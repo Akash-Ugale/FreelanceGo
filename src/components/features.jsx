@@ -27,7 +27,7 @@ const features = [
 
 export default function Features() {
   return (
-    <section className="container space-y-16 py-16 md:py-24 lg:py-32 px-4">
+    <section className="container mx-auto space-y-16 py-16 md:py-24 lg:py-32 px-4">
       <div className="mx-auto max-w-[58rem] text-center">
         <h2 className="font-bold text-2xl sm:text-3xl md:text-4xl lg:text-5xl leading-[1.1]">
           Why Choose FreelanceGo?

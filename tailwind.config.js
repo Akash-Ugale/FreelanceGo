@@ -53,7 +53,17 @@ export default {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
-  		}
+  		},
+			animation: {
+        'spin-slow': 'spin 6s linear infinite',
+        'spin-slower-reverse': 'spin-reverse 10s linear infinite',
+      },
+      keyframes: {
+        'spin-reverse': {
+          from: { transform: 'rotate(360deg)' },
+          to: { transform: 'rotate(0deg)' },
+        },
+      },
   	}
   },
   plugins: [require("tailwindcss-animate")],

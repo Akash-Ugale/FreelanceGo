@@ -1,5 +1,4 @@
-import { useState } from "react"
-import { Link } from "react-router-dom"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -10,9 +9,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Bell, Settings, User, LogOut, CreditCard, HelpCircle, Menu } from "lucide-react"
+import {
+  Bell,
+  CreditCard,
+  HelpCircle,
+  LogOut,
+  Menu,
+  Settings,
+  User,
+} from "lucide-react"
+import { useState } from "react"
 import DashboardSidebarContent from "./dashboard-sidebar-content"
 
 export default function DashboardHeader({ userRole, onRoleChange }) {
@@ -23,9 +29,9 @@ export default function DashboardHeader({ userRole, onRoleChange }) {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex h-16 items-center justify-between px-4 md:px-6">
-        <div className="flex items-center space-x-4">
+    <header className="sticky top-0 z-40 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="flex h-16 items-center justify-between px-4">
+        <div className="flex items-center gap-2">
           <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -34,16 +40,19 @@ export default function DashboardHeader({ userRole, onRoleChange }) {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-64 p-0">
-              <DashboardSidebarContent userRole={userRole} onItemClick={() => setSidebarOpen(false)} />
+              <DashboardSidebarContent
+                userRole={userRole}
+                onItemClick={() => setSidebarOpen(false)}
+              />
             </SheetContent>
           </Sheet>
 
-          <Link to="/" className="flex items-center space-x-2">
+          <a href="/dashboard" className="flex items-center">
             <span className="font-bold text-lg md:text-xl">FreelanceGo</span>
-          </Link>
+          </a>
         </div>
 
-        <div className="hidden sm:flex items-center space-x-2">
+        {/* <div className="hidden items-center space-x-2">
           <span className="text-xs md:text-sm text-muted-foreground">Switch to:</span>
           <Button
             variant={userRole === "freelancer" ? "default" : "outline"}
@@ -56,25 +65,30 @@ export default function DashboardHeader({ userRole, onRoleChange }) {
           <Badge variant={userRole === "freelancer" ? "default" : "secondary"} className="text-xs">
             {userRole === "freelancer" ? "Freelancer" : "Client"}
           </Badge>
-        </div>
+        </div> */}
 
         <div className="flex items-center space-x-2 md:space-x-4">
-          <div className="sm:hidden">
+          {/* <div>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="text-xs bg-transparent">
+                <Button size="sm">
                   {userRole === "freelancer" ? "Freelancer" : "Client"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={toggleRole}>
-                  Switch to {userRole === "freelancer" ? "Client" : "Freelancer"}
+                  Switch to{" "}
+                  {userRole === "freelancer" ? "Client" : "Freelancer"}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </div> */}
 
-          <Button variant="ghost" size="icon" className="relative h-9 w-9 md:h-10 md:w-10">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative h-9 w-9 md:h-10 md:w-10"
+          >
             <Bell className="h-4 w-4 md:h-5 md:w-5" />
             <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
               3
@@ -83,9 +97,15 @@ export default function DashboardHeader({ userRole, onRoleChange }) {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="relative h-9 w-9 md:h-10 md:w-10 rounded-full">
+              <Button
+                variant="ghost"
+                className="relative h-9 w-9 md:h-10 md:w-10 rounded-full"
+              >
                 <Avatar className="h-9 w-9 md:h-10 md:w-10">
-                  <AvatarImage src="/placeholder.svg?height=40&width=40&text=JD" alt="Profile" />
+                  <AvatarImage
+                    src="/placeholder.svg?height=40&width=40&text=JD"
+                    alt="Profile"
+                  />
                   <AvatarFallback>JD</AvatarFallback>
                 </Avatar>
               </Button>
@@ -94,8 +114,12 @@ export default function DashboardHeader({ userRole, onRoleChange }) {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">John Doe</p>
-                  <p className="text-xs leading-none text-muted-foreground">john.doe@example.com</p>
-                  <p className="text-xs leading-none text-muted-foreground capitalize">{userRole}</p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    john.doe@example.com
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground capitalize">
+                    {userRole}
+                  </p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

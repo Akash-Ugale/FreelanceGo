@@ -1,16 +1,18 @@
-import Navbar from "@/components/navbar"
-import Hero from "@/components/hero"
-import Features from "@/components/features"
 import CTA from "@/components/cta"
+import Features from "@/components/features"
 import Footer from "@/components/footer"
-import { useEffect } from "react"
+import Hero from "@/components/hero"
 import MouseMoveEffect from "@/components/mouse-move-effect"
+import Navbar from "@/components/navbar"
+import { useEffect } from "react"
 
 export default function Home() {
-    useEffect(() => {document.documentElement.classList.add("dark")},[])
+  useEffect(() => {
+    document.documentElement.classList.add("dark")
+  }, [])
   return (
     <div className="relative min-h-screen bg-background">
-        <MouseMoveEffect/>
+      <MouseMoveEffect />
       {/* Background gradients */}
       <div className="pointer-events-none fixed inset-0">
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
@@ -21,10 +23,10 @@ export default function Home() {
       <div className="relative z-10">
         <Navbar />
         <div className="px-3">
-            <Hero />
-        <Features />
-        <CTA />
-        <Footer />
+          <Hero />
+          <Features />
+          <CTA />
+          <Footer />
         </div>
       </div>
     </div>
