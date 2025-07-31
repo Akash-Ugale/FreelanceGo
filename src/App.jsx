@@ -1,47 +1,40 @@
-import { useState } from 'react'
-import './App.css'
-import AboutUs from './pages/about-us'
-import Login from './pages/login'
-import Register from './pages/register'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
-import Home from './pages/landingpage'
-import Dashboard from './pages/dashboard'
-import BidHistoryContent from './components/dashboard/bid-history-content'
-import BidHistory from './pages/BidHistory'
-
+import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import AboutUs from "./pages/about-us"
+import BidHistory from "./pages/BidHistory"
+import Dashboard from "./pages/dashboard"
+import Home from "./pages/landingpage"
+import Login from "./pages/login"
+import Register from "./pages/register"
 
 function App() {
   const router = createBrowserRouter([
-    
     {
       path: "/dashboard/bid-history",
-      element: <BidHistory/>  
+      element: <BidHistory />,
     },
     {
       path: "/dashboard",
-      element: <Dashboard/>  
+      element: <Dashboard />,
     },
     {
       path: "/",
-      element: <Home/>  
+      element: <Home />,
     },
     {
       path: "/about-us",
-      element: <AboutUs/>  
+      element: <AboutUs />,
     },
     {
-    path: "/login",
-    element: <Login />
-  }, 
-  {
-    path:"/register",
-    element:<Register/>
-  }
+      path: "/login",
+      element: <Login />,
+    },
+    {
+      path: "/register",
+      element: <Register />,
+    },
   ])
 
-  return (
-    <RouterProvider router={router}/>
-  )
+  return <RouterProvider router={router} />
 }
 
 export default App
