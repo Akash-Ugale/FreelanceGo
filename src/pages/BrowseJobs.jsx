@@ -1,13 +1,11 @@
-// Freelancer bid history
-"use client"
 
 import { useState } from "react"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
-import BidHistoryContent from "@/components/dashboard/tabs/bid-history-content"
+import BrowseJobsContent from "@/components/dashboard/tabs/browse-jobs-content"
 
-export default function BidHistory() {
-  const [userRole, setUserRole] = useState("freelancer")
+export default function BrowseJobs() {
+  const [userRole, setUserRole] = useState("freelancer") // ✅ fixed here
 
   return (
     <div className="min-h-screen bg-background">
@@ -15,7 +13,7 @@ export default function BidHistory() {
       <div className="flex">
         <DashboardSidebar userRole={userRole} />
         <main className="flex-1 p-4 md:p-6">
-          <BidHistoryContent userRole={userRole} />
+          <BrowseJobsContent userRole={userRole} />
         </main>
       </div>
     </div>

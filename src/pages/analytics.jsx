@@ -1,12 +1,11 @@
-// Freelancer bid history
 "use client"
 
 import { useState } from "react"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
-import BidHistoryContent from "@/components/dashboard/tabs/bid-history-content"
+import AnalyticsContent from "@/components/dashboard/tabs/analytics-content"
 
-export default function BidHistory() {
+export default function Analytics() {
   const [userRole, setUserRole] = useState("freelancer")
 
   return (
@@ -15,7 +14,7 @@ export default function BidHistory() {
       <div className="flex">
         <DashboardSidebar userRole={userRole} />
         <main className="flex-1 p-4 md:p-6">
-          <BidHistoryContent userRole={userRole} />
+          <AnalyticsContent userRole={userRole} />
         </main>
       </div>
     </div>

@@ -7,12 +7,13 @@ import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { useState } from "react"
 
 export default function Dashboard() {
-  const [userRole, setUserRole] = useState("freelancer")
+  const [userRole, setUserRole] = useState("client")
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
+  
   return (
     <div className="min-h-screen bg-background">
-      <FullscreenLoader show={true} />
+      <FullscreenLoader show={false} />
       {/* Dashboard Header */}
       <div>
         <DashboardHeader userRole={userRole} onRoleChange={setUserRole} />
