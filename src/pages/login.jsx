@@ -139,9 +139,9 @@ export default function Login() {
 
             <div className="mt-6 text-center text-sm">
               Don't have an account?{" "}
-              <Link to="/register" className="text-primary hover:underline">
+              <a href ="https://freelancegobackend.onrender.com/ouath2/authorization/google" className="text-primary hover:underline">
                 Sign up
-              </Link>
+              </a>
             </div>
           </CardContent>
         </Card>

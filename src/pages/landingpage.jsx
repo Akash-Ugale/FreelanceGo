@@ -1,15 +1,15 @@
-import CTA from "@/components/cta"
-import Features from "@/components/features"
-import Footer from "@/components/footer"
-import Hero from "@/components/hero"
-import MouseMoveEffect from "@/components/mouse-move-effect"
-import Navbar from "@/components/navbar"
-import { useEffect } from "react"
+import CTA from "@/components/cta";
+import Features from "@/components/features";
+import Footer from "@/components/footer";
+import Hero from "@/components/hero";
+import MouseMoveEffect from "@/components/mouse-move-effect";
+import Navbar from "@/components/navbar";
+import { useEffect } from "react";
 
 export default function Home() {
   useEffect(() => {
-    document.documentElement.classList.add("dark")
-  }, [])
+    document.documentElement.classList.add("dark");
+  }, []);
   return (
     <div className="relative min-h-screen bg-background">
       <MouseMoveEffect />
@@ -22,6 +22,7 @@ export default function Home() {
 
       <div className="relative z-10">
         <Navbar />
+
         <div className="px-3">
           <Hero />
           <Features />
@@ -30,5 +31,5 @@ export default function Home() {
         </div>
       </div>
     </div>
-  )
+  );
 }

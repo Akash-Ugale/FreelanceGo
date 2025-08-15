@@ -1,13 +1,13 @@
-import { Link } from "react-router-dom"
-import { Button } from "@/components/ui/button"
-import { Github, Menu } from "lucide-react"
-import { useState } from "react"
+import { Link } from "react-router-dom";
+import { Button } from "@/components/ui/button";
+import { Github, Menu } from "lucide-react";
+import { useState } from "react";
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3">
+    <header className="sticky top-0 z-20 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3">
       <div className="container flex h-14 max-w-screen-2xl items-center">
         <Link to="/" className="mr-6 flex items-center space-x-2">
           <span className="font-bold">FreelanceGo</span>
@@ -15,13 +15,22 @@ export default function Navbar() {
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex flex-1 items-center space-x-6 text-sm font-medium">
-          <Link to="/find-work" className="transition-colors hover:text-primary">
+          <Link
+            to="/find-work"
+            className="transition-colors hover:text-primary"
+          >
             Find Work
           </Link>
-          <Link to="/find-talent" className="transition-colors hover:text-primary">
+          <Link
+            to="/find-talent"
+            className="transition-colors hover:text-primary"
+          >
             Find Talent
           </Link>
-          <Link to="/how-it-works" className="transition-colors hover:text-primary">
+          <Link
+            to="/how-it-works"
+            className="transition-colors hover:text-primary"
+          >
             How It Works
           </Link>
           <Link to="/about-us" className="transition-colors hover:text-primary">
@@ -41,11 +50,11 @@ export default function Navbar() {
               <span className="sr-only">GitHub</span>
             </Button>
           </a>
-          <Link to="/login">
+          <a href="https://freelancegobackend.onrender.com/ouath2/authorization/google">
             <Button variant="ghost" size="sm">
               Login
             </Button>
-          </Link>
+          </a>
           <Link to="/register">
             <Button size="sm">Join FreelanceGo</Button>
           </Link>
@@ -67,21 +76,37 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden border-t bg-background/95 backdrop-blur">
           <nav className="container py-4 space-y-4">
-            <Link to="/find-work" className="block text-sm font-medium transition-colors hover:text-primary">
+            <Link
+              to="/find-work"
+              className="block text-sm font-medium transition-colors hover:text-primary"
+            >
               Find Work
             </Link>
-            <Link to="/find-talent" className="block text-sm font-medium transition-colors hover:text-primary">
+            <Link
+              to="/find-talent"
+              className="block text-sm font-medium transition-colors hover:text-primary"
+            >
               Find Talent
             </Link>
-            <Link to="/how-it-works" className="block text-sm font-medium transition-colors hover:text-primary">
+            <Link
+              to="/how-it-works"
+              className="block text-sm font-medium transition-colors hover:text-primary"
+            >
               How It Works
             </Link>
-            <Link to="/about-us" className="block text-sm font-medium transition-colors hover:text-primary">
+            <Link
+              to="/about-us"
+              className="block text-sm font-medium transition-colors hover:text-primary"
+            >
               About Us
             </Link>
             <div className="flex flex-col space-y-2 pt-4 border-t">
               <Link to="/login">
-                <Button variant="ghost" size="sm" className="w-full justify-start">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start"
+                >
                   Login
                 </Button>
               </Link>
@@ -97,7 +122,11 @@ export default function Navbar() {
               rel="noreferrer"
               className="block pt-4"
             >
-              <Button variant="ghost" size="sm" className="w-full justify-start">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start"
+              >
                 <Github className="h-4 w-4 mr-2" />
                 GitHub
               </Button>
@@ -106,7 +135,5 @@ export default function Navbar() {
         </div>
       )}
     </header>
-  )
+  );
 }
-
-

@@ -126,7 +126,7 @@ export default function ProposalsContent({ userRole }) {
 
   const proposals = userRole === "freelancer" ? freelancerProposals : clientProposals
 
-  const getStatusColor = (statu) => {
+  const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
       case "accepted":
       case "hired":

@@ -3,20 +3,24 @@ import DashboardHeader from "@/components/dashboard/dashboard-header"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
 import DashboardSidebarMobile from "@/components/dashboard/dashboard-sidebar-mobile"
 import FullscreenLoader from "@/components/FullScreenLoader"
+import { useAuth } from "@/context/AuthContext"
 import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { useState } from "react"
+import { Outlet } from "react-router-dom"
 
 export default function Dashboard() {
-  const [userRole, setUserRole] = useState("client")
+  const {userRole, authLoading} = useAuth()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-
   
+  if (authLoading) {
+    return <FullscreenLoader show={true} />;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <FullscreenLoader show={false} />
       {/* Dashboard Header */}
       <div>
-        <DashboardHeader userRole={userRole} onRoleChange={setUserRole} />
+        <DashboardHeader userRole={userRole} />
       </div>
 
       {/* Layout Content */}
@@ -30,7 +34,7 @@ export default function Dashboard() {
           clientItems={clientItems}
         />
         <main className="flex-1 p-4 md:p-6">
-          <DashboardContent userRole={userRole} />
+          <Outlet/>
         </main>
       </div>
     </div>

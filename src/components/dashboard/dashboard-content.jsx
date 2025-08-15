@@ -201,7 +201,7 @@ export default function DashboardContent({ userRole }) {
     } else {
       return [
         { icon: PlusCircle, label: "Post a Job", href: "/dashboard/post-job" },
-        { icon: Eye, label: "Review Proposals", href: "/dashboard/proposals-review" },
+        { icon: Eye, label: "Review Proposals", href: "/dashboard/proposals" },
         { icon: UserCheck, label: "Manage Freelancers", href: "/dashboard/hired-freelancers" },
         { icon: MessageSquare, label: "Messages", href: "/dashboard/messages" },
       ]

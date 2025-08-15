@@ -1,96 +1,54 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import DashboardContent from "./components/dashboard/dashboard-content"
+import JobPostsContent from "./components/dashboard/tabs/job-post-content"
+import PostJobContent from "./components/dashboard/tabs/post-job-content"
 import AboutUs from "./pages/about-us"
+import Analytics from "./pages/analytics"
 import BidHistory from "./pages/BidHistory"
+import BrowseJobs from "./pages/BrowseJobs"
+import CreateProfile from "./pages/create-profile"
 import Dashboard from "./pages/dashboard"
+import Earnings from "./pages/earnings"
 import Home from "./pages/landingpage"
 import Login from "./pages/login"
-import Register from "./pages/register"
-import BrowseJobs from "./pages/BrowseJobs"
-import Proposals from "./pages/Proposals"
-import Reviews from "./pages/reviews"
-import Earnings from "./pages/earnings"
 import Messages from "./pages/message"
-import Analytics from "./pages/analytics"
-import Projects from "./pages/ActiveProjects"
-import CreateProfile from "./pages/create-profile"
 import ProfileSetup from "./pages/profile-setup"
-import PostJobContent from "./components/dashboard/tabs/post-job-content"
-import JobPostsContent from "./components/dashboard/tabs/job-post-content"
+import Proposals from "./pages/Proposals"
+import Register from "./pages/register"
+import Reviews from "./pages/reviews"
+import Projects from "./pages/ActiveProjects"
+import AuthContextProvider from "./context/AuthContext"
 
 function App() {
   const router = createBrowserRouter([
     {
-      path: "/dashboard/job-posts",
-      element: <JobPostsContent/>,
-    },
-    {
-      path: "/dashboard/post-job",
-      element: <PostJobContent/>,
-    },
-    
-      {
-      path: "/dashboard/projects",
-      element: <Projects/>,
-    },
-      {
-      path: "/dashboard/analytics",
-      element: <Analytics/>,
-    },
-     {
-      path: "/dashboard/messages",
-      element: <Messages/>,
-    },
-    {
-      path: "/dashboard/earnings",
-      element: <Earnings/>,
-    },
-    {
-      path: "/dashboard/reviews",
-      element: <Reviews/>,
-    },
-      {
-      path: "/dashboard/proposals",
-      element: <Proposals/>,
-    },
-    {
-      path: "/dashboard/browse-jobs",
-      element: <BrowseJobs/>,
-    },
-    {
-      path: "/dashboard/bid-history",
-      element: <BidHistory />,
-    },
-    {
       path: "/dashboard",
       element: <Dashboard />,
+      children: [
+        { index: true, element: <DashboardContent /> },
+        { path: "job-posts", element: <JobPostsContent /> },
+        { path: "post-job", element: <PostJobContent /> },
+        { path: "projects", element: <Projects /> },
+        { path: "analytics", element: <Analytics /> },
+        { path: "messages", element: <Messages /> },
+        { path: "earnings", element: <Earnings /> },
+        { path: "reviews", element: <Reviews /> },
+        { path: "proposals", element: <Proposals /> },
+        { path: "browse-jobs", element: <BrowseJobs /> },
+        { path: "bid-history", element: <BidHistory /> },
+      ],
     },
-    {
-      path: "/",
-      element: <Home />,
-    },
-    {
-      path: "/about-us",
-      element: <AboutUs />,
-    },
-    {
-      path: "/login",
-      element: <Login />,
-    },
-    {
-      path: "/register",
-      element: <Register />,
-    },
-     {
-      path: "/create-profile",
-      element: <CreateProfile/>,
-    },
-     {
-      path: "/profile-setup",
-      element: <ProfileSetup />,
-    },
+    { path: "/", element: <Home /> },
+    { path: "/about-us", element: <AboutUs /> },
+    { path: "/login", element: <Login /> },
+    { path: "/register", element: <Register /> },
+    { path: "/create-profile", element: <CreateProfile /> },
+    { path: "/profile-setup", element: <ProfileSetup /> },
   ])
 
-  return <RouterProvider router={router} />
+  return <AuthContextProvider>
+    <RouterProvider router={router} />
+  </AuthContextProvider>;
 }
 
-export default App
+export default App

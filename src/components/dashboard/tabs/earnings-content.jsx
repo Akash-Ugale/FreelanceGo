@@ -4,174 +4,133 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Progress } from "@/components/ui/progress"
 import {
   DollarSign,
+  TrendingUp,
+  TrendingDown,
   Calendar,
   Download,
-  CreditCard,
-  Wallet,
-  ArrowUpRight,
-  ArrowDownRight,
+  Eye,
   Clock,
   CheckCircle,
+  AlertCircle,
 } from "lucide-react"
-
-const freelancerEarnings = {
-  totalEarnings: 45750,
-  thisMonth: 8500,
-  lastMonth: 7200,
-  pendingPayments: 2400,
-  availableBalance: 6100,
-  transactions: [
-    {
-      id: 1,
-      project: "E-commerce Website Development",
-      client: "TechCorp Inc.",
-      amount: 2000,
-      status: "Completed",
-      date: "2024-01-25",
-      type: "milestone",
-    },
-    {
-      id: 2,
-      project: "Mobile App UI/UX Design",
-      client: "FitLife Startup",
-      amount: 1500,
-      status: "Completed",
-      date: "2024-01-20",
-      type: "milestone",
-    },
-    {
-      id: 3,
-      project: "Content Writing for Tech Blog",
-      client: "DevInsights Media",
-      amount: 800,
-      status: "Pending",
-      date: "2024-01-22",
-      type: "hourly",
-    },
-    {
-      id: 4,
-      project: "API Integration Project",
-      client: "DataTech Solutions",
-      amount: 1200,
-      status: "Completed",
-      date: "2024-01-18",
-      type: "fixed",
-    },
-  ],
-}
-
-const clientPayments = {
-  totalEarnings: 78500, // Changed from totalSpent to totalEarnings
-  thisMonth: 12300,
-  lastMonth: 9800,
-  pendingPayments: 3200,
-  availableBalance: 8500, // Changed from escrowBalance to availableBalance
-  transactions: [
-    {
-      id: 1,
-      project: "Full-Stack Web Development",
-      freelancer: "Sarah Johnson",
-      amount: 3500,
-      status: "Released",
-      date: "2024-01-25",
-      type: "milestone",
-    },
-    {
-      id: 2,
-      project: "Brand Identity Design",
-      freelancer: "Mike Chen",
-      amount: 2200,
-      status: "In Escrow",
-      date: "2024-01-23",
-      type: "milestone",
-    },
-    {
-      id: 3,
-      project: "Mobile App Development",
-      freelancer: "Emily Rodriguez",
-      amount: 4500,
-      status: "Released",
-      date: "2024-01-20",
-      type: "fixed",
-    },
-    {
-      id: 4,
-      project: "Content Strategy",
-      freelancer: "Alex Rivera",
-      amount: 1800,
-      status: "Pending Release",
-      date: "2024-01-22",
-      type: "hourly",
-    },
-  ],
-}
-
 
 
 export default function EarningsContent({ userRole }) {
-  const [timeFilter, setTimeFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
+  const [selectedPeriod, setSelectedPeriod] = useState("month")
+
+  // Mock data with consistent structure
+  const freelancerEarnings = {
+    totalEarnings: 12450.0,
+    thisMonth: 2850.0,
+    lastMonth: 3200.0,
+    pendingPayments: 1250.0,
+    availableBalance: 8900.0,
+    transactions: [
+      {
+        id: "1",
+        project: "E-commerce Website Development",
+        client: "TechCorp Inc.",
+        amount: 2500.0,
+        date: "2024-01-15",
+        status: "completed",
+        type: "project",
+      },
+      {
+        id: "2",
+        project: "Mobile App UI Design",
+        client: "StartupXYZ",
+        amount: 1800.0,
+        date: "2024-01-10",
+        status: "pending",
+        type: "milestone",
+      },
+      {
+        id: "3",
+        project: "Website Maintenance",
+        client: "LocalBiz",
+        amount: 450.0,
+        date: "2024-01-08",
+        status: "completed",
+        type: "hourly",
+      },
+    ],
+  }
+
+  const clientPayments = {
+    totalEarnings: 8750.0, // Using totalEarnings for consistency
+    thisMonth: 1950.0,
+    lastMonth: 2100.0,
+    pendingPayments: 850.0,
+    availableBalance: 5200.0,
+    transactions: [
+      {
+        id: "1",
+        project: "Website Redesign",
+        freelancer: "John Smith",
+        amount: 3200.0,
+        date: "2024-01-12",
+        status: "completed",
+        type: "project",
+      },
+      {
+        id: "2",
+        project: "Logo Design",
+        freelancer: "Sarah Johnson",
+        amount: 850.0,
+        date: "2024-01-09",
+        status: "in_escrow",
+        type: "milestone",
+      },
+      {
+        id: "3",
+        project: "Content Writing",
+        freelancer: "Mike Davis",
+        amount: 600.0,
+        date: "2024-01-05",
+        status: "completed",
+        type: "hourly",
+      },
+    ],
+  }
 
   const data = userRole === "freelancer" ? freelancerEarnings : clientPayments
+  const monthlyChange = (((data.thisMonth - data.lastMonth) / data.lastMonth) * 100).toFixed(1)
+  const isPositiveChange = Number.parseFloat(monthlyChange) > 0
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
+    switch (status) {
       case "completed":
-      case "released":
-        return "default"
+        return "bg-green-100 text-green-800"
       case "pending":
-      case "pending release":
-        return "secondary"
-      case "in escrow":
-        return "outline"
+        return "bg-yellow-100 text-yellow-800"
+      case "in_escrow":
+        return "bg-blue-100 text-blue-800"
       default:
-        return "outline"
+        return "bg-gray-100 text-gray-800"
     }
   }
 
-  const getChangePercentage = () => {
-    const change = ((data.thisMonth - data.lastMonth) / data.lastMonth) * 100
-    return {
-      value: Math.abs(change).toFixed(1),
-      isPositive: change > 0,
+  const getStatusIcon = (status) => {
+    switch (status) {
+      case "completed":
+        return <CheckCircle className="h-4 w-4" />
+      case "pending":
+        return <Clock className="h-4 w-4" />
+      case "in_escrow":
+        return <AlertCircle className="h-4 w-4" />
+      default:
+        return <Clock className="h-4 w-4" />
     }
   }
-
-  const change = getChangePercentage()
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {userRole === "freelancer" ? "Earnings" : "Payments"}
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            {userRole === "freelancer"
-              ? "Track your freelance income and payments"
-              : "Manage your project payments and expenses"}
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="bg-transparent">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-          {userRole === "freelancer" && (
-            <Button size="sm">
-              <Wallet className="mr-2 h-4 w-4" />
-              Withdraw
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -190,18 +149,17 @@ export default function EarningsContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+            {isPositiveChange ? (
+              <TrendingUp className="h-4 w-4 text-green-600" />
+            ) : (
+              <TrendingDown className="h-4 w-4 text-red-600" />
+            )}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${data.thisMonth.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground flex items-center">
-              {change.isPositive ? (
-                <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-              )}
-              <span className={change.isPositive ? "text-green-500" : "text-red-500"}>{change.value}%</span>
-              <span className="ml-1">from last month</span>
+            <p className={`text-xs ${isPositiveChange ? "text-green-600" : "text-red-600"}`}>
+              {isPositiveChange ? "+" : ""}
+              {monthlyChange}% from last month
             </p>
           </CardContent>
         </Card>
@@ -209,143 +167,173 @@ export default function EarningsContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === "freelancer" ? "Pending Payments" : "Pending Releases"}
+              {userRole === "freelancer" ? "Pending Payments" : "In Escrow"}
             </CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${data.pendingPayments.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer" ? "Awaiting release" : "Awaiting approval"}
+              {userRole === "freelancer" ? "Awaiting release" : "Held in escrow"}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {userRole === "freelancer" ? "Available Balance" : "Escrow Balance"}
-            </CardTitle>
-            <Wallet className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
+            <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">${data.availableBalance.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer" ? "Ready to withdraw" : "Held in escrow"}
-            </p>
+            <p className="text-xs text-muted-foreground">Ready for withdrawal</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Content */}
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div>
-              <CardTitle className="text-xl">
-                {userRole === "freelancer" ? "Earnings History" : "Payment History"}
-              </CardTitle>
-              <CardDescription>
-                {userRole === "freelancer"
-                  ? "Track your income from completed projects"
-                  : "Monitor your project payments and releases"}
-              </CardDescription>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Select value={timeFilter} onValueChange={setTimeFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Time period" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Time</SelectItem>
-                  <SelectItem value="this-month">This Month</SelectItem>
-                  <SelectItem value="last-month">Last Month</SelectItem>
-                  <SelectItem value="this-year">This Year</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                  <SelectItem value="pending">Pending</SelectItem>
-                  <SelectItem value="in-escrow">In Escrow</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {data.transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 border rounded-lg space-y-3 sm:space-y-0"
-              >
-                <div className="flex-1">
-                  <h4 className="font-medium text-base">{transaction.project}</h4>
-                  <p className="text-sm text-muted-foreground">
-                    {userRole === "freelancer" ? transaction.client : transaction.freelancer}
-                  </p>
-                  <div className="flex items-center space-x-4 mt-1 text-xs text-muted-foreground">
-                    <span>{transaction.date}</span>
-                    <Badge variant="outline" className="text-xs capitalize">
-                      {transaction.type}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="flex items-center justify-between sm:justify-end space-x-4">
-                  <div className="text-right">
-                    <div className="font-semibold text-lg">${transaction.amount.toLocaleString()}</div>
-                    <Badge variant={getStatusColor(transaction.status)} className="text-xs">
-                      {transaction.status === "Completed" && <CheckCircle className="mr-1 h-3 w-3" />}
-                      {transaction.status === "Pending" && <Clock className="mr-1 h-3 w-3" />}
-                      {transaction.status}
-                    </Badge>
-                  </div>
-                  <Button variant="ghost" size="sm">
-                    <Download className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Payment Methods / Withdrawal Options */}
-      {userRole === "freelancer" && (
-        <Card>
+      {/* Earnings Chart and Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle className="text-xl">Withdrawal Methods</CardTitle>
-            <CardDescription>Manage your payout preferences</CardDescription>
+            <CardTitle>{userRole === "freelancer" ? "Earnings" : "Spending"} Overview</CardTitle>
+            <CardDescription>
+              Your {userRole === "freelancer" ? "earnings" : "spending"} trend over time
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                <CreditCard className="h-8 w-8 text-blue-600" />
-                <div className="flex-1">
-                  <h4 className="font-medium">Bank Transfer</h4>
-                  <p className="text-sm text-muted-foreground">Direct deposit to your bank account</p>
+            <div className="space-y-4">
+              <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <TabsList>
+                  <TabsTrigger value="week">Week</TabsTrigger>
+                  <TabsTrigger value="month">Month</TabsTrigger>
+                  <TabsTrigger value="year">Year</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
+              {/* Mock chart area */}
+              <div className="h-64 bg-muted/20 rounded-lg flex items-center justify-center">
+                <div className="text-center">
+                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
+                  <p className="text-muted-foreground">Chart visualization would go here</p>
                 </div>
-                <Badge variant="default">Primary</Badge>
-              </div>
-              <div className="flex items-center space-x-3 p-4 border rounded-lg">
-                <Wallet className="h-8 w-8 text-green-600" />
-                <div className="flex-1">
-                  <h4 className="font-medium">PayPal</h4>
-                  <p className="text-sm text-muted-foreground">Instant transfer to PayPal</p>
-                </div>
-                <Button variant="outline" size="sm" className="bg-transparent">
-                  Add
-                </Button>
               </div>
             </div>
           </CardContent>
         </Card>
-      )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {userRole === "freelancer" ? (
+              <>
+                <Button className="w-full" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Withdraw Funds
+                </Button>
+                <Button variant="outline" className="w-full bg-transparent" size="sm">
+                  <Eye className="h-4 w-4 mr-2" />
+                  View Tax Documents
+                </Button>
+                <Button variant="outline" className="w-full bg-transparent" size="sm">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Payment Schedule
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button className="w-full" size="sm">
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Add Funds
+                </Button>
+                <Button variant="outline" className="w-full bg-transparent" size="sm">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Payment Methods
+                </Button>
+                <Button variant="outline" className="w-full bg-transparent" size="sm">
+                  <Download className="h-4 w-4 mr-2" />
+                  Download Receipts
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Recent Transactions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Transactions</CardTitle>
+          <CardDescription>Your latest {userRole === "freelancer" ? "earnings" : "payments"}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {data.transactions.map((transaction) => (
+              <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg">
+                <div className="flex items-center space-x-4">
+                  <div className={`p-2 rounded-full ${getStatusColor(transaction.status)}`}>
+                    {getStatusIcon(transaction.status)}
+                  </div>
+                  <div>
+                    <p className="font-medium">{transaction.project}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {userRole === "freelancer" ? transaction.client : transaction.freelancer}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{transaction.date}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="font-medium">${transaction.amount.toLocaleString()}</p>
+                  <Badge variant="outline" className={`text-xs ${getStatusColor(transaction.status)}`}>
+                    {transaction.status.replace("_", " ")}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6 text-center">
+            <Button variant="outline">View All Transactions</Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Monthly Progress */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Monthly Progress</CardTitle>
+          <CardDescription>Track your {userRole === "freelancer" ? "earnings" : "spending"} goals</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div>
+              <div className="flex justify-between text-sm mb-2">
+                <span>Monthly Goal</span>
+                <span>${data.thisMonth.toLocaleString()} / $5,000</span>
+              </div>
+              <Progress value={(data.thisMonth / 5000) * 100} className="h-2" />
+            </div>
+
+            <div className="grid grid-cols-3 gap-4 text-center">
+              <div>
+                <p className="text-2xl font-bold text-green-600">{Math.round((data.thisMonth / 5000) * 100)}%</p>
+                <p className="text-xs text-muted-foreground">Goal Progress</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{data.transactions.filter((t) => t.status === "completed").length}</p>
+                <p className="text-xs text-muted-foreground">Completed</p>
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {data.transactions.filter((t) => t.status === "pending").length}
+                </p>
+                <p className="text-xs text-muted-foreground">Pending</p>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

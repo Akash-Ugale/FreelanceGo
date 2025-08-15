@@ -112,7 +112,11 @@ const messages = [
 
 
 export default function MessagesContent({ userRole }) {
-  const [selectedConversation, setSelectedConversation] = useState(conversations[0])
+  // const [selectedConversation, setSelectedConversation] = useState(conversations[0])
+
+  const initialConversation = conversations.find((c) => c.role !== userRole)
+  const [selectedConversation, setSelectedConversation] = useState(initialConversation)
+
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
 
@@ -123,11 +127,12 @@ export default function MessagesContent({ userRole }) {
     }
   }
 
-  const filteredConversations = conversations.filter(
-    (conv) =>
-      conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      conv.project.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+ const filteredConversations = conversations.filter(
+  (conv) =>
+    conv.role !== userRole && // only show opposite role
+    (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+     conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
+)
 
   return (
     <div className="space-y-6">
@@ -243,30 +248,32 @@ export default function MessagesContent({ userRole }) {
           <CardContent className="flex-1 p-0">
             <div className="flex flex-col h-full">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${
-                      (userRole === "client" && message.sender === "client") ||
-                      (userRole === "freelancer" && message.sender === "freelancer")
-                        ? "justify-end"
-                        : "justify-start"
-                    }`}
-                  >
-                    <div
-                      className={`max-w-[70%] ${
-                        (userRole === "client" && message.sender === "client") ||
-                        (userRole === "freelancer" && message.sender === "freelancer")
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      } rounded-lg p-3`}
-                    >
-                      <div className="text-sm font-medium mb-1">{message.senderName}</div>
-                      <div className="text-sm">{message.message}</div>
-                      <div className="text-xs opacity-70 mt-1">{message.timestamp}</div>
-                    </div>
-                  </div>
-                ))}
+              {messages
+  .filter(
+    (msg) =>
+      msg.sender === selectedConversation.role || msg.sender === userRole
+  )
+  .map((message) => (
+    <div
+      key={message.id}
+      className={`flex ${
+        message.sender === userRole ? "justify-end" : "justify-start"
+      }`}
+    >
+      <div
+        className={`max-w-[70%] ${
+          message.sender === userRole
+            ? "bg-primary text-primary-foreground"
+            : "bg-muted"
+        } rounded-lg p-3`}
+      >
+        <div className="text-sm font-medium mb-1">{message.senderName}</div>
+        <div className="text-sm">{message.message}</div>
+        <div className="text-xs opacity-70 mt-1">{message.timestamp}</div>
+      </div>
+    </div>
+))}
+
               </div>
 
               {/* Message Input */}

@@ -1,19 +1,40 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react";
 
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom"
-import MouseMoveEffect from "@/components/mouse-move-effect"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { User, Briefcase, DollarSign, Upload, X, Plus, ArrowLeft, ArrowRight } from "lucide-react"
-import Navbar from "@/components/navbar"
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
+import MouseMoveEffect from "@/components/mouse-move-effect";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  User,
+  Briefcase,
+  DollarSign,
+  Upload,
+  X,
+  Plus,
+  ArrowLeft,
+  ArrowRight,
+} from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const skillSuggestions = [
   "JavaScript",
@@ -34,21 +55,21 @@ const skillSuggestions = [
   "Digital Marketing",
   "Data Analysis",
   "Machine Learning",
-]
+];
 
 const experienceLevels = [
-  { value: "entry", label: "Entry Level (0-2 years)" },
-  { value: "intermediate", label: "Intermediate (2-5 years)" },
-  { value: "expert", label: "Expert (5+ years)" },
-]
+  { value: "ENTRY_LEVEL", label: "Entry Level (0-2 years)" },
+  { value: "INTERMEDIATE", label: "Intermediate (2-5 years)" },
+  { value: "EXPERT", label: "Expert (5+ years)" },
+];
 
 export default function CreateProfile() {
-//   const router = useRouter()
-    const [searchParams] = useSearchParams()
-    const role = searchParams.get("role")
-    const navigate = useNavigate()
-    const location = useLocation()
-    
+  //   const router = useRouter()
+  const [searchParams] = useSearchParams();
+  const role = searchParams.get("role");
+
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [formData, setFormData] = useState({
     // Common fields
@@ -68,58 +89,64 @@ export default function CreateProfile() {
     portfolio: "",
 
     // Client specific
+    doesHaveCompany: false,
     companyName: "",
-    industry: "",
-    companySize: "",
     website: "",
-  })
+  });
 
-  const [selectedSkills, setSelectedSkills] = useState([])
-  const [customSkill, setCustomSkill] = useState("")
+  const [selectedSkills, setSelectedSkills] = useState([]);
+  const [customSkill, setCustomSkill] = useState("");
 
   useEffect(() => {
-  if (!role || (role !== "freelancer" && role !== "client")) {
-    navigate("/profile-setup")
-  }
-}, [role, navigate]) // ✅ update dependency
-
+    if (!role || (role !== "freelancer" && role !== "client")) {
+      navigate("/profile-setup");
+    }
+  }, [role, navigate]);
 
   const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log("Creating profile:", { ...formData, skills: selectedSkills, role })
+    e.preventDefault();
+    console.log("Creating profile:", {
+      ...formData,
+      skills: selectedSkills,
+      role,
+    });
     // In a real app, this would create the profile and redirect to dashboard
-    navigate("/dashboard")
-  }
+    navigate("/dashboard");
+  };
 
   const addSkill = (skill) => {
     if (skill && !selectedSkills.includes(skill)) {
-      setSelectedSkills([...selectedSkills, skill])
+      setSelectedSkills([...selectedSkills, skill]);
     }
-    setCustomSkill("")
-  }
+    setCustomSkill("");
+  };
 
   const removeSkill = (skill) => {
-    setSelectedSkills(selectedSkills.filter((s) => s !== skill))
-  }
+    setSelectedSkills(selectedSkills.filter((s) => s !== skill));
+  };
 
-  if (!role) return null
+  if (!role) return null;
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
-          <MouseMoveEffect/>
-            {/* Background gradients */}
-            <div className="pointer-events-none fixed inset-0" style={{zIndex: -1}}>
-              <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
-              <div className="absolute right-0 top-0 h-[500px] w-[500px] bg-blue-500/10 blur-[100px]" />
-              <div className="absolute bottom-0 left-0 h-[500px] w-[500px] bg-purple-500/10 blur-[100px]" />
-            </div>
-                
+      <MouseMoveEffect />
+      {/* Background gradients */}
+      <div className="pointer-events-none fixed inset-0" style={{ zIndex: -1 }}>
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
+        <div className="absolute right-0 top-0 h-[500px] w-[500px] bg-blue-500/10 blur-[100px]" />
+        <div className="absolute bottom-0 left-0 h-[500px] w-[500px] bg-purple-500/10 blur-[100px]" />
+      </div>
+
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
-            <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="shrink-0">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate(-1)}
+              className="shrink-0"
+            >
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -142,7 +169,9 @@ export default function CreateProfile() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Tell us about yourself to create your {role} profile</CardDescription>
+              <CardDescription>
+                Tell us about yourself to create your {role} profile
+              </CardDescription>
             </CardHeader>
 
             <CardContent>
@@ -161,61 +190,9 @@ export default function CreateProfile() {
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Photo
                     </Button>
-                    <p className="text-sm text-muted-foreground mt-1">JPG, PNG or GIF. Max size 2MB.</p>
-                  </div>
-                </div>
-
-                {/* Basic Information */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name *</Label>
-                    <Input
-                      id="firstName"
-                      value={formData.firstName}
-                      onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name *</Label>
-                    <Input
-                      id="lastName"
-                      value={formData.lastName}
-                      onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email Address *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                      id="phone"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="location">Location *</Label>
-                    <Input
-                      id="location"
-                      placeholder="City, Country"
-                      value={formData.location}
-                      onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                      required
-                    />
+                    <p className="text-sm text-muted-foreground mt-1">
+                      JPG, PNG or GIF. Max size 2MB.
+                    </p>
                   </div>
                 </div>
 
@@ -228,7 +205,9 @@ export default function CreateProfile() {
                         id="title"
                         placeholder="e.g., Full Stack Developer, UI/UX Designer"
                         value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({ ...formData, title: e.target.value })
+                        }
                         required
                       />
                     </div>
@@ -244,7 +223,12 @@ export default function CreateProfile() {
                             placeholder="25"
                             className="pl-10"
                             value={formData.hourlyRate}
-                            onChange={(e) => setFormData({ ...formData, hourlyRate: e.target.value })}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                hourlyRate: e.target.value,
+                              })
+                            }
                             required
                           />
                         </div>
@@ -253,7 +237,9 @@ export default function CreateProfile() {
                         <Label htmlFor="experience">Experience Level *</Label>
                         <Select
                           value={formData.experience}
-                          onValueChange={(value) => setFormData({ ...formData, experience: value })}
+                          onValueChange={(value) =>
+                            setFormData({ ...formData, experience: value })
+                          }
                         >
                           <SelectTrigger>
                             <SelectValue placeholder="Select experience" />
@@ -280,8 +266,8 @@ export default function CreateProfile() {
                             onChange={(e) => setCustomSkill(e.target.value)}
                             onKeyPress={(e) => {
                               if (e.key === "Enter") {
-                                e.preventDefault()
-                                addSkill(customSkill)
+                                e.preventDefault();
+                                addSkill(customSkill);
                               }
                             }}
                           />
@@ -318,9 +304,16 @@ export default function CreateProfile() {
                         {selectedSkills.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {selectedSkills.map((skill) => (
-                              <Badge key={skill} variant="default" className="gap-1">
+                              <Badge
+                                key={skill}
+                                variant="default"
+                                className="gap-1"
+                              >
                                 {skill}
-                                <X className="h-3 w-3 cursor-pointer" onClick={() => removeSkill(skill)} />
+                                <X
+                                  className="h-3 w-3 cursor-pointer"
+                                  onClick={() => removeSkill(skill)}
+                                />
                               </Badge>
                             ))}
                           </div>
@@ -335,74 +328,69 @@ export default function CreateProfile() {
                         type="url"
                         placeholder="https://yourportfolio.com"
                         value={formData.portfolio}
-                        onChange={(e) => setFormData({ ...formData, portfolio: e.target.value })}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            portfolio: e.target.value,
+                          })
+                        }
                       />
                     </div>
                   </>
                 ) : (
-                  <>
-                    <div className="space-y-2">
-                      <Label htmlFor="companyName">Company Name *</Label>
-                      <Input
-                        id="companyName"
-                        value={formData.companyName}
-                        onChange={(e) => setFormData({ ...formData, companyName: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="industry">Industry *</Label>
-                        <Select
-                          value={formData.industry}
-                          onValueChange={(value) => setFormData({ ...formData, industry: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select industry" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="technology">Technology</SelectItem>
-                            <SelectItem value="healthcare">Healthcare</SelectItem>
-                            <SelectItem value="finance">Finance</SelectItem>
-                            <SelectItem value="education">Education</SelectItem>
-                            <SelectItem value="retail">Retail</SelectItem>
-                            <SelectItem value="manufacturing">Manufacturing</SelectItem>
-                            <SelectItem value="other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="companySize">Company Size</Label>
-                        <Select
-                          value={formData.companySize}
-                          onValueChange={(value) => setFormData({ ...formData, companySize: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select size" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1-10">1-10 employees</SelectItem>
-                            <SelectItem value="11-50">11-50 employees</SelectItem>
-                            <SelectItem value="51-200">51-200 employees</SelectItem>
-                            <SelectItem value="201-500">201-500 employees</SelectItem>
-                            <SelectItem value="500+">500+ employees</SelectItem>
-                          </SelectContent>
-                        </Select>
+                  <div>
+                    <div className="grid gap-4">
+                      <div className="flex gap-3 items-center">
+                        <Label>Have a Company</Label>
+                        <Checkbox
+                          value={formData.doesHaveCompany}
+                          onCheckedChange={(checked) =>
+                            setFormData((prev) => {
+                              return {
+                                ...prev,
+                                doesHaveCompany: checked === true,
+                              };
+                            })
+                          }
+                        />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="website">Company Website</Label>
-                      <Input
-                        id="website"
-                        type="url"
-                        placeholder="https://yourcompany.com"
-                        value={formData.website}
-                        onChange={(e) => setFormData({ ...formData, website: e.target.value })}
-                      />
-                    </div>
-                  </>
+                    {formData.doesHaveCompany && (
+                      <>
+                        <div className="space-y-2">
+                          <Label htmlFor="companyName">Company Name *</Label>
+                          <Input
+                            id="companyName"
+                            value={formData.companyName}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                companyName: e.target.value,
+                              })
+                            }
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="website">Company Website</Label>
+                          <Input
+                            id="website"
+                            type="url"
+                            placeholder="https://yourcompany.com"
+                            value={formData.website}
+                            onChange={(e) =>
+                              setFormData({
+                                ...formData,
+                                website: e.target.value,
+                              })
+                            }
+                          />
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="space-y-2">
@@ -415,14 +403,21 @@ export default function CreateProfile() {
                         : "Tell freelancers about your company and the types of projects you work on..."
                     }
                     value={formData.bio}
-                    onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({ ...formData, bio: e.target.value })
+                    }
                     rows={4}
                     required
                   />
                 </div>
 
                 <div className="flex gap-4 pt-6">
-                  <Button type="button" variant="outline" onClick={() => navigate(-1)} className="flex-1">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => navigate(-1)}
+                    className="flex-1"
+                  >
                     <ArrowLeft className="h-4 w-4 mr-2" />
                     Back
                   </Button>
@@ -437,5 +432,5 @@ export default function CreateProfile() {
         </div>
       </div>
     </div>
-  )
+  );
 }
