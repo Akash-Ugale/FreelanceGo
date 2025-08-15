@@ -1,8 +1,11 @@
 import { createBrowserRouter, RouterProvider } from "react-router-dom"
+import { Toaster } from "sonner"
 import DashboardContent from "./components/dashboard/dashboard-content"
 import JobPostsContent from "./components/dashboard/tabs/job-post-content"
 import PostJobContent from "./components/dashboard/tabs/post-job-content"
+import AuthContextProvider from "./context/AuthContext"
 import AboutUs from "./pages/about-us"
+import Projects from "./pages/ActiveProjects"
 import Analytics from "./pages/analytics"
 import BidHistory from "./pages/BidHistory"
 import BrowseJobs from "./pages/BrowseJobs"
@@ -16,8 +19,6 @@ import ProfileSetup from "./pages/profile-setup"
 import Proposals from "./pages/Proposals"
 import Register from "./pages/register"
 import Reviews from "./pages/reviews"
-import Projects from "./pages/ActiveProjects"
-import AuthContextProvider from "./context/AuthContext"
 
 function App() {
   const router = createBrowserRouter([
@@ -46,9 +47,12 @@ function App() {
     { path: "/profile-setup", element: <ProfileSetup /> },
   ])
 
-  return <AuthContextProvider>
-    <RouterProvider router={router} />
-  </AuthContextProvider>;
+  return (
+    <AuthContextProvider>
+      <Toaster />
+      <RouterProvider router={router} />
+    </AuthContextProvider>
+  )
 }
 
-export default App
+export default App

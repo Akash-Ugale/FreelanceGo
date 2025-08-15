@@ -1,73 +1,36 @@
-"use client";
-
-import { useState } from "react";
-import { useEffect } from "react";
-import axios from "axios";
-
-import {
-  Link,
-  useNavigate,
-  useLocation,
-  useSearchParams,
-} from "react-router-dom";
-import MouseMoveEffect from "@/components/mouse-move-effect";
-import { Button } from "@/components/ui/button";
+import { apiClient } from "@/api/AxiosServiceApi"
+import FullscreenLoader from "@/components/FullScreenLoader"
+import MouseMoveEffect from "@/components/mouse-move-effect"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  User,
-  Briefcase,
-  Star,
-  MapPin,
-  Calendar,
-  Plus,
-  ArrowRight,
-  CheckCircle,
-} from "lucide-react";
-import Navbar from "@/components/navbar";
-import FullscreenLoader from "@/components/FullScreenLoader";
-import { apiClient } from "@/api/AxiosServiceApi";
-
-// // Mock data for existing profiles
-// const mockProfiles = {
-//   freelancer: {
-//     id: "1",
-//     name: "John Doe",
-//     email: "john@example.com",
-//     avatar: "/placeholder.svg?height=80&width=80&text=JD",
-//     role: "freelancer",
-//     title: "Full Stack Developer",
-//     location: "San Francisco, CA",
-//     rating: 4.9,
-//     completedJobs: 47,
-//     joinedDate: "2023-01-15",
-//     skills: ["React", "Node.js", "TypeScript", "Python"],
-//     isActive: true,
-//   },
-//   // client: null // No client profile exists
-// }
+} from "@/components/ui/card"
+import { ArrowRight, Briefcase, CheckCircle, Plus, User } from "lucide-react"
+import { useEffect, useState } from "react"
+import { Link, useNavigate, useSearchParams } from "react-router-dom"
 
 export default function ProfileSetup() {
-  const navigate = useNavigate();
-  const [selectedRole, setSelectedRole] = useState(null);
+  const navigate = useNavigate()
+  const [selectedRole, setSelectedRole] = useState(null)
 
-  const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const [searchParams] = useSearchParams()
+  const token = searchParams.get("token")
 
   if (!token) {
-    navigate("/");
+    navigate("/")
   }
 
-  const [existingFreelancer, setExistingFreelancer] = useState(null);
-  const [existingClient, setExistingClient] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [existingFreelancer, setExistingFreelancer] = useState(null)
+  const [existingClient, setExistingClient] = useState(null)
+  const [existingUser, setExistingUser] = useState(null)
+
+  const [loading, setLoading] = useState(true)
 
   async function fetchProfiles() {
     try {
@@ -75,39 +38,43 @@ export default function ProfileSetup() {
         headers: {
           Authorization: "Bearer " + token,
         },
-      });
-      const { freelancer, client } = response;
-      console.log(response);
-      setExistingFreelancer(freelancer);
-      setExistingClient(client);
+      })
+      const {
+        data: { freelancer, client, user },
+      } = response
+      console.log(response)
+      setExistingFreelancer(freelancer)
+      setExistingClient(client)
+      setExistingUser(user)
     } catch (error) {
-      console.error("Failed to fetch profiles:", error);
+      console.error("Failed to fetch profiles:", error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
   useEffect(() => {
-    localStorage.setItem("token", token);
+    localStorage.setItem("token", token)
 
-    fetchProfiles();
-  }, []);
+    fetchProfiles()
+  }, [])
 
   const handleContinueAsExisting = (role) => {
     // In a real app, this would set the user session/context
-    console.log(`Continuing as existing ${role}`);
-    navigate("/dashboard?role=freelance");
-  };
+    console.log(`Continuing as existing ${role}`)
+    navigate("/dashboard?role=freelance")
+  }
 
   const handleCreateNewProfile = (role) => {
     // In a real app, this would redirect to profile creation form
-    console.log(`Creating new ${role} profile`);
-    navigate(`/create-profile?role=${role}`);
-  };
+    console.log(`Creating new ${role} profile`)
+    navigate(`/create-profile?role=${role}`)
+  }
 
   return (
     <div className="min-h-screen bg-background">
       <FullscreenLoader show={loading} />
       <MouseMoveEffect />
+
       {/* Background gradients */}
       <div
         className="pointer-events-none fixed inset-0 "
@@ -138,7 +105,7 @@ export default function ProfileSetup() {
 
               <div className="grid md:grid-cols-2 gap-6">
                 {existingFreelancer && (
-                  <Card className="relative overflow-hidden border-2 border-green-200 bg-green-50/50">
+                  <Card className="relative overflow-hidden border">
                     <div className="absolute top-4 right-4">
                       <Badge
                         variant="secondary"
@@ -153,58 +120,39 @@ export default function ProfileSetup() {
                         <Avatar className="h-16 w-16">
                           <AvatarImage
                             src={
-                              existingFreelancer.avatar || "/placeholder.svg"
+                              `data:image/jpeg;base64,${existingUser.imageData}` ||
+                              "/placeholder.svg"
                             }
-                            alt={existingFreelancer.name}
+                            alt={existingUser.username}
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                            {existingFreelancer.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
+                            {existingUser.username
+                              ?.split(" ")
+                              ?.map((n) => n[0])
+                              ?.join("")}
                           </AvatarFallback>
                         </Avatar>
 
                         <div className="flex-1">
                           <CardTitle className="text-xl mb-1">
-                            {existingFreelancer.name}
+                            {existingUser.username}
                           </CardTitle>
                           <CardDescription className="text-base font-medium text-primary">
-                            {existingFreelancer.title}
+                            {existingFreelancer?.designation}
                           </CardDescription>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {existingFreelancer.location}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                              {existingFreelancer.rating}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </CardHeader>
 
                     <CardContent className="pt-0">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="text-center p-3 bg-white rounded-lg">
-                          <div className="text-2xl font-bold text-primary">
-                            {existingFreelancer.completedJobs}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Jobs Completed
-                          </div>
+                      <div className="text-center p-3 bg-muted/50 mb-2 rounded-lg">
+                        <div className="text-2xl font-bold text-primary">
+                          {new Date(
+                            existingFreelancer?.joinedDate || Date.now()
+                          ).getFullYear()}
                         </div>
-                        <div className="text-center p-3 bg-white rounded-lg">
-                          <div className="text-2xl font-bold text-primary">
-                            {new Date(
-                              existingFreelancer.joinedDate
-                            ).getFullYear()}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            Member Since
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          Member Since
                         </div>
                       </div>
 
@@ -245,7 +193,7 @@ export default function ProfileSetup() {
                 )}
 
                 {existingClient && (
-                  <Card className="relative overflow-hidden border-2 border-blue-200 bg-blue-50/50">
+                  <Card className="relative overflow-hidden border">
                     <div className="absolute top-4 right-4">
                       <Badge
                         variant="secondary"
@@ -259,11 +207,14 @@ export default function ProfileSetup() {
                       <div className="flex items-start gap-4">
                         <Avatar className="h-16 w-16">
                           <AvatarImage
-                            src={existingClient.avatar || "/placeholder.svg"}
-                            alt={existingClient.name}
+                            src={
+                              `data:image/jpeg;base64,${existingUser.imageData}` ||
+                              "/placeholder.svg"
+                            }
+                            alt={existingUser.username}
                           />
                           <AvatarFallback className="bg-primary text-primary-foreground text-lg">
-                            {existingClient.name
+                            {existingUser.username
                               .split(" ")
                               .map((n) => n[0])
                               .join("")}
@@ -272,24 +223,11 @@ export default function ProfileSetup() {
 
                         <div className="flex-1">
                           <CardTitle className="text-xl mb-1">
-                            {existingClient.name}
+                            {existingUser.username}
                           </CardTitle>
                           <CardDescription className="text-base font-medium text-primary">
                             Client Account
                           </CardDescription>
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-1">
-                              <MapPin className="h-4 w-4" />
-                              {existingClient.location}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Calendar className="h-4 w-4" />
-                              Since{" "}
-                              {new Date(
-                                existingClient.joinedDate
-                              ).getFullYear()}
-                            </div>
-                          </div>
                         </div>
                       </div>
                     </CardHeader>
@@ -445,5 +383,5 @@ export default function ProfileSetup() {
         </div>
       </div>
     </div>
-  );
+  )
 }
