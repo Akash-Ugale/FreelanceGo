@@ -1,40 +1,33 @@
-"use client";
+"use client"
 
-import React, { useState, useEffect } from "react";
+import { useEffect, useState } from "react"
 
-import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
-import MouseMoveEffect from "@/components/mouse-move-effect";
-import { Button } from "@/components/ui/button";
+import { apiClient } from "@/api/AxiosServiceApi"
+import FullScreenLoader from "@/components/FullScreenLoader"
+import MouseMoveEffect from "@/components/mouse-move-effect"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import {
-  User,
-  Briefcase,
-  DollarSign,
-  Upload,
-  X,
-  Plus,
-  ArrowLeft,
-  ArrowRight,
-} from "lucide-react";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import { ArrowLeft, ArrowRight, Briefcase, Plus, User, X } from "lucide-react"
+import { useNavigate, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
 
 const skillSuggestions = [
   "JavaScript",
@@ -55,24 +48,24 @@ const skillSuggestions = [
   "Digital Marketing",
   "Data Analysis",
   "Machine Learning",
-];
+]
 
 const experienceLevels = [
   { value: "ENTRY_LEVEL", label: "Entry Level (0-2 years)" },
   { value: "INTERMEDIATE", label: "Intermediate (2-5 years)" },
   { value: "EXPERT", label: "Expert (5+ years)" },
-];
+]
 
 export default function CreateProfile() {
   //   const router = useRouter()
-  const [searchParams] = useSearchParams();
-  const role = searchParams.get("role");
+  const [searchParams] = useSearchParams()
+  const role = searchParams.get("role")
 
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(false)
 
   const [formData, setFormData] = useState({
-    // Common fields
+    // * Common fields
     firstName: "",
     lastName: "",
     email: "",
@@ -81,54 +74,88 @@ export default function CreateProfile() {
     bio: "",
     avatar: "",
 
-    // Freelancer specific
-    title: "",
+    // * Freelancer specific
+    designation: "",
     hourlyRate: "",
-    experience: "",
+    experienceLevel: "",
     skills: [],
-    portfolio: "",
+    portfolioUrl: "",
 
-    // Client specific
-    doesHaveCompany: false,
+    // * Client specific
+    doesHaveCompany: true,
     companyName: "",
     website: "",
-  });
+  })
 
-  const [selectedSkills, setSelectedSkills] = useState([]);
-  const [customSkill, setCustomSkill] = useState("");
+  const [selectedSkills, setSelectedSkills] = useState([])
+  const [customSkill, setCustomSkill] = useState("")
 
   useEffect(() => {
     if (!role || (role !== "freelancer" && role !== "client")) {
-      navigate("/profile-setup");
+      navigate("/profile-setup")
     }
-  }, [role, navigate]);
+  }, [role, navigate])
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Creating profile:", {
-      ...formData,
-      skills: selectedSkills,
-      role,
-    });
-    // In a real app, this would create the profile and redirect to dashboard
-    navigate("/dashboard");
-  };
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    // API call
+    setLoading(true)
+    try {
+      const response = await apiClient.post(
+        `/api/create-profile/${role}`,
+        {
+          ...formData,
+          skills: selectedSkills,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + localStorage.getItem("token"),
+          },
+        }
+      )
+      console.log(response)
+      const { status } = response
+      if (status !== 200) {
+        toast.error("Failed to create profile")
+        return
+      }
+
+      const {
+        data: { token },
+      } = response
+      if (!token) {
+        console.error("Token not received from backend")
+        return
+      }
+      localStorage.setItem("token", token)
+      toast.success("Profile created successfully")
+      setTimeout(() => {
+        navigate("/dashboard")
+      }, 2000)
+    } catch (error) {
+      console.error("Failed to create profile:", error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const addSkill = (skill) => {
     if (skill && !selectedSkills.includes(skill)) {
-      setSelectedSkills([...selectedSkills, skill]);
+      setSelectedSkills([...selectedSkills, skill])
     }
-    setCustomSkill("");
-  };
+    setCustomSkill("")
+  }
 
   const removeSkill = (skill) => {
-    setSelectedSkills(selectedSkills.filter((s) => s !== skill));
-  };
+    setSelectedSkills(selectedSkills.filter((s) => s !== skill))
+  }
 
-  if (!role) return null;
+  if (!role) return null
 
   return (
     <div className="min-h-screen bg-background">
+      <FullScreenLoader show={loading} />
       <MouseMoveEffect />
       {/* Background gradients */}
       <div className="pointer-events-none fixed inset-0" style={{ zIndex: -1 }}>
@@ -141,16 +168,8 @@ export default function CreateProfile() {
         <div className="max-w-2xl mx-auto">
           {/* Header */}
           <div className="flex items-center gap-4 mb-8">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => navigate(-1)}
-              className="shrink-0"
-            >
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
             <div>
-              <h1 className="text-3xl font-bold flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
                 {role === "freelancer" ? (
                   <User className="h-8 w-8 text-primary" />
                 ) : (
@@ -176,26 +195,18 @@ export default function CreateProfile() {
 
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Avatar Upload */}
-                <div className="flex items-center gap-6">
-                  <Avatar className="h-20 w-20">
-                    <AvatarImage src={formData.avatar || "/placeholder.svg"} />
-                    <AvatarFallback className="text-lg">
-                      {formData.firstName[0]}
-                      {formData.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <Button type="button" variant="outline" size="sm">
-                      <Upload className="h-4 w-4 mr-2" />
-                      Upload Photo
-                    </Button>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      JPG, PNG or GIF. Max size 2MB.
-                    </p>
-                  </div>
+                <div>
+                  <Label htmlFor="phone">Enter Phone Number</Label>
+                  <Input
+                    id="phone"
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        phone: e.target.value,
+                      }))
+                    }
+                  />
                 </div>
-
                 {/* Role-specific fields */}
                 {role === "freelancer" ? (
                   <>
@@ -204,55 +215,36 @@ export default function CreateProfile() {
                       <Input
                         id="title"
                         placeholder="e.g., Full Stack Developer, UI/UX Designer"
-                        value={formData.title}
+                        value={formData.designation}
                         onChange={(e) =>
-                          setFormData({ ...formData, title: e.target.value })
+                          setFormData({
+                            ...formData,
+                            designation: e.target.value,
+                          })
                         }
                         required
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="hourlyRate">Hourly Rate (USD) *</Label>
-                        <div className="relative">
-                          <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input
-                            id="hourlyRate"
-                            type="number"
-                            placeholder="25"
-                            className="pl-10"
-                            value={formData.hourlyRate}
-                            onChange={(e) =>
-                              setFormData({
-                                ...formData,
-                                hourlyRate: e.target.value,
-                              })
-                            }
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="experience">Experience Level *</Label>
-                        <Select
-                          value={formData.experience}
-                          onValueChange={(value) =>
-                            setFormData({ ...formData, experience: value })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select experience" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {experienceLevels.map((level) => (
-                              <SelectItem key={level.value} value={level.value}>
-                                {level.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="experience">Experience Level *</Label>
+                      <Select
+                        value={formData.experienceLevel}
+                        onValueChange={(value) =>
+                          setFormData({ ...formData, experienceLevel: value })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select experience" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {experienceLevels.map((level) => (
+                            <SelectItem key={level.value} value={level.value}>
+                              {level.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     {/* Skills */}
@@ -266,8 +258,8 @@ export default function CreateProfile() {
                             onChange={(e) => setCustomSkill(e.target.value)}
                             onKeyPress={(e) => {
                               if (e.key === "Enter") {
-                                e.preventDefault();
-                                addSkill(customSkill);
+                                e.preventDefault()
+                                addSkill(customSkill)
                               }
                             }}
                           />
@@ -327,11 +319,11 @@ export default function CreateProfile() {
                         id="portfolio"
                         type="url"
                         placeholder="https://yourportfolio.com"
-                        value={formData.portfolio}
+                        value={formData.portfolioUrl}
                         onChange={(e) =>
                           setFormData({
                             ...formData,
-                            portfolio: e.target.value,
+                            portfolioUrl: e.target.value,
                           })
                         }
                       />
@@ -339,26 +331,32 @@ export default function CreateProfile() {
                   </>
                 ) : (
                   <div>
-                    <div className="grid gap-4">
+                    <div className="grid gap-4 px-3 py-2 bg-muted/40 rounded-md mb-3">
                       <div className="flex gap-3 items-center">
-                        <Label>Have a Company</Label>
                         <Checkbox
-                          value={formData.doesHaveCompany}
+                          id="has-a-company"
+                          checked={formData.doesHaveCompany}
                           onCheckedChange={(checked) =>
                             setFormData((prev) => {
                               return {
                                 ...prev,
                                 doesHaveCompany: checked === true,
-                              };
+                              }
                             })
                           }
                         />
+                        <Label
+                          htmlFor="has-a-company"
+                          className="cursor-pointer"
+                        >
+                          Have a Company
+                        </Label>
                       </div>
                     </div>
 
                     {formData.doesHaveCompany && (
-                      <>
-                        <div className="space-y-2">
+                      <div className="space-y-3">
+                        <div className="space-y-1">
                           <Label htmlFor="companyName">Company Name *</Label>
                           <Input
                             id="companyName"
@@ -373,7 +371,7 @@ export default function CreateProfile() {
                           />
                         </div>
 
-                        <div className="space-y-2">
+                        <div className="space-y-1">
                           <Label htmlFor="website">Company Website</Label>
                           <Input
                             id="website"
@@ -388,7 +386,7 @@ export default function CreateProfile() {
                             }
                           />
                         </div>
-                      </>
+                      </div>
                     )}
                   </div>
                 )}
@@ -432,5 +430,5 @@ export default function CreateProfile() {
         </div>
       </div>
     </div>
-  );
+  )
 }

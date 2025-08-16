@@ -1,10 +1,10 @@
-import { Link } from "react-router-dom";
-import { Button } from "@/components/ui/button";
-import { Github, Menu } from "lucide-react";
-import { useState } from "react";
+import { Button } from "@/components/ui/button"
+import { Github, Menu } from "lucide-react"
+import { useState } from "react"
+import { Link } from "react-router-dom"
 
 export default function Navbar() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false)
 
   return (
     <header className="sticky top-0 z-20 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3">
@@ -50,14 +50,14 @@ export default function Navbar() {
               <span className="sr-only">GitHub</span>
             </Button>
           </a>
-          <a href="https://freelancegobackend.onrender.com/ouath2/authorization/google">
+          <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
             <Button variant="ghost" size="sm">
               Login
             </Button>
           </a>
-          <Link to="/register">
+          <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
             <Button size="sm">Join FreelanceGo</Button>
-          </Link>
+          </a>
         </div>
 
         {/* Mobile Menu Button */}
@@ -101,7 +101,7 @@ export default function Navbar() {
               About Us
             </Link>
             <div className="flex flex-col space-y-2 pt-4 border-t">
-              <Link to="/login">
+              <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
                 <Button
                   variant="ghost"
                   size="sm"
@@ -109,12 +109,12 @@ export default function Navbar() {
                 >
                   Login
                 </Button>
-              </Link>
-              <Link to="/register">
+              </a>
+              <a to="https://freelancegobackend.onrender.com/oauth2/authorization/google">
                 <Button size="sm" className="w-full">
                   Join FreelanceGo
                 </Button>
-              </Link>
+              </a>
             </div>
             <a
               href="https://github.com/amanesoft"
@@ -135,5 +135,5 @@ export default function Navbar() {
         </div>
       )}
     </header>
-  );
+  )
 }
