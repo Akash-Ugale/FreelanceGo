@@ -63,6 +63,7 @@ export default function CreateProfile() {
 
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
+  const {token} = useAuth()
 
   const [formData, setFormData] = useState({
     // * Common fields
@@ -110,7 +111,7 @@ export default function CreateProfile() {
         },
         {
           headers: {
-            Authorization: "Bearer " + localStorage.getItem("token"),
+            Authorization: "Bearer " + token,
           },
         }
       )
