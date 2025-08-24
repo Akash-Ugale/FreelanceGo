@@ -1,11 +1,8 @@
 import { cn } from "@/lib/utils"
+import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { Link } from "react-router-dom"
 
-export default function DashboardSidebarContentCollapsed({
-  userRole,
-  freelancerItems,
-  clientItems,
-}) {
+export default function DashboardSidebarContentCollapsed({ userRole }) {
   const sidebarItems = userRole === "freelancer" ? freelancerItems : clientItems
 
   return (

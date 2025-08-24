@@ -52,21 +52,43 @@ export default function ProfileSetup() {
       setLoading(false)
     }
   }
+
   useEffect(() => {
     localStorage.setItem("token", token)
-
     fetchProfiles()
   }, [])
 
-  const handleContinueAsExisting = (role) => {
-    // In a real app, this would set the user session/context
-    console.log(`Continuing as existing ${role}`)
-    navigate("/dashboard?role=freelance")
+  const handleContinueAsExisting = async (role) => {
+    setLoading(true)
+    try {
+      const response = await apiClient.post(
+        `/api/update-role?role=${role}`,
+        {},
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      )
+      console.log(response)
+      const {
+        status,
+        data: { token: newToken },
+      } = response
+      if (status === 200) {
+        localStorage.setItem("token", newToken)
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true })
+        }, 1000)
+      }
+    } catch (error) {
+      console.error("Failed to check role:", error)
+    } finally {
+      setLoading(false)
+    }
   }
 
   const handleCreateNewProfile = (role) => {
-    // In a real app, this would redirect to profile creation form
-    console.log(`Creating new ${role} profile`)
     navigate(`/create-profile?role=${role}`)
   }
 
@@ -181,7 +203,7 @@ export default function ProfileSetup() {
                       </div>
 
                       <Button
-                        onClick={() => handleContinueAsExisting("freelancer")}
+                        onClick={() => handleContinueAsExisting("FREELANCER")}
                         className="w-full"
                         size="lg"
                       >
@@ -253,7 +275,7 @@ export default function ProfileSetup() {
                       </div>
 
                       <Button
-                        onClick={() => handleContinueAsExisting("client")}
+                        onClick={() => handleContinueAsExisting("CLIENT")}
                         className="w-full"
                         size="lg"
                       >

@@ -1,13 +1,23 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, Send, Paperclip, MoreVertical, Phone, Video, Star, Archive, Trash2 } from "lucide-react"
+import {
+  Archive,
+  MoreVertical,
+  Paperclip,
+  Phone,
+  Search,
+  Send,
+  Star,
+  Trash2,
+  Video,
+} from "lucide-react"
+import { useState } from "react"
 
 const conversations = [
   {
@@ -36,7 +46,8 @@ const conversations = [
     id: 3,
     name: "FitLife Startup",
     role: "client",
-    lastMessage: "The designs look fantastic! Just a few minor adjustments needed.",
+    lastMessage:
+      "The designs look fantastic! Just a few minor adjustments needed.",
     timestamp: "1 day ago",
     unread: 1,
     online: false,
@@ -61,7 +72,8 @@ const messages = [
     id: 1,
     sender: "client",
     senderName: "TechCorp Inc.",
-    message: "Hi Sarah! I wanted to check in on the progress of the e-commerce platform. How are things going?",
+    message:
+      "Hi Sarah! I wanted to check in on the progress of the e-commerce platform. How are things going?",
     timestamp: "10:30 AM",
     type: "text",
   },
@@ -78,7 +90,8 @@ const messages = [
     id: 3,
     sender: "freelancer",
     senderName: "Sarah Johnson",
-    message: "I've also integrated the Stripe payment system as requested. Would you like me to send you a demo link?",
+    message:
+      "I've also integrated the Stripe payment system as requested. Would you like me to send you a demo link?",
     timestamp: "10:46 AM",
     type: "text",
   },
@@ -110,12 +123,12 @@ const messages = [
   },
 ]
 
-
 export default function MessagesContent({ userRole }) {
   // const [selectedConversation, setSelectedConversation] = useState(conversations[0])
 
   const initialConversation = conversations.find((c) => c.role !== userRole)
-  const [selectedConversation, setSelectedConversation] = useState(initialConversation)
+  const [selectedConversation, setSelectedConversation] =
+    useState(initialConversation)
 
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
@@ -127,20 +140,23 @@ export default function MessagesContent({ userRole }) {
     }
   }
 
- const filteredConversations = conversations.filter(
-  (conv) =>
-    conv.role !== userRole && // only show opposite role
-    (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-     conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
-)
+  const filteredConversations = conversations.filter(
+    (conv) =>
+      conv.role !== userRole && // only show opposite role
+      (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
+  )
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Messages</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Messages
+        </h1>
         <p className="text-muted-foreground text-sm md:text-base">
-          Communicate with your {userRole === "freelancer" ? "clients" : "freelancers"}
+          Communicate with your{" "}
+          {userRole === "freelancer" ? "clients" : "freelancers"}
         </p>
       </div>
 
@@ -170,14 +186,18 @@ export default function MessagesContent({ userRole }) {
                 <div
                   key={conversation.id}
                   className={`p-4 border-b cursor-pointer transition-colors hover:bg-accent/50 ${
-                    selectedConversation.id === conversation.id ? "bg-accent" : ""
+                    selectedConversation.id === conversation.id
+                      ? "bg-accent"
+                      : ""
                   }`}
                   onClick={() => setSelectedConversation(conversation)}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="relative">
                       <Avatar className="h-10 w-10">
-                        <AvatarImage src={`/placeholder.svg?height=40&width=40&text=${conversation.avatar}`} />
+                        <AvatarImage
+                          src={`/placeholder.svg?height=40&width=40&text=${conversation.avatar}`}
+                        />
                         <AvatarFallback>{conversation.avatar}</AvatarFallback>
                       </Avatar>
                       {conversation.online && (
@@ -186,7 +206,9 @@ export default function MessagesContent({ userRole }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-medium text-sm truncate">{conversation.name}</h4>
+                        <h4 className="font-medium text-sm truncate">
+                          {conversation.name}
+                        </h4>
                         {conversation.unread > 0 && (
                           <Badge
                             variant="default"
@@ -196,9 +218,15 @@ export default function MessagesContent({ userRole }) {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">{conversation.project}</p>
-                      <p className="text-xs text-muted-foreground truncate">{conversation.lastMessage}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{conversation.timestamp}</p>
+                      <p className="text-xs text-muted-foreground mb-1">
+                        {conversation.project}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {conversation.lastMessage}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {conversation.timestamp}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -215,8 +243,12 @@ export default function MessagesContent({ userRole }) {
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={`/placeholder.svg?height=40&width=40&text=${selectedConversation.avatar}`} />
-                    <AvatarFallback>{selectedConversation.avatar}</AvatarFallback>
+                    <AvatarImage
+                      src={`/placeholder.svg?height=40&width=40&text=${selectedConversation.avatar}`}
+                    />
+                    <AvatarFallback>
+                      {selectedConversation.avatar}
+                    </AvatarFallback>
                   </Avatar>
                   {selectedConversation.online && (
                     <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
@@ -224,9 +256,13 @@ export default function MessagesContent({ userRole }) {
                 </div>
                 <div>
                   <h3 className="font-medium">{selectedConversation.name}</h3>
-                  <p className="text-sm text-muted-foreground">{selectedConversation.project}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {selectedConversation.project}
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    {selectedConversation.online ? "Online now" : "Last seen 2 hours ago"}
+                    {selectedConversation.online
+                      ? "Online now"
+                      : "Last seen 2 hours ago"}
                   </p>
                 </div>
               </div>
@@ -248,38 +284,48 @@ export default function MessagesContent({ userRole }) {
           <CardContent className="flex-1 p-0">
             <div className="flex flex-col h-full">
               <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages
-  .filter(
-    (msg) =>
-      msg.sender === selectedConversation.role || msg.sender === userRole
-  )
-  .map((message) => (
-    <div
-      key={message.id}
-      className={`flex ${
-        message.sender === userRole ? "justify-end" : "justify-start"
-      }`}
-    >
-      <div
-        className={`max-w-[70%] ${
-          message.sender === userRole
-            ? "bg-primary text-primary-foreground"
-            : "bg-muted"
-        } rounded-lg p-3`}
-      >
-        <div className="text-sm font-medium mb-1">{message.senderName}</div>
-        <div className="text-sm">{message.message}</div>
-        <div className="text-xs opacity-70 mt-1">{message.timestamp}</div>
-      </div>
-    </div>
-))}
-
+                {messages
+                  .filter(
+                    (msg) =>
+                      msg.sender === selectedConversation.role ||
+                      msg.sender === userRole
+                  )
+                  .map((message) => (
+                    <div
+                      key={message.id}
+                      className={`flex ${
+                        message.sender === userRole
+                          ? "justify-end"
+                          : "justify-start"
+                      }`}
+                    >
+                      <div
+                        className={`max-w-[70%] ${
+                          message.sender === userRole
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted"
+                        } rounded-lg p-3`}
+                      >
+                        <div className="text-sm font-medium mb-1">
+                          {message.senderName}
+                        </div>
+                        <div className="text-sm">{message.message}</div>
+                        <div className="text-xs opacity-70 mt-1">
+                          {message.timestamp}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
               </div>
 
               {/* Message Input */}
               <div className="border-t p-4">
                 <div className="flex space-x-2">
-                  <Button size="sm" variant="outline" className="bg-transparent">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="bg-transparent"
+                  >
                     <Paperclip className="h-4 w-4" />
                   </Button>
                   <Textarea
@@ -294,7 +340,10 @@ export default function MessagesContent({ userRole }) {
                       }
                     }}
                   />
-                  <Button onClick={handleSendMessage} disabled={!newMessage.trim()}>
+                  <Button
+                    onClick={handleSendMessage}
+                    disabled={!newMessage.trim()}
+                  >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
@@ -307,7 +356,11 @@ export default function MessagesContent({ userRole }) {
                     <Button size="sm" variant="ghost" className="h-6 px-2">
                       <Archive className="h-3 w-3" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-6 px-2 text-red-500 hover:text-red-600">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 px-2 text-red-500 hover:text-red-600"
+                    >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
