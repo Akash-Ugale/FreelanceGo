@@ -34,6 +34,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { userRoles } from "@/utils/constants"
 
 
 const jobPosts = [
@@ -120,7 +121,7 @@ export default function JobPostsContent({ userRole }) {
   const [selectedJobs, setSelectedJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState("all")
 
-  if (userRole === "freelancer") {
+  if (userRole === userRoles.FREELANCER) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md text-center">
@@ -228,7 +229,7 @@ export default function JobPostsContent({ userRole }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
@@ -262,7 +263,7 @@ export default function JobPostsContent({ userRole }) {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Drafts</CardTitle>
             <FileText className="h-4 w-4 text-yellow-600" />
@@ -271,7 +272,7 @@ export default function JobPostsContent({ userRole }) {
             <div className="text-2xl font-bold">{stats.drafts}</div>
             <p className="text-xs text-muted-foreground">Unpublished</p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -300,7 +301,7 @@ export default function JobPostsContent({ userRole }) {
       <Card>
         <CardHeader>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <Tabs value={selectedTab} onValueChange={setSelectedTab} className="hidden">
               <TabsList>
                 <TabsTrigger value="all">All ({jobPosts.length})</TabsTrigger>
                 <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
@@ -309,14 +310,14 @@ export default function JobPostsContent({ userRole }) {
               </TabsList>
             </Tabs>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full sm:w-[250px]"
+                  className="pl-10 w-full"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>

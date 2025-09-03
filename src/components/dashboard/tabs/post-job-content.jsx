@@ -1,7 +1,8 @@
-"use client"
-
+import { apiClient } from "@/api/AxiosServiceApi"
+import FullScreenLoader from "@/components/FullScreenLoader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import {
   Card,
   CardContent,
@@ -12,18 +13,26 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { useAuth } from "@/context/AuthContext"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/context/AuthContext"
+import { userRoles } from "@/utils/constants"
+import { format, formatISO } from "date-fns"
 import {
   AlertCircle,
   Briefcase,
+  CalendarIcon,
   Clock,
   DollarSign,
   Eye,
@@ -36,6 +45,7 @@ import {
   X,
 } from "lucide-react"
 import { useState } from "react"
+import { toast } from "sonner"
 
 const jobCategories = [
   "Web Development",
@@ -71,52 +81,18 @@ const skillSuggestions = [
   "Docker",
 ]
 
-const handlePostJob = async () => {
-  setLoading(true);
-
-  try {
-    const response = await apiClient.post(
-      "/api/create-post",
-      {
-        ...jobFormData,
-        skills: selectedSkills,
-      },
-      {
-        headers: {
-          Authorization: "Bearer " + token,
-        },
-      }
-    );
-
-    console.log("Job posted:", response);
-
-    const { status } = response;
-
-    if (status !== 200 && status !== 201) {
-      toast.error("Failed to post job");
-      return;
-    }
-
-    toast.success("Job posted successfully!");
-  } catch (error) {
-    console.error("Error posting job:", error);
-    toast.error("Something went wrong while posting the job");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
 export default function PostJobContent({ userRole }) {
   const [currentTab, setCurrentTab] = useState("basics")
   const [selectedSkills, setSelectedSkills] = useState([])
   const [customSkill, setCustomSkill] = useState("")
-  const {token} = useAuth()
+  const { token } = useAuth()
+  const [loading, setLoading] = useState(false)
+
   const [jobData, setJobData] = useState({
-    title: "",
+    jobTitle: "",
     category: "",
-    description: "",
-    requirements: "",
+    jobDescription: "",
+    requirement: "",
     timeline: "",
     budgetType: "fixed",
     budgetAmount: "",
@@ -127,9 +103,11 @@ export default function PostJobContent({ userRole }) {
     screeningQuestions: [""],
     visibility: "public",
     featuredListing: false,
+    projectStartTime: Date.now(),
+    projectEndTime: Date.now(),
   })
 
-  if (userRole === "freelancer") {
+  if (userRole === userRoles.FREELANCER) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md text-center">
@@ -192,7 +170,7 @@ export default function PostJobContent({ userRole }) {
       case "basics":
         return jobData.title && jobData.category && selectedSkills.length > 0
       case "details":
-        return jobData.description && jobData.requirements && jobData.timeline
+        return jobData.jobDescription && jobData.requirement && jobData.timeline
       case "budget":
         return jobData.budgetType === "fixed"
           ? jobData.budgetAmount
@@ -204,8 +182,38 @@ export default function PostJobContent({ userRole }) {
     }
   }
 
+  const handlePostJob = async () => {
+    setLoading(true)
+    try {
+      const response = await apiClient.post(
+        "/api/create-post",
+        {
+          ...jobData,
+          requiredSkills: selectedSkills,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + token,
+          },
+        }
+      )
+
+      console.log("Job posted:", response)
+      const { status } = response
+      if (status === 200) {
+        toast.success("Job posted successfully!")
+      }
+    } catch (error) {
+      console.error("Error posting job:", error)
+      toast.error("Something went wrong while posting the job")
+    } finally {
+      setLoading(false)
+    }
+  }
+
   return (
     <div className="space-y-6">
+      <FullScreenLoader show={loading} />
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
@@ -280,9 +288,9 @@ export default function PostJobContent({ userRole }) {
                   <Input
                     id="job-title"
                     placeholder="e.g. Build a responsive e-commerce website"
-                    value={jobData.title}
+                    value={jobData.jobTitle}
                     onChange={(e) =>
-                      setJobData({ ...jobData, title: e.target.value })
+                      setJobData({ ...jobData, jobTitle: e.target.value })
                     }
                     className="mt-1"
                   />
@@ -380,9 +388,9 @@ export default function PostJobContent({ userRole }) {
                       <SelectValue placeholder="Select experience level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="entry">Entry Level</SelectItem>
-                      <SelectItem value="intermediate">Intermediate</SelectItem>
-                      <SelectItem value="expert">Expert</SelectItem>
+                      <SelectItem value="ENTRY_LEVEL">Entry Level</SelectItem>
+                      <SelectItem value="INTERMEDIATE">Intermediate</SelectItem>
+                      <SelectItem value="EXPERT">Expert</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -396,9 +404,9 @@ export default function PostJobContent({ userRole }) {
                   <Textarea
                     id="description"
                     placeholder="Describe your project in detail. What are you looking to accomplish?"
-                    value={jobData.description}
+                    value={jobData.jobDescription}
                     onChange={(e) =>
-                      setJobData({ ...jobData, description: e.target.value })
+                      setJobData({ ...jobData, jobDescription: e.target.value })
                     }
                     className="mt-1 min-h-[120px]"
                   />
@@ -409,9 +417,9 @@ export default function PostJobContent({ userRole }) {
                   <Textarea
                     id="requirements"
                     placeholder="List specific requirements, deliverables, and expectations"
-                    value={jobData.requirements}
+                    value={jobData.requirement}
                     onChange={(e) =>
-                      setJobData({ ...jobData, requirements: e.target.value })
+                      setJobData({ ...jobData, requirement: e.target.value })
                     }
                     className="mt-1 min-h-[100px]"
                   />
@@ -432,30 +440,75 @@ export default function PostJobContent({ userRole }) {
                     />
                   </div>
                 </div>
-                <div>
-                  <Label htmlFor="timeline">Project Timeline *</Label>
-                  <Select
-                    value={jobData.timeline}
-                    onValueChange={(value) =>
-                      setJobData({ ...jobData, timeline: value })
-                    }
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue placeholder="Select timeline" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="less-than-1-week">
-                        Less than 1 week
-                      </SelectItem>
-                      <SelectItem value="1-2-weeks">1-2 weeks</SelectItem>
-                      <SelectItem value="2-4-weeks">2-4 weeks</SelectItem>
-                      <SelectItem value="1-2-months">1-2 months</SelectItem>
-                      <SelectItem value="2-6-months">2-6 months</SelectItem>
-                      <SelectItem value="more-than-6-months">
-                        More than 6 months
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                <div className="grid gap-2">
+                  <Label htmlFor="projectStartTime">Project Start Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal mt-1 ${
+                          !jobData.projectStartTime && "text-muted-foreground"
+                        }`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {jobData.projectStartTime
+                          ? format(new Date(jobData.projectStartTime), "PPP")
+                          : "Pick a start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          jobData.projectStartTime
+                            ? new Date(jobData.projectStartTime)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          setJobData({
+                            ...jobData,
+                            projectStartTime: date ? formatISO(date) : null,
+                          })
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="projectEndTime">Project End Date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={`w-full justify-start text-left font-normal mt-1 ${
+                          !jobData.projectEndTime && "text-muted-foreground"
+                        }`}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {jobData.projectEndTime
+                          ? format(new Date(jobData.projectEndTime), "PPP")
+                          : "Pick a start date"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="end">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          jobData.projectEndTime
+                            ? new Date(jobData.projectEndTime)
+                            : undefined
+                        }
+                        onSelect={(date) =>
+                          setJobData({
+                            ...jobData,
+                            projectEndTime: date ? formatISO(date) : null,
+                          })
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div>
@@ -523,7 +576,7 @@ export default function PostJobContent({ userRole }) {
                     <div>
                       <h4 className="font-medium mb-2">Description</h4>
                       <p className="text-sm text-muted-foreground">
-                        {jobData.description ||
+                        {jobData.jobDescription ||
                           "Project description will appear here..."}
                       </p>
                     </div>
@@ -535,18 +588,17 @@ export default function PostJobContent({ userRole }) {
                       </div>
                       <div className="flex items-center space-x-1">
                         <Clock className="h-4 w-4" />
-                        <span>{jobData.timeline || "Timeline"}</span>
+                        <span>
+                          {format(jobData.projectStartTime, "PPP")} -{" "}
+                          {format(jobData.projectEndTime, "PPP")}
+                        </span>
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
                 <div className="flex justify-end">
-                  {/* <Button variant="outline" className="bg-transparent">
-                    <Save className="mr-2 h-4 w-4" />
-                    Save as Draft
-                  </Button> */}
-                  <Button>
+                  <Button onClick={handlePostJob}>
                     <Send className="mr-2 h-4 w-4" />
                     Post Job
                   </Button>

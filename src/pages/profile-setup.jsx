@@ -11,7 +11,14 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { ArrowRight, Briefcase, CheckCircle, Plus, User } from "lucide-react"
+import {
+  ArrowRight,
+  Briefcase,
+  CheckCircle,
+  Plus,
+  User,
+  UserCircle,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import { Link, useNavigate, useSearchParams } from "react-router-dom"
 
@@ -121,8 +128,8 @@ export default function ProfileSetup() {
           {(existingFreelancer || existingClient) && (
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                <CheckCircle className="h-6 w-6 text-green-500" />
-                Your Existing Profiles
+                <UserCircle className="h-6 w-6 text-white" />
+                Existing Profiles
               </h2>
 
               <div className="grid md:grid-cols-2 gap-6">

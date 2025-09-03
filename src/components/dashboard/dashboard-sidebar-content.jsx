@@ -1,33 +1,31 @@
 import { cn } from "@/lib/utils"
+import { userRoles } from "@/utils/constants"
 import { Settings } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
 export default function DashboardSidebarContent({
   userRole,
-  onItemClick,
   freelancerItems,
   clientItems,
 }) {
   const [activeItem, setActiveItem] = useState("/dashboard")
-  const sidebarItems = userRole === "freelancer" ? freelancerItems : clientItems
+  const sidebarItems =
+    userRole === userRoles.FREELANCER ? freelancerItems : clientItems
 
   const handleItemClick = (href) => {
     setActiveItem(href)
-    if (onItemClick) onItemClick()
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="sticky top-0 flex flex-col h-full">
       {/* Header */}
-      <div className="p-6 border-b">
+      {/* <div className="p-6 border-b">
         <h2 className="font-semibold text-lg">
-          {userRole === "freelancer" ? "Freelancer" : "Client"} Dashboard
+          {userRole === userRoles.FREELANCER ? "Freelancer" : "Client"}{" "}
+          Dashboard
         </h2>
-        <p className="text-sm text-muted-foreground capitalize">
-          {userRole} Navigation
-        </p>
-      </div>
+      </div> */}
 
       {/* Navigation Items */}
       <div className="flex-1 overflow-auto py-4">
@@ -52,7 +50,7 @@ export default function DashboardSidebarContent({
       </div>
 
       {/* Bottom Section */}
-      <div className="border-t p-4">
+      <div className="border-t p-2">
         <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
           <Settings className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium">Settings</span>

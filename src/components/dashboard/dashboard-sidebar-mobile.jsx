@@ -1,16 +1,17 @@
 import { cn } from "@/lib/utils"
-import { Dialog, Transition, TransitionChild } from "@headlessui/react"
+import { Dialog, DialogPanel, Transition, TransitionChild } from "@headlessui/react"
 import { X } from "lucide-react"
 import { Fragment } from "react"
 import DashboardSidebarContent from "./dashboard-sidebar-content"
+import { useAuth } from "@/context/AuthContext"
 
 export default function DashboardSidebarMobile({
   isOpen,
   setIsOpen,
-  userRole,
   freelancerItems,
   clientItems,
 }) {
+  const { userRole } = useAuth()
   return (
     <Transition show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-40 md:hidden" onClose={setIsOpen}>
@@ -27,7 +28,7 @@ export default function DashboardSidebarMobile({
         </TransitionChild>
 
         <div className="fixed inset-0 flex z-40">
-          <Transition.Child
+          <TransitionChild
             as={Fragment}
             enter="transition ease-in-out duration-300 transform"
             enterFrom="-translate-x-full"
@@ -36,7 +37,7 @@ export default function DashboardSidebarMobile({
             leaveFrom="translate-x-0"
             leaveTo="-translate-x-full"
           >
-            <Dialog.Panel
+            <DialogPanel
               className={cn(
                 "relative w-64 bg-background shadow-xl h-full flex flex-col"
               )}
@@ -56,8 +57,8 @@ export default function DashboardSidebarMobile({
                 clientItems={clientItems}
                 onItemClick={() => setIsOpen(false)}
               />
-            </Dialog.Panel>
-          </Transition.Child>
+            </DialogPanel>
+          </TransitionChild>
         </div>
       </Dialog>
     </Transition>

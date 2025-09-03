@@ -13,10 +13,6 @@ export default function Dashboard() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
 
-  if (authLoading) {
-    return <FullscreenLoader show={true} />
-  }
-
   async function validateToken(token) {
     try {
       const response = await apiClient.get("/api/isAuthenticated", {
@@ -44,15 +40,19 @@ export default function Dashboard() {
     }
   }, [])
 
+  if (authLoading) {
+    return <FullscreenLoader show={true} />
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen max-h-screen overflow-hidden bg-background flex flex-col">
       {/* Dashboard Header */}
       <div>
         <DashboardHeader userRole={userRole} />
       </div>
 
       {/* Layout Content */}
-      <div className="flex">
+      <div className="relative flex-1 flex max-h-full overflow-y-auto">
         <DashboardSidebar userRole={userRole} />
         <DashboardSidebarMobile
           isOpen={mobileSidebarOpen}
