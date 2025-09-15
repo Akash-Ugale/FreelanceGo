@@ -20,7 +20,6 @@ export default function AuthContextProvider({ children }) {
     setUserRole(null)
   }
 
-  // return true = valid, false = invalid
   const isTokenValid = async (token) => {
     try {
       const response = await apiClient.get("/api/isAuthenticated", {
@@ -76,7 +75,7 @@ export default function AuthContextProvider({ children }) {
     }
 
     checkAuth()
-  }, [])
+  }, [token])
 
   return (
     <AuthContext.Provider
@@ -91,6 +90,7 @@ export default function AuthContextProvider({ children }) {
         setAuthLoading,
         logoutUser,
         token,
+        setToken,
       }}
     >
       {children}

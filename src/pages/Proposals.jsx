@@ -1,25 +1,10 @@
 "use client"
 
-import { useState } from "react"
-import DashboardHeader from "@/components/dashboard/dashboard-header"
-import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
 import ProposalsContent from "@/components/dashboard/tabs/proposals-content"
 import { useAuth } from "@/context/AuthContext"
 
 export default function Proposals() {
-  const {userRole} = useAuth() // no type annotation here
+  const { userRole } = useAuth() // no type annotation here
 
-  return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader userRole={userRole} />
-      <div className="flex">
-        <DashboardSidebar userRole={userRole} />
-        <main className="flex-1 p-4 md:p-6">
-          <ProposalsContent userRole={userRole} />
-        </main>
-      </div>
-    </div>
-  )
+  return <ProposalsContent userRole={userRole} />
 }
-
-

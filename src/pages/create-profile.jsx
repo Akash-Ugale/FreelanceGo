@@ -25,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useAuth } from "@/context/AuthContext"
 import { ArrowLeft, ArrowRight, Briefcase, Plus, User, X } from "lucide-react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
@@ -57,13 +58,12 @@ const experienceLevels = [
 ]
 
 export default function CreateProfile() {
-  //   const router = useRouter()
   const [searchParams] = useSearchParams()
   const role = searchParams.get("role")
 
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
-  const {token} = useAuth()
+  const { token, setToken } = useAuth()
 
   const [formData, setFormData] = useState({
     // * Common fields
@@ -123,13 +123,14 @@ export default function CreateProfile() {
       }
 
       const {
-        data: { token },
+        data: { token: newToken },
       } = response
-      if (!token) {
+      if (!newToken) {
         console.error("Token not received from backend")
         return
       }
-      localStorage.setItem("token", token)
+      localStorage.setItem("token", newToken)
+      setToken(newToken)
       toast.success("Profile created successfully")
       setTimeout(() => {
         navigate("/dashboard")

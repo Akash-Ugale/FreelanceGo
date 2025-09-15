@@ -1,13 +1,30 @@
-"use client"
-
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Search, MapPin, Clock, DollarSign, Star, Bookmark, Send, Filter, Users, Briefcase, Award } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { useAuth } from "@/context/AuthContext"
+import {
+  Award,
+  Bookmark,
+  Briefcase,
+  Clock,
+  DollarSign,
+  Filter,
+  MapPin,
+  Search,
+  Send,
+  Star,
+  Users,
+} from "lucide-react"
+import { useState } from "react"
 
 const jobs = [
   {
@@ -15,7 +32,7 @@ const jobs = [
     title: "Full-Stack React Developer for E-commerce Platform",
     description:
       "We're looking for an experienced full-stack developer to build a modern e-commerce platform using React, Node.js, and PostgreSQL. The project involves creating a responsive frontend, robust backend APIs, and integrating payment systems.",
-    budget: "$3,000 - $5,000",
+    budget: "3,000 - 5,000",
     duration: "2-3 months",
     skillsRequired: ["React", "Node.js", "PostgreSQL", "Stripe API"],
     client: {
@@ -36,7 +53,7 @@ const jobs = [
     title: "Mobile App UI/UX Design for Fitness App",
     description:
       "Design a modern, intuitive mobile app interface for a fitness tracking application. We need someone who can create wireframes, prototypes, and final designs that work well on both iOS and Android platforms.",
-    budget: "$1,500 - $2,500",
+    budget: "1,500 - 2,500",
     duration: "3-4 weeks",
     skillsRequired: ["Figma", "UI/UX Design", "Mobile Design", "Prototyping"],
     client: {
@@ -57,9 +74,14 @@ const jobs = [
     title: "Content Writer for Tech Blog",
     description:
       "We need a skilled content writer to create engaging blog posts about emerging technologies, software development trends, and industry insights. Must have experience writing technical content for developer audiences.",
-    budget: "$50 - $100/hour",
+    budget: "50 - 100/hour",
     duration: "Ongoing",
-    skillsRequired: ["Technical Writing", "SEO", "Content Strategy", "Research"],
+    skillsRequired: [
+      "Technical Writing",
+      "SEO",
+      "Content Strategy",
+      "Research",
+    ],
     client: {
       name: "DevInsights Media",
       rating: 4.9,
@@ -82,7 +104,7 @@ const freelancers = [
     title: "Full-Stack Developer & UI/UX Designer",
     description:
       "Experienced developer with 8+ years in React, Node.js, and modern web technologies. Specialized in creating scalable web applications and beautiful user interfaces.",
-    hourlyRate: "$75 - $120/hour",
+    hourlyRate: "75 - 120/hour",
     skills: ["React", "Node.js", "TypeScript", "PostgreSQL", "Figma"],
     rating: 4.9,
     reviewsCount: 127,
@@ -98,7 +120,7 @@ const freelancers = [
     title: "Mobile App Developer",
     description:
       "iOS and Android developer with expertise in React Native and Flutter. Passionate about creating smooth, performant mobile experiences that users love.",
-    hourlyRate: "$60 - $95/hour",
+    hourlyRate: "60 - 95/hour",
     skills: ["React Native", "Flutter", "iOS", "Android", "Firebase"],
     rating: 4.8,
     reviewsCount: 93,
@@ -106,7 +128,11 @@ const freelancers = [
     location: "Seattle, WA",
     verified: true,
     availability: "Available in 2 weeks",
-    portfolio: ["Fitness Tracking App", "Food Delivery App", "Social Media App"],
+    portfolio: [
+      "Fitness Tracking App",
+      "Food Delivery App",
+      "Social Media App",
+    ],
   },
   {
     id: 3,
@@ -114,7 +140,7 @@ const freelancers = [
     title: "Content Strategist & Technical Writer",
     description:
       "Technical writer and content strategist with 6+ years of experience creating compelling content for tech companies, startups, and developer tools.",
-    hourlyRate: "$45 - $75/hour",
+    hourlyRate: "45 - 75/hour",
     skills: ["Technical Writing", "Content Strategy", "SEO", "Documentation"],
     rating: 4.9,
     reviewsCount: 156,
@@ -126,23 +152,27 @@ const freelancers = [
   },
 ]
 
-
-
-export default function BrowseJobsContent({ userRole }) {
+export default function BrowseJobsContent() {
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [budgetFilter, setBudgetFilter] = useState("all")
   const [savedJobs, setSavedJobs] = useState([])
+  const { userRole } = useAuth()
 
   const toggleSaveJob = (jobId) => {
-    setSavedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
+    setSavedJobs((prev) =>
+      prev.includes(jobId)
+        ? prev.filter((id) => id !== jobId)
+        : [...prev, jobId]
+    )
   }
 
   const filteredJobs = jobs.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = categoryFilter === "all" || job.category.toLowerCase() === categoryFilter
+    const matchesCategory =
+      categoryFilter === "all" || job.category.toLowerCase() === categoryFilter
     return matchesSearch && matchesCategory
   })
 
@@ -150,7 +180,9 @@ export default function BrowseJobsContent({ userRole }) {
     const matchesSearch =
       freelancer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       freelancer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      freelancer.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+      freelancer.skills.some((skill) =>
+        skill.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     return matchesSearch
   })
 
@@ -159,14 +191,20 @@ export default function BrowseJobsContent({ userRole }) {
       <div className="space-y-6">
         {/* Header */}
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Find Talent</h1>
-          <p className="text-muted-foreground text-sm md:text-base">Discover skilled freelancers for your projects</p>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Find Talent
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Discover skilled freelancers for your projects
+          </p>
         </div>
 
         {/* Search and Filters */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg md:text-xl">Search Freelancers</CardTitle>
+            <CardTitle className="text-lg md:text-xl">
+              Search Freelancers
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
@@ -193,7 +231,10 @@ export default function BrowseJobsContent({ userRole }) {
                   <SelectItem value="marketing">Marketing</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="w-full md:w-auto bg-transparent">
+              <Button
+                variant="outline"
+                className="w-full md:w-auto bg-transparent"
+              >
                 <Filter className="mr-2 h-4 w-4" />
                 More Filters
               </Button>
@@ -204,7 +245,10 @@ export default function BrowseJobsContent({ userRole }) {
         {/* Freelancers List */}
         <div className="space-y-4">
           {filteredFreelancers.map((freelancer) => (
-            <Card key={freelancer.id} className="hover:shadow-md transition-shadow">
+            <Card
+              key={freelancer.id}
+              className="hover:shadow-md transition-shadow"
+            >
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start space-y-4 lg:space-y-0 lg:space-x-6">
                   {/* Avatar and Basic Info */}
@@ -225,7 +269,9 @@ export default function BrowseJobsContent({ userRole }) {
                     </Avatar>
                     <div className="lg:text-center">
                       <div className="flex items-center space-x-2 lg:justify-center">
-                        <h3 className="font-semibold text-lg">{freelancer.name}</h3>
+                        <h3 className="font-semibold text-lg">
+                          {freelancer.name}
+                        </h3>
                         {freelancer.verified && (
                           <Badge variant="secondary" className="text-xs">
                             <Award className="mr-1 h-3 w-3" />
@@ -233,23 +279,35 @@ export default function BrowseJobsContent({ userRole }) {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-sm text-muted-foreground">{freelancer.title}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {freelancer.title}
+                      </p>
                       <div className="flex items-center space-x-1 mt-1 lg:justify-center">
                         <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{freelancer.rating}</span>
-                        <span className="text-sm text-muted-foreground">({freelancer.reviewsCount})</span>
+                        <span className="text-sm font-medium">
+                          {freelancer.rating}
+                        </span>
+                        <span className="text-sm text-muted-foreground">
+                          ({freelancer.reviewsCount})
+                        </span>
                       </div>
                     </div>
                   </div>
 
                   {/* Main Content */}
                   <div className="flex-1 space-y-4">
-                    <p className="text-sm text-muted-foreground">{freelancer.description}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {freelancer.description}
+                    </p>
 
                     {/* Skills */}
                     <div className="flex flex-wrap gap-2">
                       {freelancer.skills.map((skill, index) => (
-                        <Badge key={index} variant="outline" className="text-xs">
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
                           {skill}
                         </Badge>
                       ))}
@@ -258,12 +316,18 @@ export default function BrowseJobsContent({ userRole }) {
                     {/* Stats */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <div className="font-medium">{freelancer.hourlyRate}</div>
+                        <div className="font-medium">
+                          {freelancer.hourlyRate}
+                        </div>
                         <div className="text-muted-foreground">Hourly Rate</div>
                       </div>
                       <div>
-                        <div className="font-medium">{freelancer.completedJobs}</div>
-                        <div className="text-muted-foreground">Jobs Completed</div>
+                        <div className="font-medium">
+                          {freelancer.completedJobs}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Jobs Completed
+                        </div>
                       </div>
                       <div>
                         <div className="font-medium flex items-center">
@@ -273,17 +337,27 @@ export default function BrowseJobsContent({ userRole }) {
                         <div className="text-muted-foreground">Location</div>
                       </div>
                       <div>
-                        <div className="font-medium text-green-600">{freelancer.availability}</div>
-                        <div className="text-muted-foreground">Availability</div>
+                        <div className="font-medium text-green-600">
+                          {freelancer.availability}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Availability
+                        </div>
                       </div>
                     </div>
 
                     {/* Portfolio */}
                     <div>
-                      <div className="text-sm font-medium mb-2">Recent Work:</div>
+                      <div className="text-sm font-medium mb-2">
+                        Recent Work:
+                      </div>
                       <div className="flex flex-wrap gap-2">
                         {freelancer.portfolio.map((work, index) => (
-                          <Badge key={index} variant="secondary" className="text-xs">
+                          <Badge
+                            key={index}
+                            variant="secondary"
+                            className="text-xs"
+                          >
                             {work}
                           </Badge>
                         ))}
@@ -297,7 +371,11 @@ export default function BrowseJobsContent({ userRole }) {
                       <Send className="mr-2 h-4 w-4" />
                       Invite
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full bg-transparent">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full bg-transparent"
+                    >
                       View Profile
                     </Button>
                     <Button variant="ghost" size="sm" className="w-full">
@@ -318,11 +396,14 @@ export default function BrowseJobsContent({ userRole }) {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Browse Jobs</h1>
-        <p className="text-muted-foreground text-sm md:text-base">Find your next freelance opportunity</p>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Browse Jobs
+        </h1>
+        <p className="text-muted-foreground text-sm md:text-base">
+          Find your next freelance opportunity
+        </p>
       </div>
 
-      {/* Search and Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">Search Jobs</CardTitle>
@@ -363,7 +444,10 @@ export default function BrowseJobsContent({ userRole }) {
                 <SelectItem value="over-5000">Over $5,000</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="w-full md:w-auto bg-transparent">
+            <Button
+              variant="outline"
+              className="w-full md:w-auto bg-transparent"
+            >
               <Filter className="mr-2 h-4 w-4" />
               More Filters
             </Button>
@@ -383,19 +467,19 @@ export default function BrowseJobsContent({ userRole }) {
                     <h3 className="font-semibold text-lg mb-2">{job.title}</h3>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center">
-                        <DollarSign className="mr-1 h-3 w-3" />
+                        <DollarSign className="mr-1 h-4 w-4" />
                         {job.budget}
                       </span>
                       <span className="flex items-center">
-                        <Clock className="mr-1 h-3 w-3" />
+                        <Clock className="mr-1 h-4 w-4" />
                         {job.duration}
                       </span>
                       <span className="flex items-center">
-                        <Users className="mr-1 h-3 w-3" />
+                        <Users className="mr-1 h-4 w-4" />
                         {job.proposalsCount} proposals
                       </span>
                       <span className="flex items-center">
-                        <Briefcase className="mr-1 h-3 w-3" />
+                        <Briefcase className="mr-1 h-4 w-4" />
                         {job.experienceLevel}
                       </span>
                     </div>
@@ -407,7 +491,9 @@ export default function BrowseJobsContent({ userRole }) {
                 </div>
 
                 {/* Description */}
-                <p className="text-sm text-muted-foreground line-clamp-3">{job.description}</p>
+                <p className="text-sm text-muted-foreground line-clamp-3">
+                  {job.description}
+                </p>
 
                 {/* Skills */}
                 <div className="flex flex-wrap gap-2">
@@ -437,7 +523,9 @@ export default function BrowseJobsContent({ userRole }) {
                     </Avatar>
                     <div>
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium text-sm">{job.client.name}</span>
+                        <span className="font-medium text-sm">
+                          {job.client.name}
+                        </span>
                         {job.client.verified && (
                           <Badge variant="secondary" className="text-xs">
                             <Award className="mr-1 h-3 w-3" />
@@ -445,7 +533,7 @@ export default function BrowseJobsContent({ userRole }) {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                         <span className="flex items-center">
                           <Star className="mr-1 h-3 w-3 fill-yellow-400 text-yellow-400" />
                           {job.client.rating} ({job.client.reviewsCount})
@@ -463,9 +551,15 @@ export default function BrowseJobsContent({ userRole }) {
                       variant="ghost"
                       size="sm"
                       onClick={() => toggleSaveJob(job.id)}
-                      className={savedJobs.includes(job.id) ? "text-blue-600" : ""}
+                      className={
+                        savedJobs.includes(job.id) ? "text-blue-600" : ""
+                      }
                     >
-                      <Bookmark className={`mr-2 h-4 w-4 ${savedJobs.includes(job.id) ? "fill-current" : ""}`} />
+                      <Bookmark
+                        className={`mr-2 h-4 w-4 ${
+                          savedJobs.includes(job.id) ? "fill-current" : ""
+                        }`}
+                      />
                       {savedJobs.includes(job.id) ? "Saved" : "Save"}
                     </Button>
                     <Button size="sm">

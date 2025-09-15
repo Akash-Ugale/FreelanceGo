@@ -1,10 +1,8 @@
 import { apiClient } from "@/api/AxiosServiceApi"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
-import DashboardSidebarMobile from "@/components/dashboard/dashboard-sidebar-mobile"
 import FullscreenLoader from "@/components/FullScreenLoader"
 import { useAuth } from "@/context/AuthContext"
-import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate } from "react-router-dom"
 
@@ -12,10 +10,6 @@ export default function Dashboard() {
   const { userRole, authLoading } = useAuth()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const navigate = useNavigate()
-
-  if (authLoading) {
-    return <FullscreenLoader show={true} />
-  }
 
   async function validateToken(token) {
     try {
@@ -44,23 +38,20 @@ export default function Dashboard() {
     }
   }, [])
 
+  if (authLoading) {
+    return <FullscreenLoader show={true} />
+  }
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen max-h-screen overflow-hidden bg-background flex flex-col">
       {/* Dashboard Header */}
       <div>
         <DashboardHeader userRole={userRole} />
       </div>
 
       {/* Layout Content */}
-      <div className="flex">
+      <div className="relative flex-1 flex max-h-full overflow-y-auto">
         <DashboardSidebar userRole={userRole} />
-        <DashboardSidebarMobile
-          isOpen={mobileSidebarOpen}
-          setIsOpen={setMobileSidebarOpen}
-          userRole={userRole}
-          freelancerItems={freelancerItems}
-          clientItems={clientItems}
-        />
         <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>

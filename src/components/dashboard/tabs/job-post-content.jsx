@@ -1,32 +1,15 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Checkbox } from "@/components/ui/checkbox"
+import { Button } from "@/components/ui/button"
 import {
-  MoreHorizontal,
-  Search,
-  Filter,
-  Plus,
-  Eye,
-  Edit,
-  Copy,
-  Pause,
-  Archive,
-  Trash2,
-  Users,
-  DollarSign,
-  Clock,
-  Calendar,
-  AlertCircle,
-  CheckCircle,
-  FileText,
-} from "lucide-react"
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,7 +17,36 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { userRoles } from "@/utils/constants"
+import {
+  AlertCircle,
+  Archive,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Copy,
+  DollarSign,
+  Edit,
+  Eye,
+  FileText,
+  Filter,
+  MoreHorizontal,
+  Pause,
+  Plus,
+  Search,
+  Trash2,
+  Users,
+} from "lucide-react"
+import { useState } from "react"
 
 const jobPosts = [
   {
@@ -49,7 +61,8 @@ const jobPosts = [
     postedDate: "2024-01-20",
     deadline: "2024-03-15",
     skills: ["React", "Node.js", "PostgreSQL"],
-    description: "Looking for an experienced full-stack developer to build a modern web application...",
+    description:
+      "Looking for an experienced full-stack developer to build a modern web application...",
     experienceLevel: "Expert",
   },
   {
@@ -64,7 +77,8 @@ const jobPosts = [
     postedDate: "2024-01-18",
     deadline: "2024-02-28",
     skills: ["Brand Design", "Logo Design", "Adobe Creative Suite"],
-    description: "Need a creative designer to develop a complete brand identity for our startup...",
+    description:
+      "Need a creative designer to develop a complete brand identity for our startup...",
     experienceLevel: "Intermediate",
   },
   {
@@ -79,7 +93,8 @@ const jobPosts = [
     postedDate: "2024-01-10",
     deadline: "2024-02-20",
     skills: ["React Native", "iOS", "Android"],
-    description: "Develop a cross-platform mobile application with modern UI/UX...",
+    description:
+      "Develop a cross-platform mobile application with modern UI/UX...",
     experienceLevel: "Expert",
   },
   {
@@ -94,7 +109,8 @@ const jobPosts = [
     postedDate: "2024-01-15",
     deadline: "2024-02-15",
     skills: ["Technical Writing", "SEO", "Content Strategy"],
-    description: "Looking for a technical writer to create engaging blog posts...",
+    description:
+      "Looking for a technical writer to create engaging blog posts...",
     experienceLevel: "Intermediate",
   },
   {
@@ -109,7 +125,8 @@ const jobPosts = [
     postedDate: "2024-01-25",
     deadline: "2024-03-01",
     skills: ["Shopify", "E-commerce", "Payment Integration"],
-    description: "Set up a complete e-commerce solution with payment processing...",
+    description:
+      "Set up a complete e-commerce solution with payment processing...",
     experienceLevel: "Intermediate",
   },
 ]
@@ -120,7 +137,7 @@ export default function JobPostsContent({ userRole }) {
   const [selectedJobs, setSelectedJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState("all")
 
-  if (userRole === "freelancer") {
+  if (userRole === userRoles.FREELANCER) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <Card className="w-full max-w-md text-center">
@@ -128,7 +145,8 @@ export default function JobPostsContent({ userRole }) {
             <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
             <CardTitle>Switch to Client Role</CardTitle>
             <CardDescription>
-              You need to be in client mode to manage job posts. Switch your role to access this feature.
+              You need to be in client mode to manage job posts. Switch your
+              role to access this feature.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -176,15 +194,19 @@ export default function JobPostsContent({ userRole }) {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.category.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === "all" || job.status.toLowerCase() === statusFilter
-    const matchesTab = selectedTab === "all" || job.status.toLowerCase() === selectedTab
+    const matchesStatus =
+      statusFilter === "all" || job.status.toLowerCase() === statusFilter
+    const matchesTab =
+      selectedTab === "all" || job.status.toLowerCase() === selectedTab
     return matchesSearch && matchesStatus && matchesTab
   })
 
   const getJobStats = () => {
     const total = jobPosts.length
     const active = jobPosts.filter((job) => job.status === "Active").length
-    const completed = jobPosts.filter((job) => job.status === "Completed").length
+    const completed = jobPosts.filter(
+      (job) => job.status === "Completed"
+    ).length
     const drafts = jobPosts.filter((job) => job.status === "Draft").length
     const totalProposals = jobPosts.reduce((sum, job) => sum + job.proposals, 0)
     const totalViews = jobPosts.reduce((sum, job) => sum + job.views, 0)
@@ -194,7 +216,11 @@ export default function JobPostsContent({ userRole }) {
   const stats = getJobStats()
 
   const toggleJobSelection = (jobId) => {
-    setSelectedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
+    setSelectedJobs((prev) =>
+      prev.includes(jobId)
+        ? prev.filter((id) => id !== jobId)
+        : [...prev, jobId]
+    )
   }
 
   const selectAllJobs = () => {
@@ -210,7 +236,9 @@ export default function JobPostsContent({ userRole }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Job Posts</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            My Job Posts
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             Manage your posted jobs and track their performance
           </p>
@@ -228,7 +256,7 @@ export default function JobPostsContent({ userRole }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-6">
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
@@ -262,7 +290,7 @@ export default function JobPostsContent({ userRole }) {
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Drafts</CardTitle>
             <FileText className="h-4 w-4 text-yellow-600" />
@@ -271,7 +299,7 @@ export default function JobPostsContent({ userRole }) {
             <div className="text-2xl font-bold">{stats.drafts}</div>
             <p className="text-xs text-muted-foreground">Unpublished</p>
           </CardContent>
-        </Card>
+        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -300,23 +328,31 @@ export default function JobPostsContent({ userRole }) {
       <Card>
         <CardHeader>
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <Tabs value={selectedTab} onValueChange={setSelectedTab}>
+            <Tabs
+              value={selectedTab}
+              onValueChange={setSelectedTab}
+              className="hidden"
+            >
               <TabsList>
                 <TabsTrigger value="all">All ({jobPosts.length})</TabsTrigger>
-                <TabsTrigger value="active">Active ({stats.active})</TabsTrigger>
-                <TabsTrigger value="completed">Completed ({stats.completed})</TabsTrigger>
+                <TabsTrigger value="active">
+                  Active ({stats.active})
+                </TabsTrigger>
+                <TabsTrigger value="completed">
+                  Completed ({stats.completed})
+                </TabsTrigger>
                 <TabsTrigger value="draft">Drafts ({stats.drafts})</TabsTrigger>
               </TabsList>
             </Tabs>
 
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative">
+            <div className="flex flex-col sm:flex-row gap-4 w-full">
+              <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                 <Input
                   placeholder="Search jobs..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-full sm:w-[250px]"
+                  className="pl-10 w-full"
                 />
               </div>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -337,10 +373,16 @@ export default function JobPostsContent({ userRole }) {
           {selectedJobs.length > 0 && (
             <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
               <span className="text-sm font-medium">
-                {selectedJobs.length} job{selectedJobs.length > 1 ? "s" : ""} selected
+                {selectedJobs.length} job{selectedJobs.length > 1 ? "s" : ""}{" "}
+                selected
               </span>
               <div className="flex items-center space-x-2">
-                <Button variant="outline" size="sm" onClick={clearSelection} className="bg-transparent">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={clearSelection}
+                  className="bg-transparent"
+                >
                   Clear
                 </Button>
                 <Button variant="outline" size="sm" className="bg-transparent">
@@ -377,17 +419,28 @@ export default function JobPostsContent({ userRole }) {
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
                           <h3 className="font-semibold text-lg">{job.title}</h3>
-                          <Badge variant={getStatusColor(job.status)} className="flex items-center space-x-1">
+                          <Badge
+                            variant={getStatusColor(job.status)}
+                            className="flex items-center space-x-1"
+                          >
                             {getStatusIcon(job.status)}
                             <span>{job.status}</span>
                           </Badge>
                         </div>
-                        <p className="text-muted-foreground text-sm mb-2">{job.category}</p>
-                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{job.description}</p>
+                        <p className="text-muted-foreground text-sm mb-2">
+                          {job.category}
+                        </p>
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          {job.description}
+                        </p>
 
                         <div className="flex flex-wrap gap-2 mb-3">
                           {job.skills.map((skill) => (
-                            <Badge key={skill} variant="secondary" className="text-xs">
+                            <Badge
+                              key={skill}
+                              variant="secondary"
+                              className="text-xs"
+                            >
                               {skill}
                             </Badge>
                           ))}
@@ -397,7 +450,7 @@ export default function JobPostsContent({ userRole }) {
                           <div className="flex items-center space-x-1">
                             <DollarSign className="h-4 w-4" />
                             <span>
-                              ${job.budget.toLocaleString()}
+                              {job.budget.toLocaleString()}
                               {job.budgetType === "hourly" && "/hr"}
                             </span>
                           </div>
@@ -421,13 +474,21 @@ export default function JobPostsContent({ userRole }) {
                       </div>
 
                       <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent"
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="outline" size="sm" className="bg-transparent">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="bg-transparent"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
