@@ -1,9 +1,6 @@
-import { cn } from "@/lib/utils"
-import { Dialog, DialogPanel, Transition, TransitionChild } from "@headlessui/react"
-import { X } from "lucide-react"
-import { Fragment } from "react"
-import DashboardSidebarContent from "./dashboard-sidebar-content"
 import { useAuth } from "@/context/AuthContext"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "../ui/sheet"
+import DashboardSidebarContent from "./dashboard-sidebar-content"
 
 export default function DashboardSidebarMobile({
   isOpen,
@@ -13,54 +10,18 @@ export default function DashboardSidebarMobile({
 }) {
   const { userRole } = useAuth()
   return (
-    <Transition show={isOpen} as={Fragment}>
-      <Dialog as="div" className="relative z-40 md:hidden" onClose={setIsOpen}>
-        <TransitionChild
-          as={Fragment}
-          enter="transition-opacity ease-linear duration-300"
-          enterFrom="opacity-0"
-          enterTo="opacity-100"
-          leave="transition-opacity ease-linear duration-200"
-          leaveFrom="opacity-100"
-          leaveTo="opacity-0"
-        >
-          <div className="fixed inset-0 bg-black bg-opacity-25" />
-        </TransitionChild>
-
-        <div className="fixed inset-0 flex z-40">
-          <TransitionChild
-            as={Fragment}
-            enter="transition ease-in-out duration-300 transform"
-            enterFrom="-translate-x-full"
-            enterTo="translate-x-0"
-            leave="transition ease-in-out duration-300 transform"
-            leaveFrom="translate-x-0"
-            leaveTo="-translate-x-full"
-          >
-            <DialogPanel
-              className={cn(
-                "relative w-64 bg-background shadow-xl h-full flex flex-col"
-              )}
-            >
-              {/* Close Button */}
-              <button
-                className="absolute top-4 right-4 z-50 text-muted-foreground"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-6 w-6" />
-              </button>
-
-              {/* Sidebar Content */}
-              <DashboardSidebarContent
-                userRole={userRole}
-                freelancerItems={freelancerItems}
-                clientItems={clientItems}
-                onItemClick={() => setIsOpen(false)}
-              />
-            </DialogPanel>
-          </TransitionChild>
-        </div>
-      </Dialog>
-    </Transition>
+    <Sheet open={isOpen} onOpenChange={setIsOpen}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>Dashboard</SheetTitle>
+          <SheetDescription>
+            <DashboardSidebarContent
+              freelancerItems={freelancerItems}
+              clientItems={clientItems}
+            />
+          </SheetDescription>
+        </SheetHeader>
+      </SheetContent>
+    </Sheet>
   )
 }

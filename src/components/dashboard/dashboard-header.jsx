@@ -9,17 +9,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useAuth } from "@/context/AuthContext"
 import {
-  Bell,
-  CreditCard,
-  HelpCircle,
-  LogOut,
-  Menu,
-  Settings,
-  User,
-} from "lucide-react"
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet"
+import { useAuth } from "@/context/AuthContext"
+import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import FullScreenLoader from "../FullScreenLoader"

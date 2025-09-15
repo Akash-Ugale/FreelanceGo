@@ -1,14 +1,11 @@
 import { cn } from "@/lib/utils"
 import { userRoles } from "@/utils/constants"
+import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { Settings } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
-export default function DashboardSidebarContent({
-  userRole,
-  freelancerItems,
-  clientItems,
-}) {
+export default function DashboardSidebarContent({ userRole }) {
   const [activeItem, setActiveItem] = useState("/dashboard")
   const sidebarItems =
     userRole === userRoles.FREELANCER ? freelancerItems : clientItems

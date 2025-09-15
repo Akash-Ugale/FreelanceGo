@@ -58,7 +58,6 @@ const experienceLevels = [
 ]
 
 export default function CreateProfile() {
-  //   const router = useRouter()
   const [searchParams] = useSearchParams()
   const role = searchParams.get("role")
 

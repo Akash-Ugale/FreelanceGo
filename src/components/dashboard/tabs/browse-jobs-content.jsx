@@ -32,7 +32,7 @@ const jobs = [
     title: "Full-Stack React Developer for E-commerce Platform",
     description:
       "We're looking for an experienced full-stack developer to build a modern e-commerce platform using React, Node.js, and PostgreSQL. The project involves creating a responsive frontend, robust backend APIs, and integrating payment systems.",
-    budget: "$3,000 - $5,000",
+    budget: "3,000 - 5,000",
     duration: "2-3 months",
     skillsRequired: ["React", "Node.js", "PostgreSQL", "Stripe API"],
     client: {
@@ -53,7 +53,7 @@ const jobs = [
     title: "Mobile App UI/UX Design for Fitness App",
     description:
       "Design a modern, intuitive mobile app interface for a fitness tracking application. We need someone who can create wireframes, prototypes, and final designs that work well on both iOS and Android platforms.",
-    budget: "$1,500 - $2,500",
+    budget: "1,500 - 2,500",
     duration: "3-4 weeks",
     skillsRequired: ["Figma", "UI/UX Design", "Mobile Design", "Prototyping"],
     client: {
@@ -74,7 +74,7 @@ const jobs = [
     title: "Content Writer for Tech Blog",
     description:
       "We need a skilled content writer to create engaging blog posts about emerging technologies, software development trends, and industry insights. Must have experience writing technical content for developer audiences.",
-    budget: "$50 - $100/hour",
+    budget: "50 - 100/hour",
     duration: "Ongoing",
     skillsRequired: [
       "Technical Writing",
@@ -104,7 +104,7 @@ const freelancers = [
     title: "Full-Stack Developer & UI/UX Designer",
     description:
       "Experienced developer with 8+ years in React, Node.js, and modern web technologies. Specialized in creating scalable web applications and beautiful user interfaces.",
-    hourlyRate: "$75 - $120/hour",
+    hourlyRate: "75 - 120/hour",
     skills: ["React", "Node.js", "TypeScript", "PostgreSQL", "Figma"],
     rating: 4.9,
     reviewsCount: 127,
@@ -120,7 +120,7 @@ const freelancers = [
     title: "Mobile App Developer",
     description:
       "iOS and Android developer with expertise in React Native and Flutter. Passionate about creating smooth, performant mobile experiences that users love.",
-    hourlyRate: "$60 - $95/hour",
+    hourlyRate: "60 - 95/hour",
     skills: ["React Native", "Flutter", "iOS", "Android", "Firebase"],
     rating: 4.8,
     reviewsCount: 93,
@@ -140,7 +140,7 @@ const freelancers = [
     title: "Content Strategist & Technical Writer",
     description:
       "Technical writer and content strategist with 6+ years of experience creating compelling content for tech companies, startups, and developer tools.",
-    hourlyRate: "$45 - $75/hour",
+    hourlyRate: "45 - 75/hour",
     skills: ["Technical Writing", "Content Strategy", "SEO", "Documentation"],
     rating: 4.9,
     reviewsCount: 156,
@@ -404,7 +404,6 @@ export default function BrowseJobsContent() {
         </p>
       </div>
 
-      {/* Search and Filters */}
       <Card>
         <CardHeader>
           <CardTitle className="text-lg md:text-xl">Search Jobs</CardTitle>
@@ -468,19 +467,19 @@ export default function BrowseJobsContent() {
                     <h3 className="font-semibold text-lg mb-2">{job.title}</h3>
                     <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                       <span className="flex items-center">
-                        <DollarSign className="mr-1 h-3 w-3" />
+                        <DollarSign className="mr-1 h-4 w-4" />
                         {job.budget}
                       </span>
                       <span className="flex items-center">
-                        <Clock className="mr-1 h-3 w-3" />
+                        <Clock className="mr-1 h-4 w-4" />
                         {job.duration}
                       </span>
                       <span className="flex items-center">
-                        <Users className="mr-1 h-3 w-3" />
+                        <Users className="mr-1 h-4 w-4" />
                         {job.proposalsCount} proposals
                       </span>
                       <span className="flex items-center">
-                        <Briefcase className="mr-1 h-3 w-3" />
+                        <Briefcase className="mr-1 h-4 w-4" />
                         {job.experienceLevel}
                       </span>
                     </div>
@@ -534,7 +533,7 @@ export default function BrowseJobsContent() {
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground">
+                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
                         <span className="flex items-center">
                           <Star className="mr-1 h-3 w-3 fill-yellow-400 text-yellow-400" />
                           {job.client.rating} ({job.client.reviewsCount})

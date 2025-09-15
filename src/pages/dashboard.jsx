@@ -1,10 +1,8 @@
 import { apiClient } from "@/api/AxiosServiceApi"
 import DashboardHeader from "@/components/dashboard/dashboard-header"
 import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
-import DashboardSidebarMobile from "@/components/dashboard/dashboard-sidebar-mobile"
 import FullscreenLoader from "@/components/FullScreenLoader"
 import { useAuth } from "@/context/AuthContext"
-import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { useEffect, useState } from "react"
 import { Outlet, useNavigate } from "react-router-dom"
 
@@ -54,13 +52,6 @@ export default function Dashboard() {
       {/* Layout Content */}
       <div className="relative flex-1 flex max-h-full overflow-y-auto">
         <DashboardSidebar userRole={userRole} />
-        <DashboardSidebarMobile
-          isOpen={mobileSidebarOpen}
-          setIsOpen={setMobileSidebarOpen}
-          userRole={userRole}
-          freelancerItems={freelancerItems}
-          clientItems={clientItems}
-        />
         <main className="flex-1 p-4 md:p-6">
           <Outlet />
         </main>
