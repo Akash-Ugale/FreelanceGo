@@ -78,15 +78,10 @@ export default function ProfileSetup() {
         }
       )
       console.log(response)
-      const {
-        status,
-        data: { token: newToken },
-      } = response
+      const { status, data: newToken } = response
       if (status === 200) {
         localStorage.setItem("token", newToken)
-        setTimeout(() => {
-          navigate("/dashboard", { replace: true })
-        }, 1000)
+        navigate("/dashboard", { replace: true })
       }
     } catch (error) {
       console.error("Failed to check role:", error)
@@ -262,7 +257,7 @@ export default function ProfileSetup() {
                     </CardHeader>
 
                     <CardContent className="pt-0">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="grid grid-cols-2 gap-4 mb-4 flex-1">
                         <div className="text-center p-3 bg-white rounded-lg">
                           <div className="text-2xl font-bold text-primary">
                             {existingClient.projectsPosted}
@@ -298,12 +293,14 @@ export default function ProfileSetup() {
 
           {/* Create New Profile Section */}
           <div>
-            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-              <Plus className="h-6 w-6 text-primary" />
-              {existingFreelancer || existingClient
-                ? "Create Additional Profile"
-                : "Create Your Profile"}
-            </h2>
+            {(!existingClient || !existingFreelancer) && (
+              <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                <Plus className="h-6 w-6 text-primary" />
+                {existingFreelancer || existingClient
+                  ? "Create Additional Profile"
+                  : "Create Your Profile"}
+              </h2>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Freelancer Option */}

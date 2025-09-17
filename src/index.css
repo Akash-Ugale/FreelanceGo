@@ -4,6 +4,8 @@
 
 * {
   font-family: "Inter", sans-serif;
+  scrollbar-width: thin;
+  scrollbar-color: white transparent;
 }
 
 @layer base {

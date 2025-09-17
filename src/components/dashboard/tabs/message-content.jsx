@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { userRoles } from "@/utils/constants"
 import {
   Archive,
   MoreVertical,
@@ -156,7 +157,7 @@ export default function MessagesContent({ userRole }) {
         </h1>
         <p className="text-muted-foreground text-sm md:text-base">
           Communicate with your{" "}
-          {userRole === "freelancer" ? "clients" : "freelancers"}
+          {userRole === userRoles.FREELANCER ? "clients" : "freelancers"}
         </p>
       </div>
 

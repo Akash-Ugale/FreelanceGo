@@ -39,7 +39,10 @@ export default function DashboardSidebarContent({ userRole }) {
                   : "text-muted-foreground"
               )}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <item.icon
+                className="h-5 w-5 flex-shrink-0"
+                fill={activeItem === item.href ? "gray" : "none"}
+              />
               <span>{item.title}</span>
             </Link>
           ))}
