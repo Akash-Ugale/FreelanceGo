@@ -17,7 +17,7 @@ export default function Hero() {
         </p>
       </div>
       <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
-        <Button size="lg" className="w-full sm:w-auto">
+        <Button size="lg" className="w-full sm:w-auto text-white">
           Start Hiring
           <ArrowRight className="ml-2 h-4 w-4" />
         </Button>

@@ -22,7 +22,7 @@ export default function DashboardSidebar() {
       <Button
         variant="ghost"
         size="icon"
-        className="absolute -right-3 top-6 z-10 h-6 w-6 rounded-full border bg-background shadow-md"
+        className="absolute left-full top-2 z-10 h-6 w-6 rounded-l-none border bg-background shadow-none"
         onClick={() => setCollapsed(!collapsed)}
       >
         {collapsed ? (

@@ -4,19 +4,20 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { userRoles } from "@/utils/constants"
 import {
-  Archive,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import {
+  ChevronLeft,
   MoreVertical,
   Paperclip,
-  Phone,
   Search,
   Send,
-  Star,
-  Trash2,
-  Video,
+  UserPlus2Icon,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -125,14 +126,13 @@ const messages = [
 ]
 
 export default function MessagesContent({ userRole }) {
-  // const [selectedConversation, setSelectedConversation] = useState(conversations[0])
-
   const initialConversation = conversations.find((c) => c.role !== userRole)
   const [selectedConversation, setSelectedConversation] =
     useState(initialConversation)
 
   const [newMessage, setNewMessage] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
+  const [mobileView, setMobileView] = useState("list") // 👈 added
 
   const handleSendMessage = () => {
     if (newMessage.trim()) {
@@ -143,32 +143,25 @@ export default function MessagesContent({ userRole }) {
 
   const filteredConversations = conversations.filter(
     (conv) =>
-      conv.role !== userRole && // only show opposite role
+      conv.role !== userRole &&
       (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Messages
-        </h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          Communicate with your{" "}
-          {userRole === userRoles.FREELANCER ? "clients" : "freelancers"}
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-4 h-[calc(100vh-200px)]">
+    <div className="space-y-6 flex flex-col">
+      <div className="grid gap-6 lg:grid-cols-4 h-[85vh] overflow-auto sm:overflow-hidden">
         {/* Conversations List */}
-        <Card className="lg:col-span-1">
+        <Card
+          className={`h-full overflow-auto ${
+            mobileView === "chat" ? "hidden" : "block"
+          } lg:block`}
+        >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg">Conversations</CardTitle>
-              <Button size="sm" variant="outline" className="bg-transparent">
-                New Chat
+              <Button size="icon" variant="outline" className="bg-transparent">
+                <UserPlus2Icon className="h-4 w-4 font-bold" />
               </Button>
             </div>
             <div className="relative">
@@ -191,7 +184,10 @@ export default function MessagesContent({ userRole }) {
                       ? "bg-accent"
                       : ""
                   }`}
-                  onClick={() => setSelectedConversation(conversation)}
+                  onClick={() => {
+                    setSelectedConversation(conversation)
+                    setMobileView("chat") // 👈 switch to chat on mobile
+                  }}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="relative">
@@ -237,10 +233,24 @@ export default function MessagesContent({ userRole }) {
         </Card>
 
         {/* Chat Area */}
-        <Card className="lg:col-span-3 flex flex-col">
+        <Card
+          className={`flex flex-col h-[85vh] sm:h-full overflow-auto relative ${
+            mobileView === "list" ? "hidden" : "flex"
+          } lg:flex lg:col-span-3`}
+        >
           {/* Chat Header */}
-          <CardHeader className="pb-3 border-b">
-            <div className="flex items-center justify-between">
+          <CardHeader className="sticky top-0 z-[2] bg-background flex flex-row items-center justify-between gap-2 border-b p-4">
+            {/* Back button for mobile */}
+            <div className="flex gap-1 items-center">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="lg:hidden"
+                onClick={() => setMobileView("list")}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <Avatar className="h-10 w-10">
@@ -251,15 +261,9 @@ export default function MessagesContent({ userRole }) {
                       {selectedConversation.avatar}
                     </AvatarFallback>
                   </Avatar>
-                  {selectedConversation.online && (
-                    <div className="absolute -bottom-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-background" />
-                  )}
                 </div>
                 <div>
                   <h3 className="font-medium">{selectedConversation.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {selectedConversation.project}
-                  </p>
                   <p className="text-xs text-muted-foreground">
                     {selectedConversation.online
                       ? "Online now"
@@ -267,18 +271,30 @@ export default function MessagesContent({ userRole }) {
                   </p>
                 </div>
               </div>
-              <div className="flex items-center space-x-2">
-                <Button size="sm" variant="outline" className="bg-transparent">
-                  <Phone className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" className="bg-transparent">
-                  <Video className="h-4 w-4" />
-                </Button>
-                <Button size="sm" variant="outline" className="bg-transparent">
+            </div>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="bg-transparent"
+                >
                   <MoreVertical className="h-4 w-4" />
                 </Button>
-              </div>
-            </div>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" sideOffset={5}>
+                <DropdownMenuItem onClick={() => alert("Delete")}>
+                  View Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => alert("Delete")}>
+                  Internship Information
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => alert("Delete")} className="text-red-500">
+                  Delete Conversation
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </CardHeader>
 
           {/* Messages */}
@@ -320,20 +336,20 @@ export default function MessagesContent({ userRole }) {
               </div>
 
               {/* Message Input */}
-              <div className="border-t p-4">
-                <div className="flex space-x-2">
+              <div className="border-t p-4 sticky bottom-0 bg-white">
+                <div className="flex items-center space-x-2">
                   <Button
-                    size="sm"
+                    size="icon"
                     variant="outline"
                     className="bg-transparent"
                   >
                     <Paperclip className="h-4 w-4" />
                   </Button>
-                  <Textarea
+                  <Input
                     placeholder="Type your message..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="min-h-[60px] resize-none flex-1"
+                    className="resize-none flex-1 min-h-[20px]"
                     onKeyPress={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault()
@@ -344,11 +360,12 @@ export default function MessagesContent({ userRole }) {
                   <Button
                     onClick={handleSendMessage}
                     disabled={!newMessage.trim()}
+                    size="icon"
                   >
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                {/* <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
                   <span>Press Enter to send, Shift+Enter for new line</span>
                   <div className="flex items-center space-x-2">
                     <Button size="sm" variant="ghost" className="h-6 px-2">
@@ -365,7 +382,7 @@ export default function MessagesContent({ userRole }) {
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
-                </div>
+                </div> */}
               </div>
             </div>
           </CardContent>

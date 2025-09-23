@@ -67,11 +67,11 @@ export default function AboutUs() {
         <div className="text-center space-y-6">
           <h1 className="text-4xl md:text-6xl font-bold tracking-tight">
             About{" "}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">Amane Soft</span>
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">FreelanceGo</span>
           </h1>
           <p className="mx-auto max-w-3xl text-lg md:text-xl text-muted-foreground leading-relaxed">
-            Founded in 2020, Amane Soft has been at the forefront of digital transformation, helping businesses leverage
-            cutting-edge technology to achieve unprecedented growth and efficiency.
+            Founded in 2025, FreelanceGo is a platform that connects businesses with top freelance talent, empowering them to achieve
+            unprecedented growth and efficiency through cutting-edge technology and expertise.
           </p>
         </div>
       </section>

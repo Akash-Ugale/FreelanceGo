@@ -1,5 +1,4 @@
-"use client"
-
+import { apiClient } from "@/api/AxiosServiceApi"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -26,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAuth } from "@/context/AuthContext"
 import { userRoles } from "@/utils/constants"
 import {
   AlertCircle,
@@ -46,7 +46,7 @@ import {
   Trash2,
   Users,
 } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 const jobPosts = [
   {
@@ -136,6 +136,7 @@ export default function JobPostsContent({ userRole }) {
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedJobs, setSelectedJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState("all")
+  const { authLoading } = useAuth()
 
   if (userRole === userRoles.FREELANCER) {
     return (
@@ -159,6 +160,20 @@ export default function JobPostsContent({ userRole }) {
       </div>
     )
   }
+
+  useEffect(() => {
+    const fetchPosts = async () => {
+      try {
+        const response = await apiClient.get(
+          "/api/dashboard/get-post-in-progress"
+        )
+        console.log("Job Posts:", response.data)
+      } catch (error) {
+        console.error(error)
+      }
+    }
+    fetchPosts()
+  }, [])
 
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
@@ -231,6 +246,10 @@ export default function JobPostsContent({ userRole }) {
     setSelectedJobs([])
   }
 
+  if (authLoading) {
+    return null
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -249,14 +268,14 @@ export default function JobPostsContent({ userRole }) {
             Filter
           </Button>
           <Button size="sm">
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="h-4 w-4" />
             Post New Job
           </Button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>

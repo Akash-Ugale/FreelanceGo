@@ -20,7 +20,7 @@ export default function FullScreenLoader({ show = true, size = 128 }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm p-6"
     >
       <div className="flex flex-col items-center gap-2">
         <div
@@ -33,13 +33,13 @@ export default function FullScreenLoader({ show = true, size = 128 }) {
             animate={{ rotate: 360 }}
             transition={{ repeat: Infinity, duration: 4, ease: "linear" }}
           >
-            <div className="w-full h-full rounded-full bg-gradient-to-r from-indigo-500 via-pink-500 to-yellow-400 shadow-xl"></div>
+            <div className="w-full h-full rounded-full bg-gradient-to-r from-white to-blue-400 shadow-xl"></div>
           </motion.div>
         </div>
 
         {/* Loading text */}
         <motion.div
-          className="text-white text-sm font-medium"
+          className="text-foreground text-sm font-medium"
           animate={{ opacity: [0.6, 1, 0.6] }}
           transition={{ repeat: Infinity, duration: 1.5 }}
         >
