@@ -10,12 +10,13 @@ export default function Navbar() {
     <header className="sticky top-0 z-20 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3">
       <div className="container flex h-14 max-w-screen-2xl items-center">
         <Link to="/" className="mr-6 flex items-center space-x-2">
+          <img src="/freelancego-logo.svg" alt="" className="w-5 h-5" />
           <span className="font-bold">FreelanceGo</span>
         </Link>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex flex-1 items-center space-x-6 text-sm font-medium">
-          <Link
+          {/* <Link
             to="/find-work"
             className="transition-colors hover:text-primary"
           >
@@ -26,7 +27,7 @@ export default function Navbar() {
             className="transition-colors hover:text-primary"
           >
             Find Talent
-          </Link>
+          </Link> */}
           <Link
             to="/how-it-works"
             className="transition-colors hover:text-primary"
@@ -56,7 +57,9 @@ export default function Navbar() {
             </Button>
           </a>
           <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
-            <Button size="sm">Join FreelanceGo</Button>
+            <Button size="sm" className="text-white">
+              Join FreelanceGo
+            </Button>
           </a>
         </div>
 
@@ -76,7 +79,7 @@ export default function Navbar() {
       {isMenuOpen && (
         <div className="md:hidden border-t bg-background/95 backdrop-blur">
           <nav className="container py-4 space-y-4">
-            <Link
+            {/* <Link
               to="/find-work"
               className="block text-sm font-medium transition-colors hover:text-primary"
             >
@@ -87,7 +90,7 @@ export default function Navbar() {
               className="block text-sm font-medium transition-colors hover:text-primary"
             >
               Find Talent
-            </Link>
+            </Link> */}
             <Link
               to="/how-it-works"
               className="block text-sm font-medium transition-colors hover:text-primary"
@@ -102,25 +105,21 @@ export default function Navbar() {
             </Link>
             <div className="flex flex-col space-y-2 pt-4 border-t">
               <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start"
-                >
+                <Button variant="outline" size="sm" className="w-full">
                   Login
                 </Button>
               </a>
               <a to="https://freelancegobackend.onrender.com/oauth2/authorization/google">
-                <Button size="sm" className="w-full">
+                <Button size="sm" className="w-full text-white">
                   Join FreelanceGo
                 </Button>
               </a>
             </div>
             <a
-              href="https://github.com/amanesoft"
+              href="https://github.com/koustubh-lab/FreelanceGo"
               target="_blank"
               rel="noreferrer"
-              className="block pt-4"
+              className="block "
             >
               <Button
                 variant="ghost"

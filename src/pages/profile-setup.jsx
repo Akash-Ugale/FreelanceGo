@@ -24,7 +24,6 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom"
 
 export default function ProfileSetup() {
   const navigate = useNavigate()
-  const [selectedRole, setSelectedRole] = useState(null)
 
   const [searchParams] = useSearchParams()
   const token = searchParams.get("token")
@@ -78,15 +77,10 @@ export default function ProfileSetup() {
         }
       )
       console.log(response)
-      const {
-        status,
-        data: { token: newToken },
-      } = response
+      const { status, data: newToken } = response
       if (status === 200) {
         localStorage.setItem("token", newToken)
-        setTimeout(() => {
-          navigate("/dashboard", { replace: true })
-        }, 1000)
+        navigate("/dashboard", { replace: true })
       }
     } catch (error) {
       console.error("Failed to check role:", error)
@@ -128,7 +122,7 @@ export default function ProfileSetup() {
           {(existingFreelancer || existingClient) && (
             <div className="mb-12">
               <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-                <UserCircle className="h-6 w-6 text-white" />
+                <UserCircle className="h-6 w-6 text-foreground" />
                 Existing Profiles
               </h2>
 
@@ -163,10 +157,10 @@ export default function ProfileSetup() {
                         </Avatar>
 
                         <div className="flex-1">
-                          <CardTitle className="text-xl mb-1">
+                          <CardTitle className="text-xl mb-1 capitalize">
                             {existingUser.username}
                           </CardTitle>
-                          <CardDescription className="text-base font-medium text-primary">
+                          <CardDescription className="text-sm font-medium text-muted-foreground">
                             {existingFreelancer?.designation}
                           </CardDescription>
                         </div>
@@ -222,7 +216,7 @@ export default function ProfileSetup() {
                 )}
 
                 {existingClient && (
-                  <Card className="relative overflow-hidden border">
+                  <Card className="relative overflow-hidden border flex flex-col">
                     <div className="absolute top-4 right-4">
                       <Badge
                         variant="secondary"
@@ -251,19 +245,19 @@ export default function ProfileSetup() {
                         </Avatar>
 
                         <div className="flex-1">
-                          <CardTitle className="text-xl mb-1">
+                          <CardTitle className="text-xl mb-1 capitalize">
                             {existingUser.username}
                           </CardTitle>
-                          <CardDescription className="text-base font-medium text-primary">
+                          <CardDescription className="text-sm font-medium text-muted-foreground">
                             Client Account
                           </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
 
-                    <CardContent className="pt-0">
-                      <div className="grid grid-cols-2 gap-4 mb-4">
-                        <div className="text-center p-3 bg-white rounded-lg">
+                    <CardContent className="pt-0 flex-1">
+                      <div className="grid grid-cols-2 gap-4 mb-4 flex-1">
+                        <div className="text-center p-3 bg-muted rounded-lg">
                           <div className="text-2xl font-bold text-primary">
                             {existingClient.projectsPosted}
                           </div>
@@ -271,7 +265,7 @@ export default function ProfileSetup() {
                             Projects Posted
                           </div>
                         </div>
-                        <div className="text-center p-3 bg-white rounded-lg">
+                        <div className="text-center p-3 bg-muted rounded-lg">
                           <div className="text-2xl font-bold text-primary">
                             {existingClient.freelancersHired}
                           </div>
@@ -298,12 +292,14 @@ export default function ProfileSetup() {
 
           {/* Create New Profile Section */}
           <div>
-            <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
-              <Plus className="h-6 w-6 text-primary" />
-              {existingFreelancer || existingClient
-                ? "Create Additional Profile"
-                : "Create Your Profile"}
-            </h2>
+            {(!existingClient || !existingFreelancer) && (
+              <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                <Plus className="h-6 w-6 text-primary" />
+                {existingFreelancer || existingClient
+                  ? "Create Additional Profile"
+                  : "Create Your Profile"}
+              </h2>
+            )}
 
             <div className="grid md:grid-cols-2 gap-6">
               {/* Freelancer Option */}

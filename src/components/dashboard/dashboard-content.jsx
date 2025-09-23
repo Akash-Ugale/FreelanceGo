@@ -20,7 +20,7 @@ import {
   UserCheck,
   Users,
 } from "lucide-react"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -201,6 +201,8 @@ export default function DashboardContent() {
     userRole === userRoles.FREELANCER ? freelancerProjects : clientProjects
   const recentActivity =
     userRole === userRoles.FREELANCER ? freelancerBids : clientProposals
+
+  const [clientDashboardData, setClientDashboardData] = useState({})
 
   const fetchDashboardData = async (token) => {
     try {

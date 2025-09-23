@@ -35,11 +35,13 @@ export default function DashboardSidebarContent({ userRole }) {
               className={cn(
                 "flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                 activeItem === item.href
-                  ? "bg-accent text-accent-foreground"
+                  ? "bg-primary/30 text-primary hover:bg-primary/30 hover:text-primary"
                   : "text-muted-foreground"
               )}
             >
-              <item.icon className="h-5 w-5 flex-shrink-0" />
+              <item.icon
+                className="h-5 w-5 flex-shrink-0"
+              />
               <span>{item.title}</span>
             </Link>
           ))}
