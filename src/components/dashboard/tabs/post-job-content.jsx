@@ -186,7 +186,7 @@ export default function PostJobContent({ userRole }) {
     setLoading(true)
     try {
       const response = await apiClient.post(
-        "/api/create-post",
+        "/api/dashboard/create-post",
         {
           ...jobData,
           requiredSkills: selectedSkills,

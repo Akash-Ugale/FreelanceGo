@@ -1,13 +1,22 @@
-"use client"
-
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Star, ThumbsUp, MessageSquare, Calendar, Award, TrendingUp } from "lucide-react"
-
-
+import { useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Star,
+  ThumbsUp,
+  MessageSquare,
+  Calendar,
+  Award,
+  TrendingUp,
+} from "lucide-react";
 
 const freelancerReviews = {
   averageRating: 4.8,
@@ -54,7 +63,7 @@ const freelancerReviews = {
       skills: ["Technical Writing", "Content Strategy"],
     },
   ],
-}
+};
 
 const clientReviews = {
   averageRating: 4.6,
@@ -101,44 +110,50 @@ const clientReviews = {
       aspects: ["Responsiveness", "Resource Provision"],
     },
   ],
-}
-
-
+};
 
 export default function ReviewsContent({ userRole }) {
-  const [activeTab, setActiveTab] = useState("received")
-  const [replyText, setReplyText] = useState("")
+  const [activeTab, setActiveTab] = useState("received");
+  const [replyText, setReplyText] = useState("");
 
-  const data = userRole === "freelancer" ? freelancerReviews : clientReviews
+  const data = userRole === "freelancer" ? freelancerReviews : clientReviews;
 
   const renderStars = (rating, size) => {
     const sizeClasses = {
       sm: "h-3 w-3",
       md: "h-4 w-4",
       lg: "h-5 w-5",
-    }
+    };
 
     return (
       <div className="flex items-center space-x-1">
         {[1, 2, 3, 4, 5].map((star) => (
           <Star
             key={star}
-            className={`${sizeClasses[size]} ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-gray-300"}`}
+            className={`${sizeClasses[size]} ${
+              star <= rating
+                ? "fill-yellow-400 text-yellow-400"
+                : "text-gray-300"
+            }`}
           />
         ))}
       </div>
-    )
-  }
+    );
+  };
 
   const getRatingPercentage = (rating) => {
-    return Math.round((data.ratingDistribution[rating] / data.totalReviews) * 100)
-  }
+    return Math.round(
+      (data.ratingDistribution[rating] / data.totalReviews) * 100
+    );
+  };
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Reviews</h1>
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+          Reviews
+        </h1>
         <p className="text-muted-foreground text-sm md:text-base">
           {userRole === "freelancer"
             ? "See what clients are saying about your work"
@@ -156,7 +171,9 @@ export default function ReviewsContent({ userRole }) {
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.averageRating}</div>
-                <div className="text-sm text-muted-foreground">Average Rating</div>
+                <div className="text-sm text-muted-foreground">
+                  Average Rating
+                </div>
                 {renderStars(Math.round(data.averageRating))}
               </div>
             </div>
@@ -171,9 +188,13 @@ export default function ReviewsContent({ userRole }) {
               </div>
               <div>
                 <div className="text-2xl font-bold">{data.totalReviews}</div>
-                <div className="text-sm text-muted-foreground">Total Reviews</div>
+                <div className="text-sm text-muted-foreground">
+                  Total Reviews
+                </div>
                 <div className="text-xs text-muted-foreground">
-                  {userRole === "freelancer" ? "From clients" : "From freelancers"}
+                  {userRole === "freelancer"
+                    ? "From clients"
+                    : "From freelancers"}
                 </div>
               </div>
             </div>
@@ -187,8 +208,12 @@ export default function ReviewsContent({ userRole }) {
                 <TrendingUp className="h-6 w-6 text-green-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">{getRatingPercentage(5)}%</div>
-                <div className="text-sm text-muted-foreground">5-Star Reviews</div>
+                <div className="text-2xl font-bold">
+                  {getRatingPercentage(5)}%
+                </div>
+                <div className="text-sm text-muted-foreground">
+                  5-Star Reviews
+                </div>
                 <div className="text-xs text-muted-foreground">
                   {data.ratingDistribution[5]} out of {data.totalReviews}
                 </div>
@@ -219,7 +244,8 @@ export default function ReviewsContent({ userRole }) {
                   />
                 </div>
                 <div className="text-sm text-muted-foreground w-16 text-right">
-                  {data.ratingDistribution[rating]} ({getRatingPercentage(rating)}%)
+                  {data.ratingDistribution[rating]} (
+                  {getRatingPercentage(rating)}%)
                 </div>
               </div>
             ))}
@@ -231,7 +257,9 @@ export default function ReviewsContent({ userRole }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">
-            {userRole === "freelancer" ? "Client Reviews" : "Freelancer Reviews"}
+            {userRole === "freelancer"
+              ? "Client Reviews"
+              : "Freelancer Reviews"}
           </CardTitle>
           <CardDescription>
             {userRole === "freelancer"
@@ -247,7 +275,8 @@ export default function ReviewsContent({ userRole }) {
                   <div className="flex items-start space-x-3">
                     <Avatar className="h-10 w-10">
                       <AvatarImage
-                        src={`/placeholder.svg?height=40&width=40&text=${(userRole === "freelancer"
+                        src={`/placeholder.svg?height=40&width=40&text=${(userRole ===
+                        "freelancer"
                           ? review.client
                           : review.freelancer
                         )
@@ -256,18 +285,29 @@ export default function ReviewsContent({ userRole }) {
                           .join("")}`}
                       />
                       <AvatarFallback>
-                        {(userRole === "freelancer" ? review.client : review.freelancer)
+                        {(userRole === "freelancer"
+                          ? review.client
+                          : review.freelancer
+                        )
                           .split(" ")
                           .map((n) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <h4 className="font-medium">{userRole === "freelancer" ? review.client : review.freelancer}</h4>
-                      <p className="text-sm text-muted-foreground">{review.project}</p>
+                      <h4 className="font-medium">
+                        {userRole === "freelancer"
+                          ? review.client
+                          : review.freelancer}
+                      </h4>
+                      <p className="text-sm text-muted-foreground">
+                        {review.project}
+                      </p>
                       <div className="flex items-center space-x-2 mt-1">
                         {renderStars(review.rating, "sm")}
-                        <span className="text-sm text-muted-foreground">{review.rating}/5</span>
+                        <span className="text-sm text-muted-foreground">
+                          {review.rating}/5
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -281,7 +321,10 @@ export default function ReviewsContent({ userRole }) {
 
                 {/* Skills/Aspects Tags */}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {(userRole === "freelancer" ? review.skills : review.aspects).map((item, index) => (
+                  {(userRole === "freelancer"
+                    ? review.skills
+                    : review.aspects
+                  ).map((item, index) => (
                     <Badge key={index} variant="secondary" className="text-xs">
                       {item}
                     </Badge>
@@ -291,11 +334,19 @@ export default function ReviewsContent({ userRole }) {
                 {/* Actions */}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-4">
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                    >
                       <ThumbsUp className="mr-1 h-3 w-3" />
                       Helpful ({review.helpful})
                     </Button>
-                    <Button variant="ghost" size="sm" className="text-muted-foreground">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-muted-foreground"
+                    >
                       <MessageSquare className="mr-1 h-3 w-3" />
                       Reply
                     </Button>
@@ -313,5 +364,5 @@ export default function ReviewsContent({ userRole }) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

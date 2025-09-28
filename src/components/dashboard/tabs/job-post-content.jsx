@@ -165,7 +165,7 @@ export default function JobPostsContent({ userRole }) {
     const fetchPosts = async () => {
       try {
         const response = await apiClient.get(
-          "/api/dashboard/get-post-in-progress"
+          "/api/dashboard/get-post"
         )
         console.log("Job Posts:", response.data)
       } catch (error) {

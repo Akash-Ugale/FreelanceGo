@@ -1,520 +1,370 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { useAuth } from "@/context/AuthContext"
-import {
-  Award,
-  Bookmark,
-  Briefcase,
-  Clock,
-  DollarSign,
-  Filter,
-  MapPin,
-  Search,
-  Send,
-  Star,
-  Users,
-} from "lucide-react"
-import { useState } from "react"
+"use client"
 
-const jobs = [
+import { useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Search, Filter, Star, MapPin, Users, Briefcase, Heart, Send, Eye } from "lucide-react"
+import { Card,CardContent } from "@/components/ui/card"
+const jobListings = [
   {
-    id: 1,
+    id: "job_001",
     title: "Full-Stack React Developer for E-commerce Platform",
     description:
-      "We're looking for an experienced full-stack developer to build a modern e-commerce platform using React, Node.js, and PostgreSQL. The project involves creating a responsive frontend, robust backend APIs, and integrating payment systems.",
-    budget: "3,000 - 5,000",
-    duration: "2-3 months",
-    skillsRequired: ["React", "Node.js", "PostgreSQL", "Stripe API"],
-    client: {
-      name: "TechCorp Solutions",
-      rating: 4.8,
-      reviewsCount: 23,
-      location: "San Francisco, CA",
-      verified: true,
+      "We're looking for an experienced full-stack developer to build a modern e-commerce platform with React, Node.js, and PostgreSQL. The project includes user authentication, payment integration, inventory management, and admin dashboard.",
+    budget: {
+      type: "fixed",
+      amount: 5000,
+      range: { min: 4000, max: 6000 },
     },
-    postedAt: "2 hours ago",
-    proposalsCount: 12,
+    timeline: "8-10 weeks",
+    postedDate: "2024-01-20T10:00:00Z",
     category: "Web Development",
+    skills: ["React", "Node.js", "PostgreSQL", "Stripe API", "TypeScript", "AWS"],
     experienceLevel: "Expert",
-    projectType: "Fixed Price",
+    projectType: "Long-term",
+    location: "Remote",
+    proposalsCount: 12,
+    client: {
+      name: "TechStart Inc.",
+      avatar: "/placeholder.svg?height=60&width=60&text=TS",
+      rating: 4.8,
+      jobsPosted: 15,
+      hireRate: 85,
+      location: "San Francisco, CA",
+      paymentVerified: true,
+    },
   },
   {
-    id: 2,
+    id: "job_002",
     title: "Mobile App UI/UX Design for Fitness App",
     description:
-      "Design a modern, intuitive mobile app interface for a fitness tracking application. We need someone who can create wireframes, prototypes, and final designs that work well on both iOS and Android platforms.",
-    budget: "1,500 - 2,500",
-    duration: "3-4 weeks",
-    skillsRequired: ["Figma", "UI/UX Design", "Mobile Design", "Prototyping"],
-    client: {
-      name: "FitLife Startup",
-      rating: 4.6,
-      reviewsCount: 15,
-      location: "Austin, TX",
-      verified: true,
+      "Design a modern, engaging UI/UX for a fitness tracking mobile app. We need wireframes, high-fidelity mockups, and interactive prototypes for both iOS and Android platforms. The design should motivate users and provide excellent user experience.",
+    budget: {
+      type: "fixed",
+      amount: 3500,
+      range: { min: 2500, max: 4000 },
     },
-    postedAt: "5 hours ago",
-    proposalsCount: 8,
-    category: "Design",
+    timeline: "5-6 weeks",
+    postedDate: "2024-01-22T14:30:00Z",
+    category: "Design & Creative",
+    skills: ["Figma", "UI/UX Design", "Mobile Design", "Prototyping", "User Research", "Adobe Creative Suite"],
     experienceLevel: "Intermediate",
-    projectType: "Fixed Price",
-  },
-  {
-    id: 3,
-    title: "Content Writer for Tech Blog",
-    description:
-      "We need a skilled content writer to create engaging blog posts about emerging technologies, software development trends, and industry insights. Must have experience writing technical content for developer audiences.",
-    budget: "50 - 100/hour",
-    duration: "Ongoing",
-    skillsRequired: [
-      "Technical Writing",
-      "SEO",
-      "Content Strategy",
-      "Research",
-    ],
-    client: {
-      name: "DevInsights Media",
-      rating: 4.9,
-      reviewsCount: 41,
-      location: "Remote",
-      verified: true,
-    },
-    postedAt: "1 day ago",
-    proposalsCount: 25,
-    category: "Writing",
-    experienceLevel: "Intermediate",
-    projectType: "Hourly",
-  },
-]
-
-const freelancers = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    title: "Full-Stack Developer & UI/UX Designer",
-    description:
-      "Experienced developer with 8+ years in React, Node.js, and modern web technologies. Specialized in creating scalable web applications and beautiful user interfaces.",
-    hourlyRate: "75 - 120/hour",
-    skills: ["React", "Node.js", "TypeScript", "PostgreSQL", "Figma"],
-    rating: 4.9,
-    reviewsCount: 127,
-    completedJobs: 89,
-    location: "New York, NY",
-    verified: true,
-    availability: "Available now",
-    portfolio: ["E-commerce Platform", "SaaS Dashboard", "Mobile App Design"],
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    title: "Mobile App Developer",
-    description:
-      "iOS and Android developer with expertise in React Native and Flutter. Passionate about creating smooth, performant mobile experiences that users love.",
-    hourlyRate: "60 - 95/hour",
-    skills: ["React Native", "Flutter", "iOS", "Android", "Firebase"],
-    rating: 4.8,
-    reviewsCount: 93,
-    completedJobs: 67,
-    location: "Seattle, WA",
-    verified: true,
-    availability: "Available in 2 weeks",
-    portfolio: [
-      "Fitness Tracking App",
-      "Food Delivery App",
-      "Social Media App",
-    ],
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    title: "Content Strategist & Technical Writer",
-    description:
-      "Technical writer and content strategist with 6+ years of experience creating compelling content for tech companies, startups, and developer tools.",
-    hourlyRate: "45 - 75/hour",
-    skills: ["Technical Writing", "Content Strategy", "SEO", "Documentation"],
-    rating: 4.9,
-    reviewsCount: 156,
-    completedJobs: 203,
+    projectType: "Medium-term",
     location: "Remote",
-    verified: true,
-    availability: "Available now",
-    portfolio: ["API Documentation", "Developer Guides", "Tech Blog Posts"],
+    proposalsCount: 8,
+    client: {
+      name: "FitLife Solutions",
+      avatar: "/placeholder.svg?height=60&width=60&text=FL",
+      rating: 4.6,
+      jobsPosted: 7,
+      hireRate: 71,
+      location: "Austin, TX",
+      paymentVerified: true,
+    },
+  },
+  {
+    id: "job_003",
+    title: "Content Writing for Tech Blog - Ongoing",
+    description:
+      "We need a skilled technical writer to create engaging blog posts for our developer-focused website. Topics include JavaScript frameworks, cloud computing, DevOps practices, and emerging technologies. Looking for someone who can explain complex concepts clearly.",
+    budget: {
+      type: "hourly",
+      amount: 75,
+      range: { min: 60, max: 90 },
+    },
+    timeline: "Ongoing",
+    postedDate: "2024-01-25T09:15:00Z",
+    category: "Writing & Translation",
+    skills: ["Technical Writing", "SEO", "Content Strategy", "JavaScript", "Python", "Developer Relations"],
+    experienceLevel: "Expert",
+    projectType: "Ongoing",
+    location: "Remote",
+    proposalsCount: 15,
+    client: {
+      name: "DevHub Media",
+      avatar: "/placeholder.svg?height=60&width=60&text=DH",
+      rating: 4.9,
+      jobsPosted: 23,
+      hireRate: 92,
+      location: "Remote",
+      paymentVerified: true,
+    },
+  },
+  {
+    id: "job_004",
+    title: "WordPress Plugin Development for E-learning Platform",
+    description:
+      "Develop a custom WordPress plugin for our e-learning platform. The plugin should handle course management, student enrollment, progress tracking, and certificate generation. Must be compatible with popular LMS plugins.",
+    budget: {
+      type: "fixed",
+      amount: 2800,
+      range: { min: 2000, max: 3500 },
+    },
+    timeline: "4-5 weeks",
+    postedDate: "2024-01-23T16:45:00Z",
+    category: "Web Development",
+    skills: ["WordPress", "PHP", "MySQL", "JavaScript", "Plugin Development", "LMS"],
+    experienceLevel: "Intermediate",
+    projectType: "Medium-term",
+    location: "Remote",
+    proposalsCount: 6,
+    client: {
+      name: "EduTech Solutions",
+      avatar: "/placeholder.svg?height=60&width=60&text=ET",
+      rating: 4.7,
+      jobsPosted: 11,
+      hireRate: 78,
+      location: "New York, NY",
+      paymentVerified: true,
+    },
+  },
+  {
+    id: "job_005",
+    title: "Data Analysis and Visualization Dashboard",
+    description:
+      "Create an interactive dashboard for business intelligence using Python, Pandas, and visualization libraries. The dashboard should connect to multiple data sources and provide real-time insights with customizable charts and reports.",
+    budget: {
+      type: "fixed",
+      amount: 4200,
+      range: { min: 3500, max: 5000 },
+    },
+    timeline: "6-7 weeks",
+    postedDate: "2024-01-21T11:20:00Z",
+    category: "Data Science",
+    skills: ["Python", "Pandas", "Plotly", "Dash", "SQL", "Data Visualization"],
+    experienceLevel: "Expert",
+    projectType: "Long-term",
+    location: "Remote",
+    proposalsCount: 9,
+    client: {
+      name: "Analytics Pro",
+      avatar: "/placeholder.svg?height=60&width=60&text=AP",
+      rating: 4.8,
+      jobsPosted: 19,
+      hireRate: 89,
+      location: "Chicago, IL",
+      paymentVerified: true,
+    },
   },
 ]
 
 export default function BrowseJobsContent() {
+  const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState("")
   const [categoryFilter, setCategoryFilter] = useState("all")
   const [budgetFilter, setBudgetFilter] = useState("all")
+  const [experienceFilter, setExperienceFilter] = useState("all")
   const [savedJobs, setSavedJobs] = useState([])
-  const { userRole } = useAuth()
 
-  const toggleSaveJob = (jobId) => {
-    setSavedJobs((prev) =>
-      prev.includes(jobId)
-        ? prev.filter((id) => id !== jobId)
-        : [...prev, jobId]
-    )
-  }
-
-  const filteredJobs = jobs.filter((job) => {
+  const filteredJobs = jobListings.filter((job) => {
     const matchesSearch =
       job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory =
-      categoryFilter === "all" || job.category.toLowerCase() === categoryFilter
-    return matchesSearch && matchesCategory
+      job.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      job.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+
+    const matchesCategory = categoryFilter === "all" || job.category === categoryFilter
+
+    const matchesBudget =
+      budgetFilter === "all" ||
+      (budgetFilter === "under-1000" && job.budget.amount < 1000) ||
+      (budgetFilter === "1000-3000" && job.budget.amount >= 1000 && job.budget.amount <= 3000) ||
+      (budgetFilter === "3000-5000" && job.budget.amount >= 3000 && job.budget.amount <= 5000) ||
+      (budgetFilter === "over-5000" && job.budget.amount > 5000)
+
+    const matchesExperience = experienceFilter === "all" || job.experienceLevel === experienceFilter
+
+    return matchesSearch && matchesCategory && matchesBudget && matchesExperience
   })
 
-  const filteredFreelancers = freelancers.filter((freelancer) => {
-    const matchesSearch =
-      freelancer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      freelancer.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      freelancer.skills.some((skill) =>
-        skill.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    return matchesSearch
-  })
+  const toggleSaveJob = (jobId) => {
+    setSavedJobs((prev) => (prev.includes(jobId) ? prev.filter((id) => id !== jobId) : [...prev, jobId]))
+  }
 
-  if (userRole === "client") {
-    return (
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Find Talent
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            Discover skilled freelancers for your projects
-          </p>
-        </div>
+  const handleSubmitProposal = (jobId) => {
+    navigate(`/submit-proposal?jobId=${jobId}`)
+  }
 
-        {/* Search and Filters */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg md:text-xl">
-              Search Freelancers
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
-              <div className="flex-1">
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Search by skills, name, or expertise..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
-                </div>
-              </div>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-full md:w-[180px]">
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="development">Development</SelectItem>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="writing">Writing</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                variant="outline"
-                className="w-full md:w-auto bg-transparent"
-              >
-                <Filter className="mr-2 h-4 w-4" />
-                More Filters
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+  const formatDate = (dateString) => {
+    const now = new Date()
+    const posted = new Date(dateString)
+    const diffTime = Math.abs(now.getTime() - posted.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
 
-        {/* Freelancers List */}
-        <div className="space-y-4">
-          {filteredFreelancers.map((freelancer) => (
-            <Card
-              key={freelancer.id}
-              className="hover:shadow-md transition-shadow"
-            >
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-start space-y-4 lg:space-y-0 lg:space-x-6">
-                  {/* Avatar and Basic Info */}
-                  <div className="flex items-start space-x-4 lg:flex-col lg:items-center lg:space-x-0 lg:space-y-4 lg:min-w-[200px]">
-                    <Avatar className="h-16 w-16 lg:h-20 lg:w-20">
-                      <AvatarImage
-                        src={`/placeholder.svg?height=80&width=80&text=${freelancer.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}`}
-                      />
-                      <AvatarFallback>
-                        {freelancer.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="lg:text-center">
-                      <div className="flex items-center space-x-2 lg:justify-center">
-                        <h3 className="font-semibold text-lg">
-                          {freelancer.name}
-                        </h3>
-                        {freelancer.verified && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Award className="mr-1 h-3 w-3" />
-                            Verified
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {freelancer.title}
-                      </p>
-                      <div className="flex items-center space-x-1 mt-1 lg:justify-center">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">
-                          {freelancer.rating}
-                        </span>
-                        <span className="text-sm text-muted-foreground">
-                          ({freelancer.reviewsCount})
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+    if (diffDays === 1) return "1 day ago"
+    if (diffDays < 7) return `${diffDays} days ago`
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
+    return `${Math.ceil(diffDays / 30)} months ago`
+  }
 
-                  {/* Main Content */}
-                  <div className="flex-1 space-y-4">
-                    <p className="text-sm text-muted-foreground">
-                      {freelancer.description}
-                    </p>
+  const formatBudget = (budget) => {
+    if (budget.type === "hourly") {
+      return `$${budget.amount}/hr`
+    }
+    return `$${budget.amount.toLocaleString()}`
+  }
 
-                    {/* Skills */}
-                    <div className="flex flex-wrap gap-2">
-                      {freelancer.skills.map((skill, index) => (
-                        <Badge
-                          key={index}
-                          variant="outline"
-                          className="text-xs"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
+  const getBudgetColor = (amount) => {
+    if (amount < 1000) return "text-orange-600"
+    if (amount < 3000) return "text-blue-600"
+    if (amount < 5000) return "text-green-600"
+    return "text-purple-600"
+  }
 
-                    {/* Stats */}
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <div className="font-medium">
-                          {freelancer.hourlyRate}
-                        </div>
-                        <div className="text-muted-foreground">Hourly Rate</div>
-                      </div>
-                      <div>
-                        <div className="font-medium">
-                          {freelancer.completedJobs}
-                        </div>
-                        <div className="text-muted-foreground">
-                          Jobs Completed
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-medium flex items-center">
-                          <MapPin className="mr-1 h-3 w-3" />
-                          {freelancer.location}
-                        </div>
-                        <div className="text-muted-foreground">Location</div>
-                      </div>
-                      <div>
-                        <div className="font-medium text-green-600">
-                          {freelancer.availability}
-                        </div>
-                        <div className="text-muted-foreground">
-                          Availability
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Portfolio */}
-                    <div>
-                      <div className="text-sm font-medium mb-2">
-                        Recent Work:
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {freelancer.portfolio.map((work, index) => (
-                          <Badge
-                            key={index}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {work}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex flex-col space-y-2 lg:min-w-[120px]">
-                    <Button size="sm" className="w-full">
-                      <Send className="mr-2 h-4 w-4" />
-                      Invite
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full bg-transparent"
-                    >
-                      View Profile
-                    </Button>
-                    <Button variant="ghost" size="sm" className="w-full">
-                      <Bookmark className="mr-2 h-4 w-4" />
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    )
+  const getExperienceColor = (level) => {
+    switch (level) {
+      case "Entry":
+        return "text-green-600"
+      case "Intermediate":
+        return "text-blue-600"
+      case "Expert":
+        return "text-purple-600"
+      default:
+        return "text-gray-600"
+    }
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-          Browse Jobs
-        </h1>
-        <p className="text-muted-foreground text-sm md:text-base">
-          Find your next freelance opportunity
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Browse Jobs</h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Find your next freelance opportunity from {jobListings.length} available projects
+          </p>
+        </div>
+        <div className="flex items-center space-x-2">
+          <Button variant="outline" size="sm" className="bg-transparent">
+            <Filter className="mr-2 h-4 w-4" />
+            Advanced Filters
+          </Button>
+          <Button variant="outline" size="sm" className="bg-transparent">
+            <Heart className="mr-2 h-4 w-4" />
+            Saved Jobs ({savedJobs.length})
+          </Button>
+        </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg md:text-xl">Search Jobs</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col space-y-4 md:flex-row md:space-y-0 md:space-x-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by title, skills, or keywords..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="web development">Web Development</SelectItem>
-                <SelectItem value="design">Design</SelectItem>
-                <SelectItem value="writing">Writing</SelectItem>
-                <SelectItem value="marketing">Marketing</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={budgetFilter} onValueChange={setBudgetFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
-                <SelectValue placeholder="Budget" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Budgets</SelectItem>
-                <SelectItem value="under-1000">Under $1,000</SelectItem>
-                <SelectItem value="1000-5000">$1,000 - $5,000</SelectItem>
-                <SelectItem value="over-5000">Over $5,000</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button
-              variant="outline"
-              className="w-full md:w-auto bg-transparent"
-            >
-              <Filter className="mr-2 h-4 w-4" />
-              More Filters
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Search and Filters */}
+      <div className="flex flex-col space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Search by job title, description, or skills..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
 
-      {/* Jobs List */}
-      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="All Categories" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="Web Development">Web Development</SelectItem>
+              <SelectItem value="Design & Creative">Design & Creative</SelectItem>
+              <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
+              <SelectItem value="Data Science">Data Science</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={budgetFilter} onValueChange={setBudgetFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="All Budgets" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Budgets</SelectItem>
+              <SelectItem value="under-1000">Under $1,000</SelectItem>
+              <SelectItem value="1000-3000">$1,000 - $3,000</SelectItem>
+              <SelectItem value="3000-5000">$3,000 - $5,000</SelectItem>
+              <SelectItem value="over-5000">Over $5,000</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={experienceFilter} onValueChange={setExperienceFilter}>
+            <SelectTrigger className="w-full sm:w-[200px]">
+              <SelectValue placeholder="All Experience" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Experience</SelectItem>
+              <SelectItem value="Entry">Entry Level</SelectItem>
+              <SelectItem value="Intermediate">Intermediate</SelectItem>
+              <SelectItem value="Expert">Expert</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Job Listings */}
+      <div className="space-y-6">
         {filteredJobs.map((job) => (
-          <Card key={job.id} className="hover:shadow-md transition-shadow">
+          <Card key={job.id} className="hover:shadow-lg transition-shadow">
             <CardContent className="p-6">
               <div className="space-y-4">
-                {/* Header */}
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-2 sm:space-y-0">
+                {/* Job Header */}
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                   <div className="flex-1">
-                    <h3 className="font-semibold text-lg mb-2">{job.title}</h3>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                      <span className="flex items-center">
-                        <DollarSign className="mr-1 h-4 w-4" />
-                        {job.budget}
-                      </span>
-                      <span className="flex items-center">
-                        <Clock className="mr-1 h-4 w-4" />
-                        {job.duration}
-                      </span>
-                      <span className="flex items-center">
-                        <Users className="mr-1 h-4 w-4" />
-                        {job.proposalsCount} proposals
-                      </span>
-                      <span className="flex items-center">
-                        <Briefcase className="mr-1 h-4 w-4" />
-                        {job.experienceLevel}
-                      </span>
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-semibold text-xl pr-4">{job.title}</h3>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => toggleSaveJob(job.id)}
+                        className={`${savedJobs.includes(job.id) ? "text-red-500" : "text-muted-foreground"} hover:text-red-500`}
+                      >
+                        <Heart className={`h-4 w-4 ${savedJobs.includes(job.id) ? "fill-current" : ""}`} />
+                      </Button>
+                    </div>
+                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
+                      <span>{formatDate(job.postedDate)}</span>
+                      <span>•</span>
+                      <Badge variant="outline" className="text-xs">
+                        {job.category}
+                      </Badge>
+                      <span>•</span>
+                      <span className={getExperienceColor(job.experienceLevel)}>{job.experienceLevel}</span>
+                    </div>
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-4">{job.description}</p>
+                  </div>
+                </div>
+
+                {/* Job Details Grid */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                  <div className="text-center">
+                    <div className={`text-lg font-bold ${getBudgetColor(job.budget.amount)}`}>
+                      {formatBudget(job.budget)}
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {job.budget.type === "fixed" ? "Fixed Price" : "Hourly Rate"}
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Badge variant="outline">{job.category}</Badge>
-                    <Badge variant="secondary">{job.projectType}</Badge>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">{job.timeline}</div>
+                    <div className="text-sm text-muted-foreground">Timeline</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">{job.proposalsCount}</div>
+                    <div className="text-sm text-muted-foreground">Proposals</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold">{job.projectType}</div>
+                    <div className="text-sm text-muted-foreground">Duration</div>
                   </div>
                 </div>
 
-                {/* Description */}
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {job.description}
-                </p>
-
-                {/* Skills */}
-                <div className="flex flex-wrap gap-2">
-                  {job.skillsRequired.map((skill, index) => (
-                    <Badge key={index} variant="outline" className="text-xs">
-                      {skill}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Client Info */}
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t space-y-3 sm:space-y-0">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="h-8 w-8">
-                      <AvatarImage
-                        src={`/placeholder.svg?height=32&width=32&text=${job.client.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}`}
-                      />
-                      <AvatarFallback className="text-xs">
+                {/* Client Information */}
+                <div className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <Avatar className="h-12 w-12">
+                      <AvatarImage src={job.client.avatar || "/placeholder.svg"} alt={job.client.name} />
+                      <AvatarFallback>
                         {job.client.name
                           .split(" ")
                           .map((n) => n[0])
@@ -522,47 +372,65 @@ export default function BrowseJobsContent() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="flex items-center space-x-2">
-                        <span className="font-medium text-sm">
-                          {job.client.name}
-                        </span>
-                        {job.client.verified && (
-                          <Badge variant="secondary" className="text-xs">
-                            <Award className="mr-1 h-3 w-3" />
-                            Verified
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h4 className="font-semibold">{job.client.name}</h4>
+                        {job.client.paymentVerified && (
+                          <Badge variant="secondary" className="text-xs bg-green-100 text-green-800">
+                            Payment Verified
                           </Badge>
                         )}
                       </div>
-                      <div className="flex items-center space-x-4 text-xs text-muted-foreground mt-1">
-                        <span className="flex items-center">
-                          <Star className="mr-1 h-3 w-3 fill-yellow-400 text-yellow-400" />
-                          {job.client.rating} ({job.client.reviewsCount})
-                        </span>
-                        <span className="flex items-center">
-                          <MapPin className="mr-1 h-3 w-3" />
-                          {job.client.location}
-                        </span>
-                        <span>{job.postedAt}</span>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <div className="flex items-center space-x-1">
+                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                          <span>{job.client.rating}</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Briefcase className="h-4 w-4" />
+                          <span>{job.client.jobsPosted} jobs posted</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <Users className="h-4 w-4" />
+                          <span>{job.client.hireRate}% hire rate</span>
+                        </div>
+                        <div className="flex items-center space-x-1">
+                          <MapPin className="h-4 w-4" />
+                          <span>{job.client.location}</span>
+                        </div>
                       </div>
                     </div>
                   </div>
+                </div>
+
+                {/* Skills */}
+                <div className="space-y-3">
+                  <h5 className="font-semibold">Required Skills</h5>
+                  <div className="flex flex-wrap gap-2">
+                    {job.skills.map((skill, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        {skill}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t space-y-3 sm:space-y-0">
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => toggleSaveJob(job.id)}
-                      className={
-                        savedJobs.includes(job.id) ? "text-blue-600" : ""
-                      }
-                    >
-                      <Bookmark
-                        className={`mr-2 h-4 w-4 ${
-                          savedJobs.includes(job.id) ? "fill-current" : ""
-                        }`}
-                      />
-                      {savedJobs.includes(job.id) ? "Saved" : "Save"}
+                    <Button variant="outline" size="sm" className="bg-transparent">
+                      <Eye className="mr-2 h-4 w-4" />
+                      View Details
                     </Button>
-                    <Button size="sm">
+                    <Button variant="outline" size="sm" className="bg-transparent">
+                      <Users className="mr-2 h-4 w-4" />
+                      View Client Profile
+                    </Button>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <div className="text-sm text-muted-foreground">
+                      {job.proposalsCount} {job.proposalsCount === 1 ? "proposal" : "proposals"}
+                    </div>
+                    <Button size="sm" onClick={() => handleSubmitProposal(job.id)}>
                       <Send className="mr-2 h-4 w-4" />
                       Submit Proposal
                     </Button>
@@ -573,6 +441,27 @@ export default function BrowseJobsContent() {
           </Card>
         ))}
       </div>
+
+      {filteredJobs.length === 0 && (
+        <div className="text-center py-12">
+          <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+          <p className="text-muted-foreground mb-4">
+            Try adjusting your search criteria or check back later for new opportunities.
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSearchTerm("")
+              setCategoryFilter("all")
+              setBudgetFilter("all")
+              setExperienceFilter("all")
+            }}
+          >
+            Clear Filters
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

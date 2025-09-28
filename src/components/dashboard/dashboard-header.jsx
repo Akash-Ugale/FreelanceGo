@@ -1,6 +1,6 @@
-import { apiClient } from "@/api/AxiosServiceApi"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { apiClient } from "@/api/AxiosServiceApi";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -16,48 +16,48 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet"
-import { useAuth } from "@/context/AuthContext"
-import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react"
-import { useEffect, useState } from "react"
-import { toast } from "sonner"
-import FullScreenLoader from "../FullScreenLoader"
-import DashboardSidebarContent from "./dashboard-sidebar-content"
+} from "@/components/ui/sheet";
+import { useAuth } from "@/context/AuthContext";
+import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import FullScreenLoader from "../FullScreenLoader";
+import DashboardSidebarContent from "./dashboard-sidebar-content";
+import { useNavigate } from "react-router-dom";
 
 export default function DashboardHeader() {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [userData, setUserData] = useState(null)
-  const { logoutUser, userRole } = useAuth()
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const { logoutUser, userRole, setUserId, authLoading, token } = useAuth();
+  const navigate = useNavigate();
 
   const fetchProfileDetails = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await apiClient.get("/api/me", {
-        headers: {
-          Authorization: "Bearer " + localStorage.getItem("token"),
-        },
-      })
-      const { status, data } = response
-      console.log(response)
+      const response = await apiClient.get("/api/me");
+      const { status, data } = response;
+      setUserId(data?.id);
+      console.log(response);
       if (status === 200) {
-        setUserData(data)
-        toast.success("Profile details fetched successfully")
+        setUserData(data);
+        toast.success("Profile details fetched successfully");
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    logoutUser()
-  }
+    logoutUser();
+    navigate("/", { replace: true });
+  };
 
   useEffect(() => {
-    fetchProfileDetails()
-  }, [])
+    fetchProfileDetails();
+  }, []);
 
   return (
     <>
@@ -152,5 +152,5 @@ export default function DashboardHeader() {
         </div>
       </header>
     </>
-  )
+  );
 }

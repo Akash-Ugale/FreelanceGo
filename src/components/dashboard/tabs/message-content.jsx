@@ -1,16 +1,18 @@
-"use client"
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import axios from "axios";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
 import {
   ChevronLeft,
   MoreVertical,
@@ -18,8 +20,10 @@ import {
   Search,
   Send,
   UserPlus2Icon,
-} from "lucide-react"
-import { useState } from "react"
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { set } from "date-fns";
+import pusher from "@/components/pusher/pusher";
 
 const conversations = [
   {
@@ -67,7 +71,7 @@ const conversations = [
     project: "Brand Identity Design",
     avatar: "MC",
   },
-]
+];
 
 const messages = [
   {
@@ -123,30 +127,119 @@ const messages = [
     timestamp: "2:30 PM",
     type: "text",
   },
-]
+];
 
-export default function MessagesContent({ userRole }) {
-  const initialConversation = conversations.find((c) => c.role !== userRole)
-  const [selectedConversation, setSelectedConversation] =
-    useState(initialConversation)
+export default function MessagesContent({ userRole, senderId }) {
+  const [conversations, setConversations] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState();
 
-  const [newMessage, setNewMessage] = useState("")
-  const [searchTerm, setSearchTerm] = useState("")
-  const [mobileView, setMobileView] = useState("list") // 👈 added
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [mobileView, setMobileView] = useState("list");
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      // Add message logic here
-      setNewMessage("")
+  const [pusherChannel, setPusherChannel] = useState(null);
+
+  // Fetch conversations (example API)
+  useEffect(() => {
+    async function fetchConversations() {
+      try {
+        const response = await axios.get("/chat/conversations");
+        const { data } = response;
+
+        if (Array.isArray(data)) {
+          setConversations(data);
+        } else {
+          setConversations([]);
+          console.warn("Conversations API returned non-array:", data);
+        }
+      } catch (error) {
+        console.log(error);
+      }
     }
-  }
+    fetchConversations();
+  }, []);
 
-  const filteredConversations = conversations.filter(
+  // Handle selecting a conversation
+  const handleSelectConversation = async (conversation) => {
+    setSelectedConversation(conversation);
+
+    // 1️⃣ Generate channel name with minimum ID first
+    const minId = Math.min(senderId, conversation.receiverId);
+    const maxId = Math.max(senderId, conversation.receiverId);
+    const generatedChannelName = `private-chat-${minId}-${maxId}`;
+
+    try {
+      // 2️⃣ Fetch old messages
+      const msgRes = await axios.get(
+        `/chat/history/${senderId}/${conversation.receiverId}`,
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+      setMessages(msgRes.data);
+
+      // 3️⃣ Subscribe directly (Pusher will auto-authenticate via backend)
+      const channel = pusher.subscribe(generatedChannelName);
+      console.log(channel)
+            channel.bind("new-message", (data) => {
+        setMessages((prev) => [...prev, data]);
+      });
+      setPusherChannel(channel);
+    } catch (err) {
+      console.error("Error initializing chat:", err);
+    }
+  };
+
+  // Send message
+  const handleSendMessage = async () => {
+    if (!newMessage.trim() || !pusherChannel) return;
+
+    const messageData = {
+      senderId,
+      receiverId: selectedConversation.id,
+      message: newMessage,
+      timestamp: new Date().toISOString(),
+    };
+
+    try {
+      await axios.post(
+        "/chat/send",
+        {
+          channelName: pusherChannel.name,
+          ...messageData,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
+
+      // Optimistically update messages
+      setMessages((prev) => [...prev, { ...messageData, senderName: "You" }]);
+      setNewMessage("");
+    } catch (err) {
+      console.error("Send message error:", err);
+    }
+  };
+
+  // Cleanup when switching conversation/unmount
+  useEffect(() => {
+    handleSelectConversation();
+
+    return () => {
+      if (pusherChannel) {
+        pusher.unsubscribe(pusherChannel.name);
+        setPusherChannel(null);
+      }
+    };
+  }, [selectedConversation]);
+
+  const filteredConversations = (conversations || []).filter(
     (conv) =>
       conv.role !== userRole &&
       (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
-  )
+  );
 
   return (
     <div className="space-y-6 flex flex-col">
@@ -185,8 +278,8 @@ export default function MessagesContent({ userRole }) {
                       : ""
                   }`}
                   onClick={() => {
-                    setSelectedConversation(conversation)
-                    setMobileView("chat") // 👈 switch to chat on mobile
+                    setSelectedConversation(conversation);
+                    setMobileView("chat"); // 👈 switch to chat on mobile
                   }}
                 >
                   <div className="flex items-start space-x-3">
@@ -233,10 +326,13 @@ export default function MessagesContent({ userRole }) {
         </Card>
 
         {/* Chat Area */}
+
         <Card
           className={`flex flex-col h-[85vh] sm:h-full overflow-auto relative ${
             mobileView === "list" ? "hidden" : "flex"
-          } lg:flex lg:col-span-3`}
+          } lg:flex lg:col-span-3 ${
+            selectedConversation ? "" : "opacity-50 pointer-events-none"
+          }`}
         >
           {/* Chat Header */}
           <CardHeader className="sticky top-0 z-[2] bg-background flex flex-row items-center justify-between gap-2 border-b p-4">
@@ -251,8 +347,8 @@ export default function MessagesContent({ userRole }) {
                 <ChevronLeft className="h-4 w-4" />
               </Button>
 
-              <div className="flex items-center space-x-3">
-                <div className="relative">
+              {selectedConversation ? (
+                <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
                       src={`/placeholder.svg?height=40&width=40&text=${selectedConversation.avatar}`}
@@ -261,16 +357,20 @@ export default function MessagesContent({ userRole }) {
                       {selectedConversation.avatar}
                     </AvatarFallback>
                   </Avatar>
+                  <div>
+                    <h3 className="font-medium">{selectedConversation.name}</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedConversation.online
+                        ? "Online now"
+                        : "Last seen 2 hours ago"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-medium">{selectedConversation.name}</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedConversation.online
-                      ? "Online now"
-                      : "Last seen 2 hours ago"}
-                  </p>
+              ) : (
+                <div className="text-muted-foreground">
+                  Select a conversation to start chat
                 </div>
-              </div>
+              )}
             </div>
 
             <DropdownMenu>
@@ -290,7 +390,10 @@ export default function MessagesContent({ userRole }) {
                 <DropdownMenuItem onClick={() => alert("Delete")}>
                   Internship Information
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => alert("Delete")} className="text-red-500">
+                <DropdownMenuItem
+                  onClick={() => alert("Delete")}
+                  className="text-red-500"
+                >
                   Delete Conversation
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -352,8 +455,8 @@ export default function MessagesContent({ userRole }) {
                     className="resize-none flex-1 min-h-[20px]"
                     onKeyPress={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault()
-                        handleSendMessage()
+                        e.preventDefault();
+                        handleSendMessage();
                       }
                     }}
                   />
@@ -365,29 +468,11 @@ export default function MessagesContent({ userRole }) {
                     <Send className="h-4 w-4" />
                   </Button>
                 </div>
-                {/* <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
-                  <span>Press Enter to send, Shift+Enter for new line</span>
-                  <div className="flex items-center space-x-2">
-                    <Button size="sm" variant="ghost" className="h-6 px-2">
-                      <Star className="h-3 w-3" />
-                    </Button>
-                    <Button size="sm" variant="ghost" className="h-6 px-2">
-                      <Archive className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-6 px-2 text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </div> */}
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
