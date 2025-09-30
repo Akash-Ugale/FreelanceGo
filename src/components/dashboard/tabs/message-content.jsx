@@ -4,7 +4,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
-
+import { initChat } from "@/components/realtimechat/ably";
+import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   DropdownMenu,
@@ -22,8 +23,7 @@ import {
   UserPlus2Icon,
 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { set } from "date-fns";
-import pusher from "@/components/pusher/pusher";
+import { apiClient } from "@/api/AxiosServiceApi";
 
 const conversations = [
   {
@@ -129,16 +129,15 @@ const messages = [
   },
 ];
 
-export default function MessagesContent({ userRole, senderId }) {
+export default function MessagesContent() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState();
-
+  const { userRole, userId } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [mobileView, setMobileView] = useState("list");
-
-  const [pusherChannel, setPusherChannel] = useState(null);
+  const [ablyChannel, setAblyChannel] = useState(null);
 
   // Fetch conversations (example API)
   useEffect(() => {
@@ -160,85 +159,70 @@ export default function MessagesContent({ userRole, senderId }) {
     fetchConversations();
   }, []);
 
-  // Handle selecting a conversation
+  // Handle conversation selection
   const handleSelectConversation = async (conversation) => {
     setSelectedConversation(conversation);
+    setMessages([]);
 
-    // 1️⃣ Generate channel name with minimum ID first
-    const minId = Math.min(senderId, conversation.receiverId);
-    const maxId = Math.max(senderId, conversation.receiverId);
-    const generatedChannelName = `private-chat-${minId}-${maxId}`;
+    // Initialize Ably channel
+    const channel = await initChat(
+      conversation.id,
+      (msg) => {
+        setMessages((prev) => [...prev, msg]);
+      },
+      userId
+    );
 
+    setAblyChannel(channel);
+
+    // Fetch previous messages
     try {
-      // 2️⃣ Fetch old messages
       const msgRes = await axios.get(
-        `/chat/history/${senderId}/${conversation.receiverId}`,
+        `/chat/history/${userId}/${conversation.id}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
       );
       setMessages(msgRes.data);
-
-      // 3️⃣ Subscribe directly (Pusher will auto-authenticate via backend)
-      const channel = pusher.subscribe(generatedChannelName);
-      console.log(channel)
-            channel.bind("new-message", (data) => {
-        setMessages((prev) => [...prev, data]);
-      });
-      setPusherChannel(channel);
     } catch (err) {
-      console.error("Error initializing chat:", err);
+      console.error("Error fetching history:", err);
     }
   };
 
-  // Send message
+  // Send a new message
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !pusherChannel) return;
+    if (!newMessage.trim() || !ablyChannel || !selectedConversation) return;
 
     const messageData = {
-      senderId,
+      senderId: userId,
       receiverId: selectedConversation.id,
       message: newMessage,
       timestamp: new Date().toISOString(),
     };
 
     try {
-      await axios.post(
-        "/chat/send",
-        {
-          channelName: pusherChannel.name,
-          ...messageData,
-        },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
-      );
+      // Persist to backend
+      await apiClient.post("/chat/send", {
+        channelName: ablyChannel.name,
+        ...messageData,
+      });
 
-      // Optimistically update messages
-      setMessages((prev) => [...prev, { ...messageData, senderName: "You" }]);
+      // Optimistic UI update
+      setMessages((prev) => [...prev, messageData]);
       setNewMessage("");
     } catch (err) {
-      console.error("Send message error:", err);
+      console.error("Send message failed:", err);
     }
   };
-
-  // Cleanup when switching conversation/unmount
+  // Cleanup on unmount or switching conversation
   useEffect(() => {
-    handleSelectConversation();
-
     return () => {
-      if (pusherChannel) {
-        pusher.unsubscribe(pusherChannel.name);
-        setPusherChannel(null);
-      }
+      if (ablyChannel) ablyChannel.unsubscribe("new-message");
     };
-  }, [selectedConversation]);
+  }, [ablyChannel]);
 
-  const filteredConversations = (conversations || []).filter(
-    (conv) =>
-      conv.role !== userRole &&
-      (conv.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        conv.project.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredConversations = conversations.filter((conv) =>
+    conv.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -273,14 +257,11 @@ export default function MessagesContent({ userRole, senderId }) {
                 <div
                   key={conversation.id}
                   className={`p-4 border-b cursor-pointer transition-colors hover:bg-accent/50 ${
-                    selectedConversation.id === conversation.id
+                    selectedConversation?.id === conversation.id
                       ? "bg-accent"
                       : ""
                   }`}
-                  onClick={() => {
-                    setSelectedConversation(conversation);
-                    setMobileView("chat"); // 👈 switch to chat on mobile
-                  }}
+                  onClick={() => handleSelectConversation(conversation)}
                 >
                   <div className="flex items-start space-x-3">
                     <div className="relative">
@@ -407,21 +388,22 @@ export default function MessagesContent({ userRole, senderId }) {
                 {messages
                   .filter(
                     (msg) =>
-                      msg.sender === selectedConversation.role ||
-                      msg.sender === userRole
+                      msg.senderId === userId ||
+                      msg.senderId === selectedConversation.id
                   )
+
                   .map((message) => (
                     <div
                       key={message.id}
                       className={`flex ${
-                        message.sender === userRole
+                        message.senderId === userId
                           ? "justify-end"
                           : "justify-start"
                       }`}
                     >
                       <div
                         className={`max-w-[70%] ${
-                          message.sender === userRole
+                          message.senderId === userId
                             ? "bg-primary text-primary-foreground"
                             : "bg-muted"
                         } rounded-lg p-3`}
@@ -453,7 +435,7 @@ export default function MessagesContent({ userRole, senderId }) {
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     className="resize-none flex-1 min-h-[20px]"
-                    onKeyPress={(e) => {
+                    onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
                         e.preventDefault();
                         handleSendMessage();
