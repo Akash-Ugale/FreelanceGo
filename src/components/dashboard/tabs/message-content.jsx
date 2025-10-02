@@ -4,6 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
+import { toast } from "sonner";
 import { initChat } from "@/components/realtimechat/ably";
 import { useAuth } from "@/context/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,115 +25,34 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { apiClient } from "@/api/AxiosServiceApi";
+import { format } from "date-fns";
 
-const conversations = [
-  {
-    id: 1,
-    name: "TechCorp Inc.",
-    role: "client",
-    lastMessage: "Great progress on the frontend! The design looks amazing.",
-    timestamp: "2 hours ago",
-    unread: 2,
-    online: true,
-    project: "E-commerce Website Development",
-    avatar: "TC",
-  },
-  {
-    id: 2,
-    name: "Sarah Johnson",
-    role: "freelancer",
-    lastMessage: "I'll have the user authentication ready by tomorrow.",
-    timestamp: "3 hours ago",
-    unread: 0,
-    online: true,
-    project: "Mobile App Development",
-    avatar: "SJ",
-  },
-  {
-    id: 3,
-    name: "FitLife Startup",
-    role: "client",
-    lastMessage:
-      "The designs look fantastic! Just a few minor adjustments needed.",
-    timestamp: "1 day ago",
-    unread: 1,
-    online: false,
-    project: "Fitness App UI/UX",
-    avatar: "FL",
-  },
-  {
-    id: 4,
-    name: "Mike Chen",
-    role: "freelancer",
-    lastMessage: "I've uploaded the latest prototypes for review.",
-    timestamp: "2 days ago",
-    unread: 0,
-    online: false,
-    project: "Brand Identity Design",
-    avatar: "MC",
-  },
-];
+function timeAgoFromOffset(offsetDateTime) {
+  const start = new Date(offsetDateTime); // Parse ISO string from backend
+  const now = new Date();
 
-const messages = [
-  {
-    id: 1,
-    sender: "client",
-    senderName: "TechCorp Inc.",
-    message:
-      "Hi Sarah! I wanted to check in on the progress of the e-commerce platform. How are things going?",
-    timestamp: "10:30 AM",
-    type: "text",
-  },
-  {
-    id: 2,
-    sender: "freelancer",
-    senderName: "Sarah Johnson",
-    message:
-      "Hello! Things are going really well. I've completed the product catalog and shopping cart functionality. The user interface is looking great!",
-    timestamp: "10:45 AM",
-    type: "text",
-  },
-  {
-    id: 3,
-    sender: "freelancer",
-    senderName: "Sarah Johnson",
-    message:
-      "I've also integrated the Stripe payment system as requested. Would you like me to send you a demo link?",
-    timestamp: "10:46 AM",
-    type: "text",
-  },
-  {
-    id: 4,
-    sender: "client",
-    senderName: "TechCorp Inc.",
-    message:
-      "That sounds fantastic! Yes, please send the demo link. Also, I have a few additional features I'd like to discuss.",
-    timestamp: "11:15 AM",
-    type: "text",
-  },
-  {
-    id: 5,
-    sender: "freelancer",
-    senderName: "Sarah Johnson",
-    message:
-      "Here's the demo link: https://demo.ecommerce-platform.com - Let me know what additional features you have in mind!",
-    timestamp: "11:20 AM",
-    type: "text",
-  },
-  {
-    id: 6,
-    sender: "client",
-    senderName: "TechCorp Inc.",
-    message: "Great progress on the frontend! The design looks amazing.",
-    timestamp: "2:30 PM",
-    type: "text",
-  },
-];
+  const diffMs = now - start;
+  const seconds = Math.floor(diffMs / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30); // rough estimate
+  const years = Math.floor(days / 365); // rough estimate
+
+  if (years > 0) return `${years} year${years > 1 ? "s" : ""} ago`;
+  if (months > 0) return `${months} month${months > 1 ? "s" : ""} ago`;
+  if (weeks > 0) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
+  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
+  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
+  return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
+}
 
 export default function MessagesContent() {
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState();
-  const { userRole, userId } = useAuth();
+  const { userRole, userId, authLoading } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -143,7 +63,8 @@ export default function MessagesContent() {
   useEffect(() => {
     async function fetchConversations() {
       try {
-        const response = await axios.get("/chat/conversations");
+        const response = await apiClient.get("/api/chat-history/" + 2);
+        console.log("conversation response", response);
         const { data } = response;
 
         if (Array.isArray(data)) {
@@ -161,24 +82,38 @@ export default function MessagesContent() {
 
   // Handle conversation selection
   const handleSelectConversation = async (conversation) => {
+    console.log("conversation clicked:", conversation);
+
     setSelectedConversation(conversation);
-    setMessages([]);
+
+    if (Array.isArray(conversation.chats)) {
+      setMessages(conversation.chats);
+      console.log(conversation.chats);
+      setMobileView("chat");
+    }
 
     // Initialize Ably channel
+
     const channel = await initChat(
-      conversation.id,
-      (msg) => {
-        setMessages((prev) => [...prev, msg]);
-      },
+      conversation.opponent.id,
+      (msg) => setMessages((prev) => [...prev, msg]),
       userId
     );
+
+    // const channel = await initChat(
+    //   conversation.id,
+    //   (msg) => {
+    //     setMessages((prev) => [...prev, msg]);
+    //   },
+    //   userId
+    // );
 
     setAblyChannel(channel);
 
     // Fetch previous messages
-    try {
+    /* try {
       const msgRes = await axios.get(
-        `/chat/history/${userId}/${conversation.id}`,
+        `/chat/history/${userId}/${conversation.opponent.id}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -186,7 +121,7 @@ export default function MessagesContent() {
       setMessages(msgRes.data);
     } catch (err) {
       console.error("Error fetching history:", err);
-    }
+    } */
   };
 
   // Send a new message
@@ -195,21 +130,29 @@ export default function MessagesContent() {
 
     const messageData = {
       senderId: userId,
-      receiverId: selectedConversation.id,
-      message: newMessage,
-      timestamp: new Date().toISOString(),
+      receiverId: selectedConversation.opponent.id,
+      content: newMessage,
     };
 
     try {
       // Persist to backend
-      await apiClient.post("/chat/send", {
-        channelName: ablyChannel.name,
-        ...messageData,
-      });
+      await apiClient.post(
+        "/api/chat/send",
+        {
+          channelName: ablyChannel.name,
+          ...messageData,
+        },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      );
 
       // Optimistic UI update
-      setMessages((prev) => [...prev, messageData]);
+      setMessages((prev) => [...prev, { ...messageData, data: newMessage }]);
       setNewMessage("");
+
+      toast("Message sent");
+      //setNewMessage("");
     } catch (err) {
       console.error("Send message failed:", err);
     }
@@ -217,13 +160,21 @@ export default function MessagesContent() {
   // Cleanup on unmount or switching conversation
   useEffect(() => {
     return () => {
-      if (ablyChannel) ablyChannel.unsubscribe("new-message");
+      if (ablyChannel) ablyChannel.unsubscribe("message");
     };
   }, [ablyChannel]);
 
   const filteredConversations = conversations.filter((conv) =>
-    conv.name.toLowerCase().includes(searchTerm.toLowerCase())
+    conv.opponent.username.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  useEffect(() => {
+    console.log(messages);
+  }, [messages]);
+
+  if (authLoading) {
+    return null;
+  }
 
   return (
     <div className="space-y-6 flex flex-col">
@@ -267,7 +218,8 @@ export default function MessagesContent() {
                     <div className="relative">
                       <Avatar className="h-10 w-10">
                         <AvatarImage
-                          src={`/placeholder.svg?height=40&width=40&text=${conversation.avatar}`}
+                          src={`data:image/png;base64,${conversation.opponent.imageData}`}
+                          alt="avatar"
                         />
                         <AvatarFallback>{conversation.avatar}</AvatarFallback>
                       </Avatar>
@@ -278,7 +230,7 @@ export default function MessagesContent() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between">
                         <h4 className="font-medium text-sm truncate">
-                          {conversation.name}
+                          {conversation.opponent.username}
                         </h4>
                         {conversation.unread > 0 && (
                           <Badge
@@ -289,11 +241,9 @@ export default function MessagesContent() {
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground mb-1">
-                        {conversation.project}
-                      </p>
                       <p className="text-xs text-muted-foreground truncate">
-                        {conversation.lastMessage}
+                        {conversation.lastMessage ??
+                          "Hi there, I want this new feature"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {conversation.timestamp}
@@ -384,15 +334,10 @@ export default function MessagesContent() {
           {/* Messages */}
           <CardContent className="flex-1 p-0">
             <div className="flex flex-col h-full">
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                {messages
-                  .filter(
-                    (msg) =>
-                      msg.senderId === userId ||
-                      msg.senderId === selectedConversation.id
-                  )
-
-                  .map((message) => (
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
+                {Array.isArray(messages) &&
+                  messages.length > 0 &&
+                  messages.map((message) => (
                     <div
                       key={message.id}
                       className={`flex ${
@@ -401,19 +346,18 @@ export default function MessagesContent() {
                           : "justify-start"
                       }`}
                     >
-                      <div
-                        className={`max-w-[70%] ${
-                          message.senderId === userId
-                            ? "bg-primary text-primary-foreground"
-                            : "bg-muted"
-                        } rounded-lg p-3`}
-                      >
-                        <div className="text-sm font-medium mb-1">
-                          {message.senderName}
+                      <div className="flex flex-col">
+                        <div
+                          className={`${
+                            message.senderId === userId
+                              ? "bg-primary text-primary-foreground"
+                              : "bg-muted"
+                          } rounded-lg p-3`}
+                        >
+                          {message.content}
                         </div>
-                        <div className="text-sm">{message.message}</div>
-                        <div className="text-xs opacity-70 mt-1">
-                          {message.timestamp}
+                        <div className="text-xs opacity-70 mt-1 text-right">
+                          {timeAgoFromOffset(message.timestamp ?? new Date())}
                         </div>
                       </div>
                     </div>
@@ -444,7 +388,11 @@ export default function MessagesContent() {
                   />
                   <Button
                     onClick={handleSendMessage}
-                    disabled={!newMessage.trim()}
+                    disabled={
+                      !newMessage.trim() ||
+                      !ablyChannel ||
+                      !selectedConversation
+                    }
                     size="icon"
                   >
                     <Send className="h-4 w-4" />

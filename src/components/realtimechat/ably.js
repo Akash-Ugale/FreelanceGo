@@ -13,18 +13,16 @@ import axios from "axios";
 export const initChat = async (
   otherUserId,
   onMessageReceived,
-  currentUserId
+  currentUserId = 1
 ) => {
   try {
-    // Request token from backend
-    const response = await apiClient.get(
-      `/api/chat/token?otherUserId=${otherUserId}`
-    );
-
-    const tokenRequest = response.data;
-
-    // Initialize Ably Realtime with token request
-    const ably = new Ably.Realtime({ token: tokenRequest });
+    const ably = new Ably.Realtime({
+      authUrl: `https://freelancegobackend.onrender.com/api/chat/token?otherUserId=${otherUserId}`, // your backend endpoint
+      //  clientId: currentUserId ? currentUserId.toString() : "1", // optional but recommended
+      authHeaders: {
+        Authorization: "Bearer " + localStorage.getItem("token"),
+      },
+    });
 
     // Compute unique channel name using currentUserId
     const id1 = Math.min(currentUserId, otherUserId);
@@ -35,15 +33,20 @@ export const initChat = async (
     const channel = ably.channels.get(channelName);
 
     // Subscribe to real-time messages
-    channel.subscribe("new-message", (msg) => {
+    channel.subscribe("message", (msg) => {
       if (typeof onMessageReceived === "function") {
-        onMessageReceived(msg.data);
+        const newMessage = {
+          senderId: otherUserId,
+          data: msg.data,
+          receiverId: currentUserId,
+        }
+        onMessageReceived(newMessage);
       }
     });
 
     return channel;
   } catch (error) {
     console.error("Failed to initialize Ably chat:", error);
-    return null;
-  }
+    return null;
+  }
 };

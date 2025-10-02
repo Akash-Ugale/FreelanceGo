@@ -7,7 +7,7 @@ import { useAuth } from "@/context/AuthContext";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-export default function MessageContentDummy({ receiverId = 1 }) {
+export default function MessageContentDummy({ receiverId = 3 }) {
   const { userId } = useAuth();
   const senderId = userId;
   const [messages, setMessages] = useState([]);
@@ -32,7 +32,7 @@ export default function MessageContentDummy({ receiverId = 1 }) {
     setupChannel();
 
     return () => {
-      if (ablyChannel) ablyChannel.unsubscribe("new-message");
+      if (ablyChannel) ablyChannel.unsubscribe("message");
     };
   }, [senderId, receiverId, userId]);
 
@@ -52,12 +52,12 @@ export default function MessageContentDummy({ receiverId = 1 }) {
         "/api/chat/send",
         { channelName: ablyChannel.name, ...messageData },
         {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}`},
         }
       );
 
       // Optimistic UI update
-      setMessages((prev) => [...prev, messageData]);
+      setMessages((prev) => [...prev, {...messageData, data: messageData.content}]);
       setCurrentMessage("");
       toast("Message sent");
     } catch (err) {
@@ -83,10 +83,10 @@ export default function MessageContentDummy({ receiverId = 1 }) {
       <ul>
         {messages.map((msg, idx) => (
           <li key={idx}>
-            {msg.senderId}: {msg.message}
+            {msg.senderId}: {msg.data}
           </li>
         ))}
       </ul>
-    </div>
-  );
+    </div>
+  );
 }

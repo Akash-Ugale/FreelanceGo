@@ -10,5 +10,5 @@ import { useAuth } from "@/context/AuthContext";
 export default function Messages() {
   const { userRole } = useAuth();
 
-  return <MessageContentDummy userRole={userRole} />;
+  return <MessagesContent userRole={userRole} />;
 }
