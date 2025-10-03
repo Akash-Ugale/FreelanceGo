@@ -9,13 +9,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -33,109 +26,25 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  Copy,
   DollarSign,
-  Edit,
   Eye,
   FileText,
   Filter,
-  MoreHorizontal,
   Pause,
   Plus,
   Search,
+  Trash,
   Trash2,
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-
-const jobPosts = [
-  {
-    id: 1,
-    title: "Full-Stack Web Development",
-    category: "Web Development",
-    status: "Active",
-    budget: 3500,
-    budgetType: "fixed",
-    proposals: 12,
-    views: 89,
-    postedDate: "2024-01-20",
-    deadline: "2024-03-15",
-    skills: ["React", "Node.js", "PostgreSQL"],
-    description:
-      "Looking for an experienced full-stack developer to build a modern web application...",
-    experienceLevel: "Expert",
-  },
-  {
-    id: 2,
-    title: "Brand Identity Design",
-    category: "Design & Creative",
-    status: "Active",
-    budget: 2200,
-    budgetType: "fixed",
-    proposals: 8,
-    views: 45,
-    postedDate: "2024-01-18",
-    deadline: "2024-02-28",
-    skills: ["Brand Design", "Logo Design", "Adobe Creative Suite"],
-    description:
-      "Need a creative designer to develop a complete brand identity for our startup...",
-    experienceLevel: "Intermediate",
-  },
-  {
-    id: 3,
-    title: "Mobile App Development",
-    category: "Mobile Development",
-    status: "Completed",
-    budget: 4500,
-    budgetType: "fixed",
-    proposals: 15,
-    views: 123,
-    postedDate: "2024-01-10",
-    deadline: "2024-02-20",
-    skills: ["React Native", "iOS", "Android"],
-    description:
-      "Develop a cross-platform mobile application with modern UI/UX...",
-    experienceLevel: "Expert",
-  },
-  {
-    id: 4,
-    title: "Content Writing for Tech Blog",
-    category: "Writing & Translation",
-    status: "Paused",
-    budget: 50,
-    budgetType: "hourly",
-    proposals: 6,
-    views: 34,
-    postedDate: "2024-01-15",
-    deadline: "2024-02-15",
-    skills: ["Technical Writing", "SEO", "Content Strategy"],
-    description:
-      "Looking for a technical writer to create engaging blog posts...",
-    experienceLevel: "Intermediate",
-  },
-  {
-    id: 5,
-    title: "E-commerce Website Setup",
-    category: "Web Development",
-    status: "Draft",
-    budget: 2800,
-    budgetType: "fixed",
-    proposals: 0,
-    views: 0,
-    postedDate: "2024-01-25",
-    deadline: "2024-03-01",
-    skills: ["Shopify", "E-commerce", "Payment Integration"],
-    description:
-      "Set up a complete e-commerce solution with payment processing...",
-    experienceLevel: "Intermediate",
-  },
-]
 
 export default function JobPostsContent({ userRole }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedJobs, setSelectedJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState("all")
+  const [jobPosts, setJobPosts] = useState([])
   const { authLoading } = useAuth()
 
   if (userRole === userRoles.FREELANCER) {
@@ -164,10 +73,11 @@ export default function JobPostsContent({ userRole }) {
   useEffect(() => {
     const fetchPosts = async () => {
       try {
-        const response = await apiClient.get(
-          "/api/dashboard/get-post"
+        const response = await apiClient.get("/api/dashboard/get-post")
+        console.log("Job Posts:", response.data.content)
+        setJobPosts(
+          Array.isArray(response.data.content) ? response.data.content : []
         )
-        console.log("Job Posts:", response.data)
       } catch (error) {
         console.error(error)
       }
@@ -176,14 +86,14 @@ export default function JobPostsContent({ userRole }) {
   }, [])
 
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "active":
+    switch (status.toUpperCase()) {
+      case "ACTIVE":
         return "default"
-      case "completed":
+      case "COMPLETED":
         return "secondary"
-      case "paused":
+      case "PAUSED":
         return "outline"
-      case "draft":
+      case "DRAFT":
         return "destructive"
       default:
         return "outline"
@@ -191,14 +101,14 @@ export default function JobPostsContent({ userRole }) {
   }
 
   const getStatusIcon = (status) => {
-    switch (status.toLowerCase()) {
-      case "active":
+    switch (status.toUpperCase()) {
+      case "ACTIVE":
         return <CheckCircle className="h-4 w-4" />
-      case "completed":
+      case "COMPLETED":
         return <CheckCircle className="h-4 w-4" />
-      case "paused":
+      case "PAUSED":
         return <Pause className="h-4 w-4" />
-      case "draft":
+      case "DRAFT":
         return <FileText className="h-4 w-4" />
       default:
         return null
@@ -206,9 +116,9 @@ export default function JobPostsContent({ userRole }) {
   }
 
   const filteredJobs = jobPosts.filter((job) => {
-    const matchesSearch =
-      job.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      job.category.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = job.jobTitle
+      ?.toLowerCase()
+      .includes(searchTerm.toLowerCase())
     const matchesStatus =
       statusFilter === "all" || job.status.toLowerCase() === statusFilter
     const matchesTab =
@@ -218,13 +128,16 @@ export default function JobPostsContent({ userRole }) {
 
   const getJobStats = () => {
     const total = jobPosts.length
-    const active = jobPosts.filter((job) => job.status === "Active").length
+    const active = jobPosts.filter((job) => job.status === "ACTIVE").length
     const completed = jobPosts.filter(
-      (job) => job.status === "Completed"
+      (job) => job.status === "COMPLETED"
     ).length
-    const drafts = jobPosts.filter((job) => job.status === "Draft").length
-    const totalProposals = jobPosts.reduce((sum, job) => sum + job.proposals, 0)
-    const totalViews = jobPosts.reduce((sum, job) => sum + job.views, 0)
+    const drafts = jobPosts.filter((job) => job.status === "DRAFT").length
+    const totalProposals = jobPosts.reduce(
+      (sum, job) => sum + (job.bidDto?.length || 0),
+      0
+    )
+    const totalViews = 0 // not provided in backend
     return { total, active, completed, drafts, totalProposals, totalViews }
   }
 
@@ -308,17 +221,6 @@ export default function JobPostsContent({ userRole }) {
             <p className="text-xs text-muted-foreground">Finished</p>
           </CardContent>
         </Card>
-
-        {/* <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Drafts</CardTitle>
-            <FileText className="h-4 w-4 text-yellow-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.drafts}</div>
-            <p className="text-xs text-muted-foreground">Unpublished</p>
-          </CardContent>
-        </Card> */}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -437,7 +339,9 @@ export default function JobPostsContent({ userRole }) {
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-2 lg:space-y-0">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <h3 className="font-semibold text-lg">{job.title}</h3>
+                          <h3 className="font-semibold text-lg">
+                            {job.jobTitle}
+                          </h3>
                           <Badge
                             variant={getStatusColor(job.status)}
                             className="flex items-center space-x-1"
@@ -447,14 +351,14 @@ export default function JobPostsContent({ userRole }) {
                           </Badge>
                         </div>
                         <p className="text-muted-foreground text-sm mb-2">
-                          {job.category}
+                          {job.clientDto?.companyName || "No category"}
                         </p>
                         <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
-                          {job.description}
+                          {job.jobDescription}
                         </p>
 
                         <div className="flex flex-wrap gap-2 mb-3">
-                          {job.skills.map((skill) => (
+                          {job.requiredSkills?.map((skill) => (
                             <Badge
                               key={skill}
                               variant="secondary"
@@ -469,25 +373,33 @@ export default function JobPostsContent({ userRole }) {
                           <div className="flex items-center space-x-1">
                             <DollarSign className="h-4 w-4" />
                             <span>
-                              {job.budget.toLocaleString()}
+                              {job.budget ? job.budget.toLocaleString() : "N/A"}
                               {job.budgetType === "hourly" && "/hr"}
                             </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
-                            <span>{job.proposals} proposals</span>
+                            <span>{job.bidDto?.length || 0} proposals</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Eye className="h-4 w-4" />
-                            <span>{job.views} views</span>
+                            <span>0 views</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Calendar className="h-4 w-4" />
-                            <span>Posted: {job.postedDate}</span>
+                            <span>
+                              Posted:{" "}
+                              {new Date(job.createdAt).toLocaleDateString()}
+                            </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Clock className="h-4 w-4" />
-                            <span>Deadline: {job.deadline}</span>
+                            <span>
+                              Deadline:{" "}
+                              {new Date(
+                                job.projectEndTime
+                              ).toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
                       </div>
@@ -501,7 +413,10 @@ export default function JobPostsContent({ userRole }) {
                           <Eye className="mr-2 h-4 w-4" />
                           View
                         </Button>
-                        <DropdownMenu>
+                        <Button variant="destructive" size="sm">
+                          <Trash className="h-3 w-3" />
+                        </Button>
+                        {/* <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               variant="outline"
@@ -535,7 +450,7 @@ export default function JobPostsContent({ userRole }) {
                               Delete
                             </DropdownMenuItem>
                           </DropdownMenuContent>
-                        </DropdownMenu>
+                        </DropdownMenu> */}
                       </div>
                     </div>
                   </div>

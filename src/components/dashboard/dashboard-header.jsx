@@ -1,6 +1,6 @@
-import { apiClient } from "@/api/AxiosServiceApi";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
+import { apiClient } from "@/api/AxiosServiceApi"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,56 +8,60 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@/components/ui/dropdown-menu"
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import { useAuth } from "@/context/AuthContext"
+import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react"
+import { useEffect, useState } from "react"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
+import FullScreenLoader from "../FullScreenLoader"
 import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
-import { useAuth } from "@/context/AuthContext";
-import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react";
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import FullScreenLoader from "../FullScreenLoader";
-import DashboardSidebarContent from "./dashboard-sidebar-content";
-import { useNavigate } from "react-router-dom";
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog"
+import DashboardSidebarContent from "./dashboard-sidebar-content"
 
 export default function DashboardHeader() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [userData, setUserData] = useState(null);
-  const { logoutUser, userRole, setUserId, authLoading, token } = useAuth();
-  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [userData, setUserData] = useState(null)
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false) // track dropdown menu
+  const { logoutUser, userRole, setUserId } = useAuth()
+  const navigate = useNavigate()
 
   const fetchProfileDetails = async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const response = await apiClient.get("/api/me");
-      const { status, data } = response;
-      setUserId(data?.id);
-      console.log(response);
+      const response = await apiClient.get("/api/me")
+      const { status, data } = response
+      setUserId(data?.id)
       if (status === 200) {
-        setUserData(data);
-        toast.success("Profile details fetched successfully");
+        setUserData(data)
+        toast.success("Profile details fetched successfully")
       }
     } catch (error) {
-      console.log(error);
+      console.log(error)
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   const handleLogout = () => {
-    logoutUser();
-    navigate("/", { replace: true });
-  };
+    logoutUser()
+    navigate("/", { replace: true })
+    setLogoutDialogOpen(false) // close dialog after logout
+  }
 
   useEffect(() => {
-    fetchProfileDetails();
-  }, []);
+    fetchProfileDetails()
+  }, [])
 
   return (
     <>
@@ -97,7 +101,7 @@ export default function DashboardHeader() {
               </span>
             </Button>
 
-            <DropdownMenu>
+            <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
@@ -112,6 +116,7 @@ export default function DashboardHeader() {
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
@@ -141,7 +146,10 @@ export default function DashboardHeader() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-red-600"
-                  onClick={handleLogout}
+                  onClick={() => {
+                    setMenuOpen(false) // close dropdown first
+                    setLogoutDialogOpen(true) // then open dialog
+                  }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
@@ -151,6 +159,24 @@ export default function DashboardHeader() {
           </div>
         </div>
       </header>
+
+      {/* Logout Confirmation Dialog */}
+      <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Are you sure?</DialogTitle>
+            <DialogDescription>
+              This action will log you out of your account.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <DialogClose asChild>
+              <Button variant="outline">Cancel</Button>
+            </DialogClose>
+            <Button onClick={handleLogout} variant="destructive">Continue</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
-  );
+  )
 }
