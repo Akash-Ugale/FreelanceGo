@@ -1,10 +1,10 @@
 "use client"
 
 import PostJobContent from "@/components/dashboard/tabs/post-job-content"
-import { useState } from "react"
+import { useAuth } from "@/context/AuthContext"
 
 export default function PostJob() {
-  const [userRole, setUserRole] = useState("client")
+  const { userRole } = useAuth()
 
   return <PostJobContent userRole={userRole} />
 }

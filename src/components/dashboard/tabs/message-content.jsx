@@ -1,20 +1,19 @@
-"use client";
+"use client"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import axios from "axios";
-import { toast } from "sonner";
-import { initChat } from "@/components/realtimechat/ably";
-import { useAuth } from "@/context/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { apiClient } from "@/api/AxiosServiceApi"
+import { initChat } from "@/components/realtimechat/ably"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@/components/ui/dropdown-menu"
+import { Input } from "@/components/ui/input"
+import { useAuth } from "@/context/AuthContext"
 import {
   ChevronLeft,
   MoreVertical,
@@ -22,74 +21,81 @@ import {
   Search,
   Send,
   UserPlus2Icon,
-} from "lucide-react";
-import { useState, useEffect } from "react";
-import { apiClient } from "@/api/AxiosServiceApi";
-import { format } from "date-fns";
+} from "lucide-react"
+import { useEffect, useState } from "react"
+import { toast } from "sonner"
 
 function timeAgoFromOffset(offsetDateTime) {
-  const start = new Date(offsetDateTime); // Parse ISO string from backend
-  const now = new Date();
+  const start = new Date(offsetDateTime)
+  const now = new Date()
+  const diffMs = now - start
 
-  const diffMs = now - start;
-  const seconds = Math.floor(diffMs / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-  const days = Math.floor(hours / 24);
-  const weeks = Math.floor(days / 7);
-  const months = Math.floor(days / 30); // rough estimate
-  const years = Math.floor(days / 365); // rough estimate
+  if (diffMs < 0) return "just now" // future dates guard
 
-  if (years > 0) return `${years} year${years > 1 ? "s" : ""} ago`;
-  if (months > 0) return `${months} month${months > 1 ? "s" : ""} ago`;
-  if (weeks > 0) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
-  if (days > 0) return `${days} day${days > 1 ? "s" : ""} ago`;
-  if (hours > 0) return `${hours} hour${hours > 1 ? "s" : ""} ago`;
-  if (minutes > 0) return `${minutes} minute${minutes > 1 ? "s" : ""} ago`;
-  return `${seconds} second${seconds !== 1 ? "s" : ""} ago`;
+  const seconds = Math.floor(diffMs / 1000)
+  if (seconds < 10) return "just now"
+  if (seconds < 60) return `${seconds}s ago`
+
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+
+  const days = Math.floor(hours / 24)
+  if (days < 7) return `${days}d ago`
+
+  const weeks = Math.floor(days / 7)
+  if (weeks < 4) return `${weeks}w ago`
+
+  const months = Math.floor(days / 30)
+  if (months < 12) return `${months}mo ago`
+
+  const years = Math.floor(days / 365)
+  return `${years}y ago`
 }
 
 export default function MessagesContent() {
-  const [conversations, setConversations] = useState([]);
-  const [selectedConversation, setSelectedConversation] = useState();
-  const { userRole, userId, authLoading } = useAuth();
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [mobileView, setMobileView] = useState("list");
-  const [ablyChannel, setAblyChannel] = useState(null);
+  const [conversations, setConversations] = useState([])
+  const [selectedConversation, setSelectedConversation] = useState()
+  const { userRole, userId, authLoading } = useAuth()
+  const [messages, setMessages] = useState([])
+  const [newMessage, setNewMessage] = useState("")
+  const [searchTerm, setSearchTerm] = useState("")
+  const [mobileView, setMobileView] = useState("list")
+  const [ablyChannel, setAblyChannel] = useState(null)
 
   // Fetch conversations (example API)
   useEffect(() => {
     async function fetchConversations() {
       try {
-        const response = await apiClient.get("/api/chat-history/" + 2);
-        console.log("conversation response", response);
-        const { data } = response;
+        const response = await apiClient.get("/api/chat-history/" + userId)
+        console.log("conversation response", response)
+        const { data } = response
 
         if (Array.isArray(data)) {
-          setConversations(data);
+          setConversations(data)
         } else {
-          setConversations([]);
-          console.warn("Conversations API returned non-array:", data);
+          setConversations([])
+          console.warn("Conversations API returned non-array:", data)
         }
       } catch (error) {
-        console.log(error);
+        console.log(error)
       }
     }
-    fetchConversations();
-  }, []);
+    fetchConversations()
+  }, [])
 
   // Handle conversation selection
   const handleSelectConversation = async (conversation) => {
-    console.log("conversation clicked:", conversation);
+    console.log("conversation clicked:", conversation)
 
-    setSelectedConversation(conversation);
+    setSelectedConversation(conversation)
 
     if (Array.isArray(conversation.chats)) {
-      setMessages(conversation.chats);
-      console.log(conversation.chats);
-      setMobileView("chat");
+      setMessages(conversation.chats)
+      console.log(conversation.chats)
+      setMobileView("chat")
     }
 
     // Initialize Ably channel
@@ -98,17 +104,9 @@ export default function MessagesContent() {
       conversation.opponent.id,
       (msg) => setMessages((prev) => [...prev, msg]),
       userId
-    );
+    )
 
-    // const channel = await initChat(
-    //   conversation.id,
-    //   (msg) => {
-    //     setMessages((prev) => [...prev, msg]);
-    //   },
-    //   userId
-    // );
-
-    setAblyChannel(channel);
+    setAblyChannel(channel)
 
     // Fetch previous messages
     /* try {
@@ -122,17 +120,17 @@ export default function MessagesContent() {
     } catch (err) {
       console.error("Error fetching history:", err);
     } */
-  };
+  }
 
   // Send a new message
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !ablyChannel || !selectedConversation) return;
+    if (!newMessage.trim() || !ablyChannel || !selectedConversation) return
 
     const messageData = {
       senderId: userId,
       receiverId: selectedConversation.opponent.id,
       content: newMessage,
-    };
+    }
 
     try {
       // Persist to backend
@@ -145,35 +143,35 @@ export default function MessagesContent() {
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
-      );
+      )
 
       // Optimistic UI update
-      setMessages((prev) => [...prev, { ...messageData, data: newMessage }]);
-      setNewMessage("");
+      setMessages((prev) => [...prev, { ...messageData, data: newMessage }])
+      setNewMessage("")
 
-      toast("Message sent");
+      toast("Message sent")
       //setNewMessage("");
     } catch (err) {
-      console.error("Send message failed:", err);
+      console.error("Send message failed:", err)
     }
-  };
+  }
   // Cleanup on unmount or switching conversation
   useEffect(() => {
     return () => {
-      if (ablyChannel) ablyChannel.unsubscribe("message");
-    };
-  }, [ablyChannel]);
+      if (ablyChannel) ablyChannel.unsubscribe("message")
+    }
+  }, [ablyChannel])
 
   const filteredConversations = conversations.filter((conv) =>
     conv.opponent.username.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  )
 
   useEffect(() => {
-    console.log(messages);
-  }, [messages]);
+    console.log(messages)
+  }, [messages])
 
   if (authLoading) {
-    return null;
+    return null
   }
 
   return (
@@ -257,7 +255,6 @@ export default function MessagesContent() {
         </Card>
 
         {/* Chat Area */}
-
         <Card
           className={`flex flex-col h-[85vh] sm:h-full overflow-auto relative ${
             mobileView === "list" ? "hidden" : "flex"
@@ -282,18 +279,20 @@ export default function MessagesContent() {
                 <div className="flex items-center space-x-3">
                   <Avatar className="h-10 w-10">
                     <AvatarImage
-                      src={`/placeholder.svg?height=40&width=40&text=${selectedConversation.avatar}`}
+                      src={`data:image/png;base64,${selectedConversation.opponent.imageData}`}
                     />
                     <AvatarFallback>
                       {selectedConversation.avatar}
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-medium">{selectedConversation.name}</h3>
+                    <h3 className="font-medium">
+                      {selectedConversation.opponent.username}
+                    </h3>
                     <p className="text-xs text-muted-foreground">
-                      {selectedConversation.online
-                        ? "Online now"
-                        : "Last seen 2 hours ago"}
+                      {timeAgoFromOffset(
+                        selectedConversation.chats.timestamp ?? new Date()
+                      )}
                     </p>
                   </div>
                 </div>
@@ -381,8 +380,8 @@ export default function MessagesContent() {
                     className="resize-none flex-1 min-h-[20px]"
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleSendMessage();
+                        e.preventDefault()
+                        handleSendMessage()
                       }
                     }}
                   />
@@ -404,5 +403,5 @@ export default function MessagesContent() {
         </Card>
       </div>
     </div>
-  );
+  )
 }

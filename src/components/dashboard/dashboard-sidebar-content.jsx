@@ -50,7 +50,7 @@ export default function DashboardSidebarContent({ userRole }) {
 
       {/* Bottom Section */}
       <div className="border-t p-2">
-        <div className="flex items-center space-x-3 px-3 py-2 rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
+        <div className="flex items-center space-x-3 px-3 py-2 rounded-lg text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
           <Settings className="h-5 w-5 text-muted-foreground" />
           <span className="text-sm font-medium">Settings</span>
         </div>

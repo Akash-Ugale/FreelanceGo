@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils"
+import { userRoles } from "@/utils/constants"
 import { clientItems, freelancerItems } from "@/utils/sidebar-items"
 import { Settings } from "lucide-react"
 import { useState } from "react"
@@ -9,11 +10,11 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip"
-import { userRoles } from "@/utils/constants"
 
 export default function DashboardSidebarContentCollapsed({ userRole }) {
   const [activeItem, setActiveItem] = useState("/dashboard")
-  const sidebarItems = userRole === userRoles.FREELANCER ? freelancerItems : clientItems
+  const sidebarItems =
+    userRole === userRoles.FREELANCER ? freelancerItems : clientItems
 
   return (
     <div className="flex flex-col items-center space-y-1 w-full overflow-y-auto">
@@ -44,10 +45,15 @@ export default function DashboardSidebarContentCollapsed({ userRole }) {
           </Tooltip>
         </TooltipProvider>
       ))}
-      <div className="border-t p-4">
-        <div className="flex items-center space-x-3  rounded-lg hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
-          <Settings className="h-5 w-5 text-muted-foreground" />
-        </div>
+      <div>
+        <Link
+          to="/settings"
+          className={cn(
+            "flex items-center justify-center w-10 h-10 rounded-md bg-popover text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-colors shadow-sm"
+          )}
+        >
+          <Settings className="h-5 w-5" />
+        </Link>
       </div>
     </div>
   )
