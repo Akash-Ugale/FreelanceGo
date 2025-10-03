@@ -9,6 +9,7 @@ import { Outlet, useNavigate } from "react-router-dom"
 export default function Dashboard() {
   const { userRole, authLoading } = useAuth()
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
+  const [activeItem, setActiveItem] = useState("/dashboard")
   const navigate = useNavigate()
 
   async function validateToken(token) {
@@ -46,13 +47,21 @@ export default function Dashboard() {
     <div className="min-h-screen max-h-screen overflow-hidden bg-background flex flex-col">
       {/* Dashboard Header */}
       <div>
-        <DashboardHeader userRole={userRole} />
+        <DashboardHeader
+          userRole={userRole}
+          activeItem={activeItem}
+          setActiveItem={setActiveItem}
+        />
       </div>
 
       {/* Layout Content */}
       <div className="relative flex-1 flex max-h-full overflow-y-auto">
-        <DashboardSidebar userRole={userRole} />
-        <main className="flex-1 p-4 md:p-6">
+        <DashboardSidebar
+          userRole={userRole}
+          activeItem={activeItem}
+          setActiveItem={setActiveItem}
+        />
+        <main className="flex-1 h-fit p-4 md:p-6">
           <Outlet />
         </main>
       </div>

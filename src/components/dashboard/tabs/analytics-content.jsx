@@ -1,24 +1,35 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import {
-  TrendingUp,
-  DollarSign,
-  Users,
-  Briefcase,
-  Star,
-  Clock,
-  Target,
-  Download,
-  ArrowUpRight,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
   ArrowDownRight,
+  ArrowUpRight,
+  Briefcase,
+  Clock,
+  DollarSign,
+  Download,
+  Star,
+  Target,
+  TrendingUp,
+  Users,
 } from "lucide-react"
-
+import { useState } from "react"
 
 const freelancerAnalytics = {
   overview: {
@@ -103,8 +114,12 @@ export default function AnalyticsContent({ userRole }) {
   }
 
   const earningsChange = getChangePercentage(
-    userRole === "freelancer" ? data.overview.thisMonth : data.overview.thisMonth,
-    userRole === "freelancer" ? freelancerAnalytics.overview.lastMonth : clientAnalytics.overview.lastMonth,
+    userRole === "freelancer"
+      ? data.overview.thisMonth
+      : data.overview.thisMonth,
+    userRole === "freelancer"
+      ? freelancerAnalytics.overview.lastMonth
+      : clientAnalytics.overview.lastMonth
   )
 
   return (
@@ -112,7 +127,9 @@ export default function AnalyticsContent({ userRole }) {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Analytics
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             {userRole === "freelancer"
               ? "Track your freelance performance and growth"
@@ -149,7 +166,11 @@ export default function AnalyticsContent({ userRole }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${(userRole === "freelancer" ? data.overview.totalEarnings : data.overview.totalSpent).toLocaleString()}
+              $
+              {(userRole === "freelancer"
+                ? data.overview.totalEarnings
+                : data.overview.totalSpent
+              ).toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground flex items-center">
               {earningsChange.isPositive ? (
@@ -157,7 +178,11 @@ export default function AnalyticsContent({ userRole }) {
               ) : (
                 <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
               )}
-              <span className={earningsChange.isPositive ? "text-green-500" : "text-red-500"}>
+              <span
+                className={
+                  earningsChange.isPositive ? "text-green-500" : "text-red-500"
+                }
+              >
                 {earningsChange.value}%
               </span>
               <span className="ml-1">from last month</span>
@@ -167,11 +192,15 @@ export default function AnalyticsContent({ userRole }) {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Projects
+            </CardTitle>
             <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{data.overview.activeProjects}</div>
+            <div className="text-2xl font-bold">
+              {data.overview.activeProjects}
+            </div>
             <p className="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
@@ -189,10 +218,14 @@ export default function AnalyticsContent({ userRole }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userRole === "freelancer" ? data.overview.avgRating : data.overview.hiredFreelancers}
+              {userRole === "freelancer"
+                ? data.overview.avgRating
+                : data.overview.hiredFreelancers}
             </div>
             <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer" ? "Client satisfaction" : "Total hired"}
+              {userRole === "freelancer"
+                ? "Client satisfaction"
+                : "Total hired"}
             </p>
           </CardContent>
         </Card>
@@ -207,11 +240,17 @@ export default function AnalyticsContent({ userRole }) {
           <CardContent>
             <div className="text-2xl font-bold">
               {userRole === "freelancer"
-                ? `${((data.overview.proposalsAccepted / data.overview.proposalsSent) * 100).toFixed(1)}%`
+                ? `${(
+                    (data.overview.proposalsAccepted /
+                      data.overview.proposalsSent) *
+                    100
+                  ).toFixed(1)}%`
                 : `${data.overview.avgTimeToHire} days`}
             </div>
             <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer" ? "Proposal acceptance" : "Average hiring time"}
+              {userRole === "freelancer"
+                ? "Proposal acceptance"
+                : "Average hiring time"}
             </p>
           </CardContent>
         </Card>
@@ -223,27 +262,48 @@ export default function AnalyticsContent({ userRole }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === "freelancer" ? "Earnings Trend" : "Spending Trend"}
+                {userRole === "freelancer"
+                  ? "Earnings Trend"
+                  : "Spending Trend"}
               </CardTitle>
               <CardDescription>
-                {userRole === "freelancer" ? "Track your income over time" : "Monitor your project spending patterns"}
+                {userRole === "freelancer"
+                  ? "Track your income over time"
+                  : "Monitor your project spending patterns"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(userRole === "freelancer" ? data.earningsTrend : data.spendingTrend).map((item, index) => (
-                  <div key={index} className="flex items-center justify-between">
+                {(userRole === "freelancer"
+                  ? data.earningsTrend
+                  : data.spendingTrend
+                ).map((item, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between"
+                  >
                     <span className="text-sm font-medium">{item.month}</span>
                     <div className="flex items-center space-x-2">
                       <div className="w-32 bg-muted rounded-full h-2">
                         <div
                           className="bg-primary h-2 rounded-full"
                           style={{
-                            width: `${(item.amount / Math.max(...(userRole === "freelancer" ? data.earningsTrend : data.spendingTrend).map((d) => d.amount))) * 100}%`,
+                            width: `${
+                              (item.amount /
+                                Math.max(
+                                  ...(userRole === "freelancer"
+                                    ? data.earningsTrend
+                                    : data.spendingTrend
+                                  ).map((d) => d.amount)
+                                )) *
+                              100
+                            }%`,
                           }}
                         />
                       </div>
-                      <span className="text-sm font-bold w-16 text-right">${item.amount.toLocaleString()}</span>
+                      <span className="text-sm font-bold w-16 text-right">
+                        ${item.amount.toLocaleString()}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -256,10 +316,14 @@ export default function AnalyticsContent({ userRole }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === "freelancer" ? "Top Skills" : "Category Breakdown"}
+                {userRole === "freelancer"
+                  ? "Top Skills"
+                  : "Category Breakdown"}
               </CardTitle>
               <CardDescription>
-                {userRole === "freelancer" ? "Your most profitable skills" : "Spending by project category"}
+                {userRole === "freelancer"
+                  ? "Your most profitable skills"
+                  : "Spending by project category"}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -268,7 +332,9 @@ export default function AnalyticsContent({ userRole }) {
                   ? data.skillsPerformance.map((skill, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{skill.skill}</span>
+                          <span className="text-sm font-medium">
+                            {skill.skill}
+                          </span>
                           <Badge variant="secondary" className="text-xs">
                             ${skill.earnings.toLocaleString()}
                           </Badge>
@@ -282,7 +348,13 @@ export default function AnalyticsContent({ userRole }) {
                           </div>
                         </div>
                         <Progress
-                          value={(skill.earnings / Math.max(...data.skillsPerformance.map((s) => s.earnings))) * 100}
+                          value={
+                            (skill.earnings /
+                              Math.max(
+                                ...data.skillsPerformance.map((s) => s.earnings)
+                              )) *
+                            100
+                          }
                           className="h-2"
                         />
                       </div>
@@ -290,14 +362,24 @@ export default function AnalyticsContent({ userRole }) {
                   : data.categoryBreakdown.map((category, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{category.category}</span>
+                          <span className="text-sm font-medium">
+                            {category.category}
+                          </span>
                           <Badge variant="secondary" className="text-xs">
                             ${category.spent.toLocaleString()}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground">{category.projects} projects</div>
+                        <div className="text-xs text-muted-foreground">
+                          {category.projects} projects
+                        </div>
                         <Progress
-                          value={(category.spent / Math.max(...data.categoryBreakdown.map((c) => c.spent))) * 100}
+                          value={
+                            (category.spent /
+                              Math.max(
+                                ...data.categoryBreakdown.map((c) => c.spent)
+                              )) *
+                            100
+                          }
                           className="h-2"
                         />
                       </div>
@@ -315,37 +397,59 @@ export default function AnalyticsContent({ userRole }) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Client Satisfaction</CardTitle>
-                <CardDescription>Breakdown of client feedback ratings</CardDescription>
+                <CardDescription>
+                  Breakdown of client feedback ratings
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Excellent (5 stars)</span>
-                      <span className="text-sm font-medium">{data.clientSatisfaction.excellent}%</span>
+                      <span className="text-sm font-medium">
+                        {data.clientSatisfaction.excellent}%
+                      </span>
                     </div>
-                    <Progress value={data.clientSatisfaction.excellent} className="h-2" />
+                    <Progress
+                      value={data.clientSatisfaction.excellent}
+                      className="h-2"
+                    />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Good (4 stars)</span>
-                      <span className="text-sm font-medium">{data.clientSatisfaction.good}%</span>
+                      <span className="text-sm font-medium">
+                        {data.clientSatisfaction.good}%
+                      </span>
                     </div>
-                    <Progress value={data.clientSatisfaction.good} className="h-2" />
+                    <Progress
+                      value={data.clientSatisfaction.good}
+                      className="h-2"
+                    />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Average (3 stars)</span>
-                      <span className="text-sm font-medium">{data.clientSatisfaction.average}%</span>
+                      <span className="text-sm font-medium">
+                        {data.clientSatisfaction.average}%
+                      </span>
                     </div>
-                    <Progress value={data.clientSatisfaction.average} className="h-2" />
+                    <Progress
+                      value={data.clientSatisfaction.average}
+                      className="h-2"
+                    />
                   </div>
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-sm">Poor (1-2 stars)</span>
-                      <span className="text-sm font-medium">{data.clientSatisfaction.poor}%</span>
+                      <span className="text-sm font-medium">
+                        {data.clientSatisfaction.poor}%
+                      </span>
                     </div>
-                    <Progress value={data.clientSatisfaction.poor} className="h-2" />
+                    <Progress
+                      value={data.clientSatisfaction.poor}
+                      className="h-2"
+                    />
                   </div>
                 </div>
               </CardContent>
@@ -354,7 +458,9 @@ export default function AnalyticsContent({ userRole }) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Performance Insights</CardTitle>
-                <CardDescription>Key metrics and recommendations</CardDescription>
+                <CardDescription>
+                  Key metrics and recommendations
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -362,14 +468,18 @@ export default function AnalyticsContent({ userRole }) {
                     <TrendingUp className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-sm font-medium">Strong Performance</p>
-                      <p className="text-xs text-muted-foreground">Your React skills are in high demand</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your React skills are in high demand
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
                     <Target className="h-5 w-5 text-blue-600" />
                     <div>
                       <p className="text-sm font-medium">Opportunity</p>
-                      <p className="text-xs text-muted-foreground">Consider raising your hourly rate by 15%</p>
+                      <p className="text-xs text-muted-foreground">
+                        Consider raising your hourly rate by 15%
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
@@ -390,25 +500,35 @@ export default function AnalyticsContent({ userRole }) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Hiring Metrics</CardTitle>
-                <CardDescription>Your recruitment performance indicators</CardDescription>
+                <CardDescription>
+                  Your recruitment performance indicators
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Average Time to Hire</span>
-                    <span className="text-lg font-bold">{data.hiringMetrics.timeToHire} days</span>
+                    <span className="text-lg font-bold">
+                      {data.hiringMetrics.timeToHire} days
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Proposals per Job</span>
-                    <span className="text-lg font-bold">{data.hiringMetrics.proposalsPerJob}</span>
+                    <span className="text-lg font-bold">
+                      {data.hiringMetrics.proposalsPerJob}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Successful Hires</span>
-                    <span className="text-lg font-bold">{data.hiringMetrics.successfulHires}%</span>
+                    <span className="text-lg font-bold">
+                      {data.hiringMetrics.successfulHires}%
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Rehire Rate</span>
-                    <span className="text-lg font-bold">{data.hiringMetrics.rehireRate}%</span>
+                    <span className="text-lg font-bold">
+                      {data.hiringMetrics.rehireRate}%
+                    </span>
                   </div>
                 </div>
               </CardContent>
@@ -417,25 +537,31 @@ export default function AnalyticsContent({ userRole }) {
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Hiring Insights</CardTitle>
-                <CardDescription>Recommendations to improve your hiring</CardDescription>
+                <CardDescription>
+                  Recommendations to improve your hiring
+                </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
                     <TrendingUp className="h-5 w-5 text-green-600" />
                     <div>
                       <p className="text-sm font-medium">Great Hiring Rate</p>
-                      <p className="text-xs text-muted-foreground">85% of your job posts result in successful hires</p>
+                      <p className="text-xs text-muted-foreground">
+                        85% of your job posts result in successful hires
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
                     <Users className="h-5 w-5 text-blue-600" />
                     <div>
                       <p className="text-sm font-medium">High Rehire Rate</p>
-                      <p className="text-xs text-muted-foreground">65% of freelancers work with you again</p>
+                      <p className="text-xs text-muted-foreground">
+                        65% of freelancers work with you again
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
+                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
                     <Clock className="h-5 w-5 text-yellow-600" />
                     <div>
                       <p className="text-sm font-medium">Tip</p>

@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -22,7 +21,6 @@ import { useAuth } from "@/context/AuthContext"
 import { userRoles } from "@/utils/constants"
 import {
   AlertCircle,
-  Archive,
   Calendar,
   CheckCircle,
   Clock,
@@ -34,7 +32,6 @@ import {
   Plus,
   Search,
   Trash,
-  Trash2,
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
@@ -42,7 +39,6 @@ import { useEffect, useState } from "react"
 export default function JobPostsContent({ userRole }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
-  const [selectedJobs, setSelectedJobs] = useState([])
   const [selectedTab, setSelectedTab] = useState("all")
   const [jobPosts, setJobPosts] = useState([])
   const { authLoading } = useAuth()
@@ -143,22 +139,6 @@ export default function JobPostsContent({ userRole }) {
 
   const stats = getJobStats()
 
-  const toggleJobSelection = (jobId) => {
-    setSelectedJobs((prev) =>
-      prev.includes(jobId)
-        ? prev.filter((id) => id !== jobId)
-        : [...prev, jobId]
-    )
-  }
-
-  const selectAllJobs = () => {
-    setSelectedJobs(filteredJobs.map((job) => job.id))
-  }
-
-  const clearSelection = () => {
-    setSelectedJobs([])
-  }
-
   if (authLoading) {
     return null
   }
@@ -188,7 +168,7 @@ export default function JobPostsContent({ userRole }) {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Jobs</CardTitle>
@@ -230,17 +210,6 @@ export default function JobPostsContent({ userRole }) {
           <CardContent>
             <div className="text-2xl font-bold">{stats.totalProposals}</div>
             <p className="text-xs text-muted-foreground">Total received</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Views</CardTitle>
-            <Eye className="h-4 w-4 text-orange-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.totalViews}</div>
-            <p className="text-xs text-muted-foreground">Total views</p>
           </CardContent>
         </Card>
       </div>
@@ -290,33 +259,6 @@ export default function JobPostsContent({ userRole }) {
               </Select>
             </div>
           </div>
-
-          {selectedJobs.length > 0 && (
-            <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
-              <span className="text-sm font-medium">
-                {selectedJobs.length} job{selectedJobs.length > 1 ? "s" : ""}{" "}
-                selected
-              </span>
-              <div className="flex items-center space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearSelection}
-                  className="bg-transparent"
-                >
-                  Clear
-                </Button>
-                <Button variant="outline" size="sm" className="bg-transparent">
-                  <Archive className="mr-2 h-4 w-4" />
-                  Archive
-                </Button>
-                <Button variant="outline" size="sm" className="bg-transparent">
-                  <Trash2 className="mr-2 h-4 w-4" />
-                  Delete
-                </Button>
-              </div>
-            </div>
-          )}
         </CardHeader>
 
         <CardContent>
@@ -324,17 +266,9 @@ export default function JobPostsContent({ userRole }) {
             {filteredJobs.map((job) => (
               <div
                 key={job.id}
-                className={`border rounded-lg p-4 hover:shadow-md transition-shadow ${
-                  selectedJobs.includes(job.id) ? "ring-2 ring-primary" : ""
-                }`}
+                className={`border rounded-lg p-4 hover:shadow-md transition-shadow`}
               >
                 <div className="flex items-start space-x-4">
-                  <Checkbox
-                    checked={selectedJobs.includes(job.id)}
-                    onCheckedChange={() => toggleJobSelection(job.id)}
-                    className="mt-1"
-                  />
-
                   <div className="flex-1 space-y-3">
                     <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-2 lg:space-y-0">
                       <div className="flex-1">
@@ -416,41 +350,6 @@ export default function JobPostsContent({ userRole }) {
                         <Button variant="destructive" size="sm">
                           <Trash className="h-3 w-3" />
                         </Button>
-                        {/* <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-transparent"
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Job
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Copy className="mr-2 h-4 w-4" />
-                              Duplicate
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem>
-                              <Pause className="mr-2 h-4 w-4" />
-                              Pause Job
-                            </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Archive className="mr-2 h-4 w-4" />
-                              Archive
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu> */}
                       </div>
                     </div>
                   </div>

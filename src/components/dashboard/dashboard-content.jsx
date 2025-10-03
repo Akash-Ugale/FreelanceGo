@@ -21,13 +21,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "../ui/dialog"
+import { Link } from "react-router-dom"
 
 const freelancerStats = [
   {
@@ -240,32 +234,27 @@ export default function DashboardContent() {
               : "Welcome back! Here's an overview of your projects and hiring activity."}
           </p>
         </div>
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="w-full sm:w-auto">
-              {userRole === userRoles.FREELANCER ? (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  New Proposal
-                </>
-              ) : (
-                <>
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Post a Job
-                </>
-              )}
-            </Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>
-                {userRole === userRoles.FREELANCER
-                  ? "New Proposal"
-                  : "Post a Job"}
-              </DialogTitle>
-            </DialogHeader>
-          </DialogContent>
-        </Dialog>
+        <Link
+          to={
+            "/" + (userRole === userRoles.FREELANCER)
+              ? "post-job"
+              : "browser-jobs"
+          }
+        >
+          <Button className="w-full sm:w-auto">
+            {userRole === userRoles.FREELANCER ? (
+              <>
+                <Plus className="mr-2 h-4 w-4" />
+                Browse Jobs
+              </>
+            ) : (
+              <>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Post a Job
+              </>
+            )}
+          </Button>
+        </Link>
       </div>
 
       {/* Stats Cards */}
