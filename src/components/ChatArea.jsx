@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/context/AuthContext"
 import { ChevronLeft, MoreVertical, Paperclip, Send } from "lucide-react"
 import { useEffect, useState } from "react"
-import { toast } from "sonner"
 
 function timeAgoFromOffset(offsetDateTime) {
   const start = new Date(offsetDateTime)
@@ -51,14 +50,18 @@ export default function ChatArea({
   useEffect(() => {
     if (!selectedConversation) return
 
-    if (selectedConversation.chats) {
-      setMessages([selectedConversation.chats])
+    // preload messages if array exists
+    if (Array.isArray(selectedConversation.chats)) {
+      setMessages(selectedConversation.chats)
     }
 
+    let channel
     async function init() {
-      const channel = await initChat(
+      channel = await initChat(
         selectedConversation.opponent.id,
-        (msg) => setMessages((prev) => [...prev, msg]),
+        (msg) => {
+          setMessages((prev) => [...prev, msg])
+        },
         userId
       )
       setAblyChannel(channel)
@@ -66,9 +69,9 @@ export default function ChatArea({
     init()
 
     return () => {
-      if (ablyChannel) ablyChannel.unsubscribe("message")
+      if (channel) channel.unsubscribe("message")
     }
-  }, [selectedConversation])
+  }, [selectedConversation, userId])
 
   // Send message
   const handleSendMessage = async () => {
@@ -81,14 +84,20 @@ export default function ChatArea({
     }
 
     try {
-      await apiClient.post("/api/chat/send", {
-        channelName: ablyChannel.name,
-        ...messageData,
-      })
+      await apiClient.post(
+        "/api/chat/send",
+        { channelName: ablyChannel.name, ...messageData },
+        {
+          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+        }
+      )
 
-      setMessages((prev) => [...prev, messageData])
+      // ! optimistic update aligned with Ably format (currently disabled)
+      /* setMessages((prev) => [
+        ...prev,
+        { ...messageData, data: messageData.content, timestamp: new Date() },
+      ]) */
       setNewMessage("")
-      toast("Message sent")
     } catch (err) {
       console.error("Send message failed:", err)
     }
@@ -160,37 +169,33 @@ export default function ChatArea({
       <CardContent className="flex-1 p-0">
         <div className="flex flex-col h-full">
           <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
-            {Array.isArray(messages) &&
-              messages.length > 0 &&
-              messages.map((message, idx) => (
-                <div
-                  key={idx}
-                  className={`flex ${
-                    message.senderId === userId
-                      ? "justify-end"
-                      : "justify-start"
-                  }`}
-                >
-                  <div className="flex flex-col">
-                    <div
-                      className={`${
-                        message.senderId === userId
-                          ? "bg-primary text-primary-foreground"
-                          : "bg-muted"
-                      } rounded-lg p-3`}
-                    >
-                      <span>{message.content}</span>
-                    </div>
-                    <div className="text-xs opacity-70 mt-1 text-right">
-                      {timeAgoFromOffset(message.timestamp ?? new Date())}
-                    </div>
+            {messages.map((message, idx) => (
+              <div
+                key={idx}
+                className={`flex ${
+                  message.senderId === userId ? "justify-end" : "justify-start"
+                }`}
+              >
+                <div className="flex flex-col">
+                  <div
+                    className={`${
+                      message.senderId === userId
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-muted"
+                    } rounded-lg p-3`}
+                  >
+                    <span>{message.content}</span>
+                  </div>
+                  <div className="text-xs opacity-70 mt-1 text-right">
+                    {timeAgoFromOffset(message.timestamp ?? new Date())}
                   </div>
                 </div>
-              ))}
+              </div>
+            ))}
           </div>
 
           {/* Message Input */}
-          <div className="border-t p-4 sticky bottom-0">
+          <div className="border-t p-4 sticky bottom-0 bg-background">
             <div className="flex items-center space-x-2">
               <Button size="icon" variant="outline" className="bg-transparent">
                 <Paperclip className="h-4 w-4" />

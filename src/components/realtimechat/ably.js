@@ -1,13 +1,5 @@
-// src/components/realtimechat/ably.js
 import * as Ably from "ably"
 
-/**
- * Initialize Ably chat channel
- * @param {number} otherUserId - The ID of the other chat participant
- * @param {function} onMessageReceived - Callback when a new message arrives
- * @param {number} currentUserId - ID of the current logged-in user from AuthContext
- * @returns {object} - Ably channel instance
- */
 export const initChat = async (
   otherUserId,
   onMessageReceived,
@@ -35,12 +27,8 @@ export const initChat = async (
     channel.subscribe("message", (msg) => {
       console.log(msg)
       if (typeof onMessageReceived === "function") {
-        const newMessage = {
-          senderId: otherUserId,
-          data: msg.data,
-          receiverId: currentUserId,
-        }
-        console.log("New Message:", newMessage)
+        const newMessage = JSON.parse(msg.data)
+        console.log("New Message:", newMessage);
         onMessageReceived(newMessage)
       }
     })
