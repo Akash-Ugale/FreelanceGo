@@ -12,7 +12,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/context/AuthContext"
 import { ChevronLeft, MoreVertical, Paperclip, Send } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 
 function timeAgoFromOffset(offsetDateTime) {
   const start = new Date(offsetDateTime)
@@ -36,6 +36,8 @@ function timeAgoFromOffset(offsetDateTime) {
   return `${years}y ago`
 }
 
+const PAGE_SIZE = 5
+
 export default function ChatArea({
   selectedConversation,
   mobileView,
@@ -45,27 +47,76 @@ export default function ChatArea({
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState("")
   const [ablyChannel, setAblyChannel] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+  const [hasMore, setHasMore] = useState(true)
+  const [isFetchingMore, setIsFetchingMore] = useState(false)
 
-  // Subscribe to conversation
+  const containerRef = useRef(null)
+  const messagesEndRef = useRef(null)
+
+  // Fetch messages, accepts page number
+  const fetchPreviousMessages = async (nextPage = 0) => {
+    if (!selectedConversation || !hasMore || isFetchingMore) return
+    try {
+      setIsFetchingMore(true)
+      const response = await apiClient.get(
+        `/api/chat/history/${userId}/${selectedConversation.opponent.id}?page=${nextPage}&size=${PAGE_SIZE}`
+      )
+      const { data } = response
+
+      if (!Array.isArray(data) || data.length === 0) {
+        setHasMore(false)
+        return
+      }
+
+      const container = containerRef.current
+      const oldScrollHeight = container?.scrollHeight
+
+      setMessages((prev) => [...data, ...prev])
+
+      // Maintain scroll position after prepending
+      requestAnimationFrame(() => {
+        if (container && oldScrollHeight) {
+          const newScrollHeight = container.scrollHeight
+          container.scrollTop = newScrollHeight - oldScrollHeight
+        }
+      })
+
+      setPage(nextPage)
+    } catch (err) {
+      console.error("Error fetching previous messages:", err)
+    } finally {
+      setIsFetchingMore(false)
+    }
+  }
+
+  // Initialize chat + subscribe to Ably
   useEffect(() => {
     if (!selectedConversation) return
-
-    // preload messages if array exists
-    if (Array.isArray(selectedConversation.chats)) {
-      setMessages(selectedConversation.chats)
-    }
+    setLoading(true)
+    setMessages([])
+    setPage(0)
+    setHasMore(true)
 
     let channel
-    async function init() {
-      channel = await initChat(
-        selectedConversation.opponent.id,
-        (msg) => {
-          setMessages((prev) => [...prev, msg])
-        },
-        userId
-      )
-      setAblyChannel(channel)
+
+    const init = async () => {
+      try {
+        channel = await initChat(
+          selectedConversation.opponent.id,
+          (msg) => setMessages((prev) => [...prev, msg]),
+          userId
+        )
+        setAblyChannel(channel)
+        await fetchPreviousMessages(0)
+      } catch (err) {
+        console.error("Chat init failed:", err)
+      } finally {
+        setLoading(false)
+      }
     }
+
     init()
 
     return () => {
@@ -73,9 +124,33 @@ export default function ChatArea({
     }
   }, [selectedConversation, userId])
 
-  // Send message
+  // Scroll listener to load older messages
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const handleScroll = () => {
+      if (!hasMore || isFetchingMore) return
+      if (container.scrollTop < 500) {
+        fetchPreviousMessages(page + 1)
+      }
+    }
+
+    container.addEventListener("scroll", handleScroll)
+    return () => container.removeEventListener("scroll", handleScroll)
+  }, [page, hasMore, isFetchingMore, selectedConversation])
+
+  // Auto-scroll to bottom on new messages
+  /* useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
+    }
+  }, [messages]) */
+
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !ablyChannel || !selectedConversation) return
+    const token = localStorage.getItem("token")
+    if (!token) return
 
     const messageData = {
       senderId: userId,
@@ -87,21 +162,16 @@ export default function ChatArea({
       await apiClient.post(
         "/api/chat/send",
         { channelName: ablyChannel.name, ...messageData },
-        {
-          headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       )
-
-      // ! optimistic update aligned with Ably format (currently disabled)
-      /* setMessages((prev) => [
-        ...prev,
-        { ...messageData, data: messageData.content, timestamp: new Date() },
-      ]) */
       setNewMessage("")
     } catch (err) {
       console.error("Send message failed:", err)
     }
   }
+
+  const lastMessageTimestamp =
+    selectedConversation?.chats?.timestamp ?? new Date()
 
   return (
     <Card
@@ -111,7 +181,7 @@ export default function ChatArea({
         selectedConversation ? "" : "opacity-50 pointer-events-none"
       }`}
     >
-      {/* Chat Header */}
+      {/* Header */}
       <CardHeader className="sticky top-0 z-[2] bg-background flex flex-row items-center justify-between gap-2 border-b p-4">
         <div className="flex gap-1 items-center">
           <Button
@@ -129,16 +199,16 @@ export default function ChatArea({
                 <AvatarImage
                   src={`data:image/png;base64,${selectedConversation.opponent.imageData}`}
                 />
-                <AvatarFallback>{selectedConversation.avatar}</AvatarFallback>
+                <AvatarFallback>
+                  {selectedConversation.opponent.username[0]}
+                </AvatarFallback>
               </Avatar>
               <div>
                 <h3 className="font-medium">
                   {selectedConversation.opponent.username}
                 </h3>
                 <p className="text-xs text-muted-foreground">
-                  {timeAgoFromOffset(
-                    selectedConversation.chats?.timestamp ?? new Date()
-                  )}
+                  {timeAgoFromOffset(lastMessageTimestamp)}
                 </p>
               </div>
             </div>
@@ -166,9 +236,35 @@ export default function ChatArea({
       </CardHeader>
 
       {/* Messages */}
-      <CardContent className="flex-1 p-0">
+      <CardContent className="relative flex-1 p-0">
+        {loading && (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50">
+            Loading...
+          </div>
+        )}
+
         <div className="flex flex-col h-full">
-          <div className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col">
+          <div
+            ref={containerRef}
+            className="flex-1 overflow-y-auto p-4 space-y-4 flex flex-col"
+          >
+            {isFetchingMore && (
+              <div className="text-center text-xs text-muted-foreground">
+                Loading older messages...
+              </div>
+            )}
+
+            {!isFetchingMore && (
+              <div className="p-3 text-center">
+                <Button
+                  variant="ghost"
+                  onClick={() => fetchPreviousMessages(page + 1)}
+                >
+                  Load more
+                </Button>
+              </div>
+            )}
+
             {messages.map((message, idx) => (
               <div
                 key={idx}
@@ -186,15 +282,21 @@ export default function ChatArea({
                   >
                     <span>{message.content}</span>
                   </div>
-                  <div className="text-xs opacity-70 mt-1 text-right">
+                  <div
+                    className={`text-xs opacity-70 mt-1 ${
+                      message.senderId === userId ? "text-right" : "text-left"
+                    }`}
+                  >
                     {timeAgoFromOffset(message.timestamp ?? new Date())}
                   </div>
                 </div>
               </div>
             ))}
+
+            <div ref={messagesEndRef} />
           </div>
 
-          {/* Message Input */}
+          {/* Input */}
           <div className="border-t p-4 sticky bottom-0 bg-background">
             <div className="flex items-center space-x-2">
               <Button size="icon" variant="outline" className="bg-transparent">

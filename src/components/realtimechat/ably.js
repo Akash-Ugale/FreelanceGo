@@ -25,10 +25,8 @@ export const initChat = async (
 
     // Subscribe to real-time messages
     channel.subscribe("message", (msg) => {
-      console.log(msg)
       if (typeof onMessageReceived === "function") {
         const newMessage = JSON.parse(msg.data)
-        console.log("New Message:", newMessage);
         onMessageReceived(newMessage)
       }
     })
