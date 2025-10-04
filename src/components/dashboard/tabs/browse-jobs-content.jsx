@@ -185,7 +185,7 @@ export default function BrowseJobsContent() {
   }
 
   const handleSubmitProposal = (jobId) => {
-    navigate(`/submit-proposal?jobId=${jobId}`)
+    navigate(`/dashboard/submit-proposal?jobId=${jobId}`)
   }
 
   const formatDate = (dateString) => {

@@ -17,11 +17,12 @@ import Login from "./pages/login";
 import Messages from "./pages/message";
 import ProfileSetup from "./pages/profile-setup";
 import Proposals from "./pages/Proposals";
-import SubmitProposal from "./pages/submit-proposal";
 import Register from "./pages/register";
 import Reviews from "./pages/reviews";
-import MessagesContent from "./components/dashboard/tabs/message-content";
-
+import ReviewProposals from "./pages/review-proposal";
+import HiredFreelancers from "./pages/hired-freelancer";
+import SubmitProposal from "./components/dashboard/submit-proposal";
+import ProjectBids from "./pages/project-bids";
 function App() {
   const router = createBrowserRouter([
     {
@@ -39,6 +40,13 @@ function App() {
         { path: "proposals", element: <Proposals /> },
         { path: "browse-jobs", element: <BrowseJobs /> },
         { path: "bid-history", element: <BidHistory /> },
+        { path:"proposals-review",element:<ReviewProposals/>},
+        { path:"hired-freelancer",element:<HiredFreelancers/>},
+        { path: "submit-proposal", element: <SubmitProposal/>},
+        {path:"project-bids/:projectId", element:<ProjectBids/>}
+
+        
+
       ],
     },
     { path: "/", element: <Home /> },
@@ -47,7 +55,6 @@ function App() {
     { path: "/register", element: <Register /> },
     { path: "/create-profile", element: <CreateProfile /> },
     { path: "/profile-setup", element: <ProfileSetup /> },
-    { path: "/submit-proposal", element: <SubmitProposal /> },
   ]);
 
   return (

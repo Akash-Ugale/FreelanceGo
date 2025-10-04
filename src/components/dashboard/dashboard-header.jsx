@@ -162,7 +162,7 @@ export default function DashboardHeader(props) {
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                 </Button>
-              </DropdownMenuTrigger>
+            </DropdownMenuTrigger>
 
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
