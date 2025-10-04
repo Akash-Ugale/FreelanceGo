@@ -18,7 +18,6 @@ export default function MessagesContent() {
   const [searchTerm, setSearchTerm] = useState("")
   const [mobileView, setMobileView] = useState("list")
 
-  // Fetch conversations
   useEffect(() => {
     if (authLoading || !userId) return
     async function fetchConversations() {
