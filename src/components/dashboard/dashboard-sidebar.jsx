@@ -7,8 +7,9 @@ import { useState } from "react"
 import DashboardSidebarContentCollapsed from "./dashboard-sidebar-collapsed"
 import DashboardSidebarContent from "./dashboard-sidebar-content"
 
-export default function DashboardSidebar() {
+export default function DashboardSidebar(props) {
   const { userRole } = useAuth()
+
   const [collapsed, setCollapsed] = useState(false)
 
   return (
@@ -38,6 +39,7 @@ export default function DashboardSidebar() {
           userRole={userRole}
           freelancerItems={freelancerItems}
           clientItems={clientItems}
+          {...props}
         />
       )}
 
@@ -49,6 +51,7 @@ export default function DashboardSidebar() {
             collapsed
             freelancerItems={freelancerItems}
             clientItems={clientItems}
+            {...props}
           />
         </div>
       )}

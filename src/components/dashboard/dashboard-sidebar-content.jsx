@@ -5,8 +5,7 @@ import { Settings } from "lucide-react"
 import { useState } from "react"
 import { Link } from "react-router-dom"
 
-export default function DashboardSidebarContent({ userRole }) {
-  const [activeItem, setActiveItem] = useState("/dashboard")
+export default function DashboardSidebarContent({ userRole, activeItem, setActiveItem }) {
   const sidebarItems =
     userRole === userRoles.FREELANCER ? freelancerItems : clientItems
 
@@ -16,15 +15,6 @@ export default function DashboardSidebarContent({ userRole }) {
 
   return (
     <div className="sticky top-0 flex flex-col h-full">
-      {/* Header */}
-      {/* <div className="p-6 border-b">
-        <h2 className="font-semibold text-lg">
-          {userRole === userRoles.FREELANCER ? "Freelancer" : "Client"}{" "}
-          Dashboard
-        </h2>
-      </div> */}
-
-      {/* Navigation Items */}
       <div className="flex-1 overflow-auto py-4">
         <nav className="space-y-1 px-3">
           {sidebarItems?.map((item) => (
@@ -35,7 +25,7 @@ export default function DashboardSidebarContent({ userRole }) {
               className={cn(
                 "flex items-center space-x-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground",
                 activeItem === item.href
-                  ? "bg-primary/30 text-primary hover:bg-primary/30 hover:text-primary"
+                  ? "bg-primary text-white hover:shadow-md hover:bg-primary/80 hover:text-white"
                   : "text-muted-foreground"
               )}
             >

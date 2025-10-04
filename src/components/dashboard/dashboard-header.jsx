@@ -11,7 +11,16 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/AuthContext"
-import { Bell, HelpCircle, LogOut, Menu, Settings, User } from "lucide-react"
+import {
+  Bell,
+  HelpCircle,
+  LogOut,
+  Menu,
+  Moon,
+  Settings,
+  Sun,
+  User,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
@@ -27,12 +36,13 @@ import {
 } from "../ui/dialog"
 import DashboardSidebarContent from "./dashboard-sidebar-content"
 
-export default function DashboardHeader() {
+export default function DashboardHeader(props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState(null)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false) // track dropdown menu
+  const [theme, setTheme] = useState("light") // theme state
   const { logoutUser, userRole, setUserId } = useAuth()
   const navigate = useNavigate()
 
@@ -56,10 +66,31 @@ export default function DashboardHeader() {
   const handleLogout = () => {
     logoutUser()
     navigate("/", { replace: true })
-    setLogoutDialogOpen(false) // close dialog after logout
+    setLogoutDialogOpen(false)
+  }
+
+  const toggleTheme = () => {
+    const newTheme = theme === "dark" ? "light" : "dark"
+    setTheme(newTheme)
+    localStorage.setItem("theme", newTheme)
+    document.body.classList.toggle("dark", newTheme === "dark")
   }
 
   useEffect(() => {
+    // load theme from localStorage or system preference
+    const storedTheme = localStorage.getItem("theme")
+    if (storedTheme) {
+      setTheme(storedTheme)
+      document.body.classList.toggle("dark", storedTheme === "dark")
+    } else {
+      const prefersDark = window.matchMedia(
+        "(prefers-color-scheme: dark)"
+      ).matches
+      if (prefersDark) {
+        setTheme("dark")
+        document.body.classList.add("dark")
+      }
+    }
     fetchProfileDetails()
   }, [])
 
@@ -80,6 +111,7 @@ export default function DashboardHeader() {
                 <DashboardSidebarContent
                   userRole={userRole}
                   onItemClick={() => setSidebarOpen(false)}
+                  {...props}
                 />
               </SheetContent>
             </Sheet>
@@ -90,6 +122,21 @@ export default function DashboardHeader() {
           </div>
 
           <div className="flex items-center space-x-2 md:space-x-4">
+            {/* Theme Toggle Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="h-9 w-9 md:h-10 md:w-10"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+              <span className="sr-only">Toggle theme</span>
+            </Button>
+
             <Button
               variant="ghost"
               size="icon"
@@ -173,7 +220,9 @@ export default function DashboardHeader() {
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleLogout} variant="destructive">Continue</Button>
+            <Button onClick={handleLogout} variant="destructive">
+              Continue
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
