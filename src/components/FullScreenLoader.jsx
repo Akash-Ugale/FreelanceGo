@@ -20,7 +20,7 @@ export default function FullScreenLoader({ show = true, size = 128 }) {
     <div
       role="status"
       aria-live="polite"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-white/40 backdrop-blur-sm p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/40 backdrop-blur-sm p-6"
     >
       <div className="flex flex-col items-center gap-2">
         <div

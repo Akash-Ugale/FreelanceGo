@@ -48,7 +48,7 @@ export default function MessagesContent() {
   if (authLoading) return null
 
   return (
-    <div className="space-y-6 flex flex-col">
+    <div className="space-y-6 flex flex-col overflow-hidden">
       <div className="grid gap-6 lg:grid-cols-4 h-[85vh] overflow-auto sm:overflow-hidden">
         {/* Conversations List */}
         <Card
@@ -113,7 +113,7 @@ export default function MessagesContent() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
-                        {conversation.lastMessage ??
+                        {conversation.chats.content ??
                           "Hi there, I want this new feature"}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">

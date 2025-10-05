@@ -42,7 +42,7 @@ export default function DashboardHeader(props) {
   const [userData, setUserData] = useState(null)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false) // track dropdown menu
-  const [theme, setTheme] = useState("light") // theme state
+  const [theme, setTheme] = useState("light")
   const { logoutUser, userRole, setUserId } = useAuth()
   const navigate = useNavigate()
 

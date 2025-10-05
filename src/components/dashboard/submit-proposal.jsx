@@ -233,7 +233,7 @@ const job = jobData[jobId]
           <div className="lg:col-span-2">
             {/* Header */}
             <div className="flex items-center space-x-4 mb-6">
-              <Button variant="outline" size="sm" onClick={() => navigate()} className="bg-transparent">
+              <Button variant="outline" size="sm" onClick={() => navigate(-1)} className="bg-transparent">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back
               </Button>
