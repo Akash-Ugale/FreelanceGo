@@ -55,7 +55,6 @@ export default function ChatArea({
   const containerRef = useRef(null)
   const messagesEndRef = useRef(null)
 
-  // Fetch messages, accepts page number
   const fetchPreviousMessages = async (nextPage = 0) => {
     if (!selectedConversation || !hasMore || isFetchingMore) return
     try {
@@ -229,7 +228,7 @@ export default function ChatArea({
             <DropdownMenuItem>View Profile</DropdownMenuItem>
             <DropdownMenuItem>Internship Information</DropdownMenuItem>
             <DropdownMenuItem className="text-red-500">
-              Delete Conversation
+              Delete Chat
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -238,8 +237,14 @@ export default function ChatArea({
       {/* Messages */}
       <CardContent className="relative flex-1 p-0">
         {loading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-background/50">
-            Loading...
+          <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-md">
+            <l-ring
+              size="40"
+              stroke="5"
+              bg-opacity="0"
+              speed="2"
+              color="blue"
+            ></l-ring>
           </div>
         )}
 
@@ -278,12 +283,12 @@ export default function ChatArea({
                       message.senderId === userId
                         ? "bg-primary text-primary-foreground"
                         : "bg-muted"
-                    } rounded-lg p-3`}
+                    } rounded-lg px-3 py-[6px]`}
                   >
                     <span>{message.content}</span>
                   </div>
                   <div
-                    className={`text-xs opacity-70 mt-1 ${
+                    className={`text-[10px] mt-1 ${
                       message.senderId === userId ? "text-right" : "text-left"
                     }`}
                   >
@@ -297,7 +302,11 @@ export default function ChatArea({
           </div>
 
           {/* Input */}
-          <div className="border-t p-4 sticky bottom-0 bg-background">
+          <div
+            className={`border-t p-4 sticky bottom-0 bg-background ${
+              loading ? "opacity-50 pointer-events-none" : ""
+            }`}
+          >
             <div className="flex items-center space-x-2">
               <Button size="icon" variant="outline" className="bg-transparent">
                 <Paperclip className="h-4 w-4" />
