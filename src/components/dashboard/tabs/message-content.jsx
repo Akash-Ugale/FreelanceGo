@@ -113,8 +113,8 @@ export default function MessagesContent() {
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground truncate">
-                        {conversation.chats.content ??
-                          "Hi there, I want this new feature"}
+                        {conversation?.chats ??
+                          `Say hi to ${conversation.opponent.username}!`}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {conversation.timestamp}

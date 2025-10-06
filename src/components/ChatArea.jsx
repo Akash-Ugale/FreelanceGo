@@ -74,7 +74,6 @@ export default function ChatArea({
 
       setMessages((prev) => [...data, ...prev])
 
-      // Maintain scroll position after prepending
       requestAnimationFrame(() => {
         if (container && oldScrollHeight) {
           const newScrollHeight = container.scrollHeight
@@ -90,7 +89,6 @@ export default function ChatArea({
     }
   }
 
-  // Initialize chat + subscribe to Ably
   useEffect(() => {
     if (!selectedConversation) return
     setLoading(true)
@@ -123,7 +121,6 @@ export default function ChatArea({
     }
   }, [selectedConversation, userId])
 
-  // Scroll listener to load older messages
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -138,13 +135,6 @@ export default function ChatArea({
     container.addEventListener("scroll", handleScroll)
     return () => container.removeEventListener("scroll", handleScroll)
   }, [page, hasMore, isFetchingMore, selectedConversation])
-
-  // Auto-scroll to bottom on new messages
-  /* useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" })
-    }
-  }, [messages]) */
 
   const handleSendMessage = async () => {
     if (!newMessage.trim() || !ablyChannel || !selectedConversation) return
