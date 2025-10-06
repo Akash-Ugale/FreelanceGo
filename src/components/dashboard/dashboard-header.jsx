@@ -11,15 +11,17 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import { useAuth } from "@/context/AuthContext"
+import { userRoles } from "@/utils/constants"
 import {
   Bell,
+  CirclePower,
   HelpCircle,
   LogOut,
   Menu,
   Moon,
   Settings,
   Sun,
-  User,
+  User2,
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
@@ -36,13 +38,38 @@ import {
 } from "../ui/dialog"
 import DashboardSidebarContent from "./dashboard-sidebar-content"
 
+const notifications = [
+  {
+    title: "New message from Sarah",
+    description: "2 minutes ago",
+    type: "message",
+  },
+  {
+    title: "New project assigned",
+    description: "1 hour ago",
+    type: "project",
+  },
+  {
+    title: "Your payment has been processed",
+    description: "2 hours ago",
+    type: "payment",
+  },
+  {
+    title: "New comment on your post",
+    description: "3 hours ago",
+    type: "comment",
+  },
+]
+
 export default function DashboardHeader(props) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState(null)
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false) // track dropdown menu
+  const [menuOpen, setMenuOpen] = useState(false)
   const [theme, setTheme] = useState("light")
+  const [userExistingProfiles, setUserExistingProfiles] = useState({})
+
   const { logoutUser, userRole, setUserId } = useAuth()
   const navigate = useNavigate()
 
@@ -55,6 +82,21 @@ export default function DashboardHeader(props) {
       if (status === 200) {
         setUserData(data)
         toast.success("Profile details fetched successfully")
+      }
+    } catch (error) {
+      console.log(error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const fetchExistingProfiles = async () => {
+    setLoading(false)
+    try {
+      const response = await apiClient.get("/api/check-role")
+      const { status, data } = response
+      if (status === 200) {
+        setUserExistingProfiles(data)
       }
     } catch (error) {
       console.log(error)
@@ -77,7 +119,6 @@ export default function DashboardHeader(props) {
   }
 
   useEffect(() => {
-    // load theme from localStorage or system preference
     const storedTheme = localStorage.getItem("theme")
     if (storedTheme) {
       setTheme(storedTheme)
@@ -92,7 +133,14 @@ export default function DashboardHeader(props) {
       }
     }
     fetchProfileDetails()
+    fetchExistingProfiles()
   }, [])
+
+  const handleRoleSwitch = () => {
+    const targetRole =
+      userRole === userRoles.FREELANCER ? "client" : "freelancer"
+    navigate(`/switch-role/${targetRole}`)
+  }
 
   return (
     <>
@@ -122,7 +170,6 @@ export default function DashboardHeader(props) {
           </div>
 
           <div className="flex items-center space-x-2 md:space-x-4">
-            {/* Theme Toggle Button */}
             <Button
               variant="ghost"
               size="icon"
@@ -137,16 +184,40 @@ export default function DashboardHeader(props) {
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative h-9 w-9 md:h-10 md:w-10"
-            >
-              <Bell className="h-4 w-4 md:h-5 md:w-5" />
-              <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
-                3
-              </span>
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative h-9 w-9 md:h-10 md:w-10"
+                >
+                  <Bell className="h-4 w-4 md:h-5 md:w-5" />
+                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
+                    3
+                  </span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-[300px]">
+                <DropdownMenuLabel className="text-lg">
+                  Notification Center
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {notifications.map((notification) => (
+                  <DropdownMenuItem key={notification.id}>
+                    <div className="flex gap-2">
+                      <div className="flex flex-col space-y-1 leading-none">
+                        <p className="text-sm font-medium leading-tight">
+                          {notification.title}
+                        </p>
+                        <p className="text-xs leading-snug text-muted-foreground">
+                          {notification.description}
+                        </p>
+                      </div>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
 
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -162,12 +233,18 @@ export default function DashboardHeader(props) {
                     <AvatarFallback>JD</AvatarFallback>
                   </Avatar>
                 </Button>
-            </DropdownMenuTrigger>
+              </DropdownMenuTrigger>
 
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <div className="grid gap-2">
+                      <div className="p-1 py-0 font-bold text-center text-xl">
+                        {userRoles.FREELANCER === userRole
+                          ? "Freelancer"
+                          : "Client"}
+                      </div>
+                      <div className="h-[1px] bg-muted"></div>
                       <p className="text-sm font-medium leading-none">
                         {userData?.username}
                       </p>
@@ -179,9 +256,26 @@ export default function DashboardHeader(props) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
+                  <User2 className="mr-2 h-4 w-4" />
                   <span>Profile</span>
                 </DropdownMenuItem>
+
+                {/* ✅ Conditionally show Switch Role item */}
+                {(userRole === userRoles.FREELANCER &&
+                  userExistingProfiles?.client) ||
+                (userRole === userRoles.CLIENT &&
+                  userExistingProfiles?.freelancer) ? (
+                  <DropdownMenuItem onClick={handleRoleSwitch}>
+                    <CirclePower className="mr-2 h-4 w-4" />
+                    <span>
+                      Switch to{" "}
+                      {userRole === userRoles.FREELANCER
+                        ? "Client"
+                        : "Freelancer"}
+                    </span>
+                  </DropdownMenuItem>
+                ) : null}
+
                 <DropdownMenuItem>
                   <Settings className="mr-2 h-4 w-4" />
                   <span>Settings</span>
@@ -194,8 +288,8 @@ export default function DashboardHeader(props) {
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={() => {
-                    setMenuOpen(false) // close dropdown first
-                    setLogoutDialogOpen(true) // then open dialog
+                    setMenuOpen(false)
+                    setLogoutDialogOpen(true)
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -207,7 +301,6 @@ export default function DashboardHeader(props) {
         </div>
       </header>
 
-      {/* Logout Confirmation Dialog */}
       <Dialog open={logoutDialogOpen} onOpenChange={setLogoutDialogOpen}>
         <DialogContent>
           <DialogHeader>

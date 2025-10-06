@@ -1,7 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
-
 import { apiClient } from "@/api/AxiosServiceApi"
 import FullScreenLoader from "@/components/FullScreenLoader"
 import MouseMoveEffect from "@/components/mouse-move-effect"
@@ -27,6 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { useAuth } from "@/context/AuthContext"
 import { ArrowLeft, ArrowRight, Briefcase, Plus, User, X } from "lucide-react"
+import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { toast } from "sonner"
 
@@ -60,13 +59,11 @@ const experienceLevels = [
 export default function CreateProfile() {
   const [searchParams] = useSearchParams()
   const role = searchParams.get("role")
-
   const navigate = useNavigate()
   const [loading, setLoading] = useState(false)
   const { token, setToken } = useAuth()
 
   const [formData, setFormData] = useState({
-    // * Common fields
     firstName: "",
     lastName: "",
     email: "",
@@ -74,15 +71,11 @@ export default function CreateProfile() {
     location: "",
     bio: "",
     avatar: "",
-
-    // * Freelancer specific
     designation: "",
     hourlyRate: "",
     experienceLevel: "",
     skills: [],
     portfolioUrl: "",
-
-    // * Client specific
     doesHaveCompany: true,
     companyName: "",
     website: "",
@@ -97,10 +90,36 @@ export default function CreateProfile() {
     }
   }, [role, navigate])
 
+  // 🔍 Validation based on role
+  const validateForm = () => {
+    if (!formData.phone.trim()) return toast.error("Phone number is required")
+
+    const bioLength = formData.bio.trim().length
+    if (!formData.bio.trim()) return toast.error("Bio is required")
+    if (bioLength < 50) return toast.error("Bio must be at least 50 characters")
+    if (bioLength > 500) return toast.error("Bio cannot exceed 500 characters")
+
+    if (role === "freelancer") {
+      if (!formData.designation.trim())
+        return toast.error("Professional title is required")
+      if (!formData.experienceLevel)
+        return toast.error("Experience level is required")
+      if (selectedSkills.length === 0)
+        return toast.error("Please add at least one skill")
+    }
+
+    if (role === "client") {
+      if (formData.doesHaveCompany && !formData.companyName.trim())
+        return toast.error("Company name is required")
+    }
+
+    return true
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
+    if (validateForm() !== true) return
 
-    // API call
     setLoading(true)
     try {
       const response = await apiClient.post(
@@ -115,28 +134,26 @@ export default function CreateProfile() {
           },
         }
       )
-      console.log(response)
-      const { status } = response
+
+      const { status, data } = response
       if (status !== 200) {
         toast.error("Failed to create profile")
         return
       }
 
-      const {
-        data: { token: newToken },
-      } = response
+      const { token: newToken } = data
       if (!newToken) {
         console.error("Token not received from backend")
         return
       }
+
       localStorage.setItem("token", newToken)
       setToken(newToken)
       toast.success("Profile created successfully")
-      setTimeout(() => {
-        navigate("/dashboard")
-      }, 2000)
+      setTimeout(() => navigate("/dashboard"), 2000)
     } catch (error) {
       console.error("Failed to create profile:", error)
+      toast.error("Something went wrong while creating profile")
     } finally {
       setLoading(false)
     }
@@ -159,7 +176,6 @@ export default function CreateProfile() {
     <div className="min-h-screen bg-background">
       <FullScreenLoader show={loading} />
       <MouseMoveEffect />
-      {/* Background gradients */}
       <div className="pointer-events-none fixed inset-0" style={{ zIndex: -1 }}>
         <div className="absolute inset-0 bg-gradient-to-b from-background via-background/90 to-background" />
         <div className="absolute right-0 top-0 h-[500px] w-[500px] bg-blue-500/10 blur-[100px]" />
@@ -168,7 +184,6 @@ export default function CreateProfile() {
 
       <div className="container mx-auto px-4 py-16">
         <div className="max-w-2xl mx-auto">
-          {/* Header */}
           <div className="flex items-center gap-4 mb-8">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-3">
@@ -207,16 +222,17 @@ export default function CreateProfile() {
                         phone: e.target.value,
                       }))
                     }
+                    value={formData.phone}
                   />
                 </div>
-                {/* Role-specific fields */}
+
                 {role === "freelancer" ? (
                   <>
                     <div className="space-y-2">
                       <Label htmlFor="title">Professional Title *</Label>
                       <Input
                         id="title"
-                        placeholder="e.g., Full Stack Developer, UI/UX Designer"
+                        placeholder="e.g., Full Stack Developer"
                         value={formData.designation}
                         onChange={(e) =>
                           setFormData({
@@ -224,7 +240,6 @@ export default function CreateProfile() {
                             designation: e.target.value,
                           })
                         }
-                        required
                       />
                     </div>
 
@@ -249,7 +264,6 @@ export default function CreateProfile() {
                       </Select>
                     </div>
 
-                    {/* Skills */}
                     <div className="space-y-2">
                       <Label>Skills *</Label>
                       <div className="space-y-3">
@@ -275,7 +289,6 @@ export default function CreateProfile() {
                           </Button>
                         </div>
 
-                        {/* Skill suggestions */}
                         <div className="flex flex-wrap gap-2">
                           {skillSuggestions
                             .filter((skill) => !selectedSkills.includes(skill))
@@ -294,7 +307,6 @@ export default function CreateProfile() {
                             ))}
                         </div>
 
-                        {/* Selected skills */}
                         {selectedSkills.length > 0 && (
                           <div className="flex flex-wrap gap-2">
                             {selectedSkills.map((skill) => (
@@ -339,12 +351,10 @@ export default function CreateProfile() {
                           id="has-a-company"
                           checked={formData.doesHaveCompany}
                           onCheckedChange={(checked) =>
-                            setFormData((prev) => {
-                              return {
-                                ...prev,
-                                doesHaveCompany: checked === true,
-                              }
-                            })
+                            setFormData((prev) => ({
+                              ...prev,
+                              doesHaveCompany: checked === true,
+                            }))
                           }
                         />
                         <Label
@@ -369,7 +379,6 @@ export default function CreateProfile() {
                                 companyName: e.target.value,
                               })
                             }
-                            required
                           />
                         </div>
 
@@ -407,7 +416,6 @@ export default function CreateProfile() {
                       setFormData({ ...formData, bio: e.target.value })
                     }
                     rows={4}
-                    required
                   />
                 </div>
 
