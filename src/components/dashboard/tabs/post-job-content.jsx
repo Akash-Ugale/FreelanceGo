@@ -43,6 +43,7 @@ import {
   X,
 } from "lucide-react"
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
 const jobCategories = [
@@ -85,6 +86,7 @@ export default function PostJobContent({ userRole }) {
   const [customSkill, setCustomSkill] = useState("")
   const { token } = useAuth()
   const [loading, setLoading] = useState(false)
+  const navigate = useNavigate()
 
   const [jobData, setJobData] = useState({
     jobTitle: "",
@@ -250,6 +252,7 @@ export default function PostJobContent({ userRole }) {
       )
       if (response.status === 200) {
         toast.success("Job posted successfully!")
+        navigate("/dashboard/job-posts")
       }
     } catch (error) {
       console.error("Error posting job:", error)

@@ -1,6 +1,7 @@
 "use client"
 
 import { apiClient } from "@/api/AxiosServiceApi"
+import InlineLoader from "@/components/InlineLoader"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -14,7 +15,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { format } from "date-fns"
-import { Eye, Filter, Heart, PhoneCall, Search, Send } from "lucide-react"
+import {
+  Eye,
+  Filter,
+  Heart,
+  IndianRupee,
+  PhoneCall,
+  Search,
+  Send,
+} from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate } from "react-router-dom"
 
@@ -25,20 +34,32 @@ export default function BrowseJobsContent() {
   const [experienceFilter, setExperienceFilter] = useState("all")
   const [savedJobs, setSavedJobs] = useState([])
   const [jobs, setJobs] = useState([])
+  const [loading, setLoading] = useState(true)
 
-  // ✅ Fetch DTO response from API (replace URL with your endpoint)
+  // ✅ Pagination states
+  const [page, setPage] = useState(0)
+  const [size] = useState(5)
+  const [totalPages, setTotalPages] = useState(0)
+
+  // ✅ Fetch paginated jobs
   useEffect(() => {
     async function fetchJobs() {
       try {
-        const res = await apiClient.get("/api/browse-job") // update URL
+        setLoading(true)
+        const res = await apiClient.get(`/api/browse-job`, {
+          params: { page, size },
+        })
         const { data } = res
-        setJobs(data)
+        setJobs(data.content || data) // if your backend sends `content` like Spring Pageable
+        setTotalPages(data.totalPages || 1)
       } catch (error) {
         console.error("Error fetching jobs:", error)
+      } finally {
+        setLoading(false)
       }
     }
     fetchJobs()
-  }, [])
+  }, [page, size])
 
   // ✅ Filtering
   const filteredJobs = jobs.filter((item) => {
@@ -157,176 +178,227 @@ export default function BrowseJobsContent() {
         </div>
       </div>
 
-      {/* Job Listings */}
-      <div className="space-y-6">
-        {filteredJobs.map((item) => {
-          const job = item.job
-          const client = job.clientDto
-          const user = client?.userDto
+      {/* ✅ Loading Spinner */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <InlineLoader />
+        </div>
+      ) : (
+        <>
+          {/* Job Listings */}
+          <div className="space-y-6">
+            {filteredJobs.map((item) => {
+              const job = item.job
+              const client = job.clientDto
+              const user = client?.userDto
 
-          const startDate = new Date(job.projectStartTime)
-          const endDate = new Date(job.projectEndTime)
-          const duration = Math.ceil(
-            (endDate - startDate) / (1000 * 60 * 60 * 24)
-          )
+              const startDate = new Date(job.projectStartTime)
+              const endDate = new Date(job.projectEndTime)
+              const duration = Math.ceil(
+                (endDate - startDate) / (1000 * 60 * 60 * 24)
+              )
 
-          return (
-            <Card key={job.id} className="hover:shadow-lg transition-shadow">
-              <CardContent className="p-6 space-y-4">
-                {/* Job Header */}
-                <div className="flex items-start justify-between">
-                  <h3 className="font-semibold text-xl">{job.jobTitle}</h3>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleSaveJob(job.id)}
-                    className={`${
-                      savedJobs.includes(job.id)
-                        ? "text-red-500"
-                        : "text-muted-foreground"
-                    } hover:text-red-500`}
-                  >
-                    <Heart
-                      className={`h-4 w-4 ${
-                        savedJobs.includes(job.id) ? "fill-current" : ""
-                      }`}
-                    />
-                  </Button>
-                </div>
-
-                <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                  <span>{formatDate(job.createdAt)}</span>
-                  <span>•</span>
-                  <span className={getExperienceColor(job.experienceLevel)}>
-                    {job.experienceLevel}
-                  </span>
-                  <span>•</span>
-                  <span className="text-green-700 font-medium">Active</span>
-                </div>
-
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  {job.jobDescription}
-                </p>
-
-                {/* Job Info */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
-                  <div className="text-center">
-                    <div
-                      className={`text-lg font-bold ${getBudgetColor(
-                        job.budget
-                      )}`}
-                    >
-                      ${job.budget.toLocaleString()}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Budget</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">{duration} days</div>
-                    <div className="text-sm text-muted-foreground">
-                      Duration
-                    </div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">
-                      {format(startDate, "PP")}
-                    </div>
-                    <div className="text-sm text-muted-foreground">Start</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-lg font-bold">
-                      {format(endDate, "PP")}
-                    </div>
-                    <div className="text-sm text-muted-foreground">End</div>
-                  </div>
-                </div>
-
-                {/* Client Info */}
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-4">
-                    <Avatar className="h-12 w-12">
-                      {user?.imageData ? (
-                        <AvatarImage
-                          src={`data:image/png;base64,${user.imageData}`}
-                          alt={user.username}
-                        />
-                      ) : (
-                        <AvatarFallback>
-                          {user?.username?.[0] || "?"}
-                        </AvatarFallback>
-                      )}
-                    </Avatar>
+              return (
+                <Card
+                  key={job.id}
+                  className="hover:shadow-lg transition-shadow"
+                >
+                  <CardContent className="p-6 space-y-4">
                     <div>
-                      <div className="flex gap-2">
-                        <h4 className="font-semibold">
-                          {client?.companyName || "Unknown Company"}
-                        </h4>
-                        <div className="flex items-center space-x-2 text-sm text-muted-foreground">
-                          <PhoneCall className="h-4 w-4" />
-                          <span>{client?.phone || "N/A"}</span>
+                      <div className="flex items-start justify-between">
+                        <h3 className="font-semibold text-xl">
+                          {job.jobTitle}
+                        </h3>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => toggleSaveJob(job.id)}
+                          className={`${
+                            savedJobs.includes(job.id)
+                              ? "text-red-500"
+                              : "text-muted-foreground"
+                          } hover:text-red-500`}
+                        >
+                          <Heart
+                            className={`h-4 w-4 ${
+                              savedJobs.includes(job.id) ? "fill-current" : ""
+                            }`}
+                          />
+                        </Button>
+                      </div>
+
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                        <span>{formatDate(job.createdAt)}</span>
+                        <span>•</span>
+                        <span
+                          className={
+                            getExperienceColor(job.experienceLevel) +
+                            " font-medium capitalize"
+                          }
+                        >
+                          {job?.experienceLevel?.toLowerCase()}
+                        </span>
+                        <span>•</span>
+                        <span className="text-green-500 font-medium">
+                          Active
+                        </span>
+                      </div>
+                    </div>
+
+                    <p className="text-muted-foreground text-sm leading-relaxed line-clamp-3">
+                      {job.jobDescription}
+                    </p>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                      <div className="text-center">
+                        <div
+                          className={`text-lg font-bold flex gap-0 items-center justify-center ${getBudgetColor(
+                            job.budget
+                          )}`}
+                        >
+                          <IndianRupee className="h-4 w-4" />{" "}
+                          {job.budget.toLocaleString()}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Budget
                         </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        Posted by {user?.username}
+                      <div className="text-center">
+                        <div className="text-lg font-bold">{duration} days</div>
+                        <div className="text-sm text-muted-foreground">
+                          Duration
+                        </div>
                       </div>
-                      <div className="text-sm text-muted-foreground">
-                        {client?.bio}
+                      <div className="text-center">
+                        <div className="text-lg font-bold">
+                          {format(startDate, "PP")}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          Start
+                        </div>
+                      </div>
+                      <div className="text-center">
+                        <div className="text-lg font-bold">
+                          {format(endDate, "PP")}
+                        </div>
+                        <div className="text-sm text-muted-foreground">End</div>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Skills */}
-                <div>
-                  <h5 className="font-semibold mb-2">Required Skills</h5>
-                  <div className="flex flex-wrap gap-2">
-                    {job.requiredSkills.map((skill, i) => (
-                      <Badge key={i} variant="outline" className="text-xs">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
+                    <div className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex flex-col md:flex-row items-center space-x-4 gap-2 w-full">
+                        <Avatar className="h-12 w-12">
+                          {user?.imageData ? (
+                            <AvatarImage
+                              src={`data:image/png;base64,${user.imageData}`}
+                              alt={user.username}
+                            />
+                          ) : (
+                            <AvatarFallback>
+                              {user?.username?.[0] || "?"}
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <div className="w-full">
+                          <div className="flex gap-2">
+                            <h4 className="font-semibold">
+                              {client?.companyName || "Individual Request"}
+                            </h4>
+                            <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                              <PhoneCall className="h-4 w-4" />
+                              <span>{client?.phone || "N/A"}</span>
+                            </div>
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Posted by {user?.username}
+                          </div>
+                          <div className="text-sm text-muted-foreground p-2 bg-muted mt-2 rounded-md">
+                            <h5 className="font-semibold mb-2">Bio</h5>
+                            <p className="line-clamp-3">"{client?.bio}"</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
 
-                {/* Actions */}
-                <div className="flex items-center justify-between pt-4 border-t">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/dashboard/job-details/${job.id}`)}
-                  >
-                    <Eye className="mr-2 h-4 w-4" /> View Details
-                  </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleSubmitProposal(job.id)}
-                  >
-                    <Send className="mr-2 h-4 w-4" /> Submit Proposal
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
+                    <div>
+                      <h5 className="font-semibold mb-2">Required Skills</h5>
+                      <div className="flex flex-wrap gap-2">
+                        {job.requiredSkills.map((skill, i) => (
+                          <Badge key={i} variant="outline" className="text-xs">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
 
-      {filteredJobs.length === 0 && (
-        <div className="text-center py-12">
-          <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
-          <p className="text-muted-foreground mb-4">
-            Try adjusting your search criteria.
-          </p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setSearchTerm("")
-              setCategoryFilter("all")
-              setExperienceFilter("all")
-            }}
-          >
-            Clear Filters
-          </Button>
-        </div>
+                    <div className="flex items-center justify-between pt-4 border-t">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() =>
+                          navigate(`/dashboard/job-details/${job.id}`)
+                        }
+                      >
+                        <Eye className="mr-2 h-4 w-4" /> View Details
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => handleSubmitProposal(job.id)}
+                      >
+                        <Send className="mr-2 h-4 w-4" /> Submit Proposal
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+
+          {/* ✅ Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center space-x-4 pt-8">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(p - 1, 0))}
+              >
+                Previous
+              </Button>
+              <span className="text-sm">
+                Page {page + 1} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={page + 1 >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+
+          {filteredJobs.length === 0 && (
+            <div className="text-center py-12">
+              <Search className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No jobs found</h3>
+              <p className="text-muted-foreground mb-4">
+                Try adjusting your search criteria.
+              </p>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setSearchTerm("")
+                  setCategoryFilter("all")
+                  setExperienceFilter("all")
+                }}
+              >
+                Clear Filters
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   )
