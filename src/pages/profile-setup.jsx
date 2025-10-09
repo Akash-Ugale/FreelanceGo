@@ -255,7 +255,7 @@ export default function ProfileSetup() {
                       </div>
                     </CardHeader>
 
-                    <CardContent className="pt-0 flex-1">
+                    <CardContent className="pt-0 flex-1 flex flex-col">
                       <div className="grid grid-cols-2 gap-4 mb-4 flex-1">
                         <div className="text-center p-3 bg-muted rounded-lg">
                           <div className="text-2xl font-bold text-primary">

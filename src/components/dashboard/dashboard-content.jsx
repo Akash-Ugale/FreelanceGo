@@ -21,7 +21,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+import { Link, useOutletContext } from "react-router-dom"
 
 const freelancerStats = [
   {
@@ -188,7 +188,8 @@ const clientProposals = [
 ]
 
 export default function DashboardContent() {
-  const { userRole, token } = useAuth()
+  const { userRole, token, authLoading } = useAuth()
+  const { activeItem, setActiveItem } = useOutletContext()
   const stats =
     userRole === userRoles.FREELANCER ? freelancerStats : clientStats
   const projects =
@@ -199,19 +200,21 @@ export default function DashboardContent() {
   const [clientDashboardData, setClientDashboardData] = useState({})
 
   const fetchDashboardData = async (token) => {
-    try {
-      const response = await apiClient.get(
-        "/api/dashboard/get-post-in-progress",
-        {
-          headers: {
-            Authorization: "Bearer " + token,
-          },
-        }
-      )
-      const { data } = response
-      console.log(data)
-    } catch (error) {
-      console.log(error)
+    if (!authLoading) {
+      try {
+        const response = await apiClient.get(
+          "/api/dashboard/get-post-in-progress",
+          {
+            headers: {
+              Authorization: "Bearer " + token,
+            },
+          }
+        )
+        const { data } = response
+        console.log(data)
+      } catch (error) {
+        console.log(error)
+      }
     }
   }
 
@@ -236,10 +239,15 @@ export default function DashboardContent() {
         </div>
         <Link
           to={
-            "/" + (userRole === userRoles.FREELANCER)
-              ? "post-job"
-              : "browser-jobs"
+            userRole === userRoles.FREELANCER
+              ? "/dashboard/browse-jobs"
+              : "/dashboard/post-job"
           }
+          onClick={setActiveItem(
+            userRole === userRoles.FREELANCER
+              ? "/dashboard/browse-jobs"
+              : "/dashboard/post-job"
+          )}
         >
           <Button className="w-full sm:w-auto">
             {userRole === userRoles.FREELANCER ? (

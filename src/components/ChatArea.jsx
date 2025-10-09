@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input"
 import { useAuth } from "@/context/AuthContext"
 import { ChevronLeft, MoreVertical, Paperclip, Send } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
+import InlineLoader from "./InlineLoader"
 
 function timeAgoFromOffset(offsetDateTime) {
   const start = new Date(offsetDateTime)
@@ -228,13 +229,7 @@ export default function ChatArea({
       <CardContent className="relative flex-1 p-0">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-md">
-            <l-ring
-              size="40"
-              stroke="5"
-              bg-opacity="0"
-              speed="2"
-              color="blue"
-            ></l-ring>
+            <InlineLoader/>
           </div>
         )}
 

@@ -1,95 +1,83 @@
-import { apiClient } from "@/api/AxiosServiceApi";
-import { jwtDecode } from "jwt-decode";
-import { createContext, useContext, useEffect, useRef, useState } from "react";
+import { apiClient } from "@/api/AxiosServiceApi"
+import { jwtDecode } from "jwt-decode"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 
-const AuthContext = createContext();
-const REDIRECT_LINK = import.meta.env.VITE_REDIRECT_LINK;
+const AuthContext = createContext()
 
 export default function AuthContextProvider({ children }) {
-  const [userRole, setUserRole] = useState(null);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authLoading, setAuthLoading] = useState(true);
-  const [token, setToken] = useState(null);
-  const [userId, setUserId] = useState(null);
-  const interceptorId = useRef(null);
+  const [userRole, setUserRole] = useState(null)
+  const [currentUser, setCurrentUser] = useState(null)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [authLoading, setAuthLoading] = useState(true)
+  const [token, setToken] = useState(null)
+  const [userId, setUserId] = useState(null)
+  const interceptorId = useRef(null)
 
   const applyInterceptors = (passedToken) => {
-    if (interceptorId) {
-      apiClient.interceptors.request.eject(interceptorId);
+    if (interceptorId.current) {
+      apiClient.interceptors.request.eject(interceptorId.current)
     }
-    apiClient.interceptors.request.use((config) => {
-      interceptorId.current = config.headers.Authorization =
-        "Bearer " + passedToken;
-      return config;
-    });
-  };
+    interceptorId.current = apiClient.interceptors.request.use((config) => {
+      config.headers.Authorization = "Bearer " + passedToken
+      return config
+    })
+  }
 
   const logoutUser = () => {
-    localStorage.removeItem("token");
-    setAuthLoading(false);
-    setIsAuthenticated(false);
-    setToken(null);
-    setUserRole(null);
-  };
+    localStorage.removeItem("token")
+    setIsAuthenticated(false)
+    setToken(null)
+    setUserRole(null)
+    setAuthLoading(false)
+  }
 
   const isTokenValid = async (token) => {
     try {
       const response = await apiClient.get("/api/isAuthenticated", {
         headers: { Authorization: "Bearer " + token },
-      });
-      return response.status === 200;
-    } catch (error) {
-      return false;
+      })
+      return response.status === 200
+    } catch {
+      return false
     }
-  };
+  }
 
   useEffect(() => {
     const checkAuth = async () => {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("token")
       if (!token) {
-        setAuthLoading(false);
-        setIsAuthenticated(false);
-        return;
+        setIsAuthenticated(false)
+        setAuthLoading(false)
+        return
       }
 
       try {
-        const decoded = jwtDecode(token);
-
-        // Expired token
-        if (decoded?.exp < Date.now() / 1000) {
-          logoutUser();
-          return;
+        const decoded = jwtDecode(token)
+        if (decoded?.exp < Date.now() / 1000 || !decoded?.role) {
+          logoutUser()
+          return
         }
 
-        // Role missing
-        if (!decoded?.role) {
-          logoutUser();
-          return;
-        }
-
-        // Validate with backend
-        const valid = await isTokenValid(token);
+        const valid = await isTokenValid(token)
         if (!valid) {
-          logoutUser();
-          return;
+          logoutUser()
+          return
         }
 
-        // Success
-        setUserRole(decoded.role);
-        setIsAuthenticated(true);
-        setToken(token);
-        applyInterceptors(token);
+        setUserRole(decoded.role)
+        setIsAuthenticated(true)
+        setToken(token)
+        applyInterceptors(token)
       } catch (error) {
-        console.error("Auth check failed:", error);
-        logoutUser();
+        console.error("Auth check failed:", error)
+        logoutUser()
       } finally {
-        setAuthLoading(false);
+        setAuthLoading(false)
       }
-    };
+    }
 
-    checkAuth();
-  }, [token]);
+    checkAuth()
+  }, []) // ✅ runs once only
 
   return (
     <AuthContext.Provider
@@ -111,7 +99,7 @@ export default function AuthContextProvider({ children }) {
     >
       {children}
     </AuthContext.Provider>
-  );
+  )
 }
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext)

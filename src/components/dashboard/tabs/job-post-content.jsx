@@ -1,4 +1,5 @@
 import { apiClient } from "@/api/AxiosServiceApi"
+import InlineLoader from "@/components/InlineLoader"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,6 +36,7 @@ import {
   Users,
 } from "lucide-react"
 import { useEffect, useState } from "react"
+import { Link } from "react-router-dom"
 
 export default function JobPostsContent({ userRole }) {
   const [searchTerm, setSearchTerm] = useState("")
@@ -206,13 +208,7 @@ export default function JobPostsContent({ userRole }) {
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-10">
-              <l-ring
-                size="40"
-                stroke="5"
-                bg-opacity="0"
-                speed="2"
-                color={CURRENT_THEME === "dark" ? "white" : "black"}
-              ></l-ring>
+              <InlineLoader />
             </div>
           ) : jobPosts.length === 0 ? (
             <div className="text-center py-12">
@@ -248,7 +244,7 @@ export default function JobPostsContent({ userRole }) {
                           <p className="text-muted-foreground text-sm mb-2">
                             {job.clientDto?.companyName || "No category"}
                           </p>
-                          <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
+                          <p className="text-sm text-muted-foreground line-clamp-3 mb-3">
                             {job.jobDescription}
                           </p>
 
@@ -303,10 +299,12 @@ export default function JobPostsContent({ userRole }) {
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="mr-2 h-4 w-4" />
-                            View
-                          </Button>
+                          <Link to={`/dashboard/job-posts/${job.id}`}>
+                            <Button variant="outline" size="sm">
+                              <Eye className="mr-2 h-4 w-4" />
+                              View
+                            </Button>
+                          </Link>
                           <Button variant="destructive" size="sm">
                             <Trash className="h-3 w-3" />
                           </Button>
