@@ -1,5 +1,3 @@
-"use client"
-
 import { apiClient } from "@/api/AxiosServiceApi"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -14,6 +12,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
+import { useAuth } from "@/context/AuthContext"
 import { format } from "date-fns"
 import {
   AlertCircle,
@@ -31,9 +30,11 @@ import {
 } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useNavigate, useSearchParams } from "react-router-dom"
+import { toast } from "sonner"
 import InlineLoader from "../InlineLoader"
 
 export default function SubmitProposal() {
+  const { userId } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const jobId = searchParams.get("jobId")
@@ -42,7 +43,7 @@ export default function SubmitProposal() {
   const [bidAmount, setBidAmount] = useState("")
   const [timeline, setTimeline] = useState("")
   const [coverLetter, setCoverLetter] = useState("")
-  const [attachments, setAttachments] = useState([])
+  const [attachments, setAttachments] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [job, setJob] = useState(null)
@@ -56,26 +57,28 @@ export default function SubmitProposal() {
       const { status, data } = response
       if (status === 200 && data.job) {
         const jobData = data.job
-        setJob({
-          id: jobData.id,
-          title: jobData.jobTitle,
-          description: jobData.jobDescription,
-          skills: jobData.requiredSkills,
-          budget: { type: "fixed", amount: jobData.budget }, // assuming fixed price
-          timeline: `${format(
-            new Date(jobData.projectStartTime),
-            "PP"
-          )} - ${format(new Date(jobData.projectEndTime), "PP")}`,
-          postedDate: jobData.createdAt,
-          client: {
-            name: jobData.clientDto.userDto.username,
-            avatar: `data:image/jpeg;base64,${jobData.clientDto.userDto.imageData}`,
-            rating: 5, // default if rating not in API
-            jobsPosted: 0, // default
-            location: "", // default
-            bio: jobData.clientDto.bio,
-          },
-        })
+        if (jobData) {
+          setJob({
+            id: jobData.id,
+            title: jobData.jobTitle,
+            description: jobData.jobDescription,
+            skills: jobData.requiredSkills,
+            budget: { type: "fixed", amount: jobData.budget },
+            timeline: `${format(
+              new Date(jobData.projectStartTime),
+              "PP"
+            )} - ${format(new Date(jobData.projectEndTime), "PP")}`,
+            postedDate: jobData.createdAt,
+            client: {
+              name: jobData.clientDto.userDto.username,
+              avatar: `data:image/jpeg;base64,${jobData.clientDto.userDto.imageData}`,
+              rating: 5,
+              jobsPosted: 0,
+              location: "",
+              bio: jobData.clientDto.bio,
+            },
+          })
+        }
       }
     } catch (error) {
       console.error("Error fetching job:", error)
@@ -89,41 +92,79 @@ export default function SubmitProposal() {
   }, [])
 
   const handleFileUpload = (event) => {
-    const files = Array.from(event.target.files || [])
-    setAttachments((prev) => [...prev, ...files])
+    const file = event.target.files?.[0]
+    if (file) {
+      const maxSize = 500 * 1024 // 500 KB in bytes
+      if (file.size > maxSize) {
+        toast.warning("File size exceeds 500 KB. Please select a smaller file.")
+        return
+      }
+      setAttachments(file)
+      toast.success("File uploaded successfully!")
+    } else {
+      toast.warning("File upload failed. Please try again.")
+    }
   }
 
-  const removeAttachment = (index) => {
-    setAttachments((prev) => prev.filter((_, i) => i !== index))
+  const removeAttachment = () => {
+    setAttachments(null)
+    // Reset the file input
+    const fileInput = document.getElementById("file-upload")
+    if (fileInput) {
+      fileInput.value = ""
+    }
   }
 
   const handleBidSubmission = async () => {
+    setIsSubmitting(true)
+
+    const formData = new FormData()
+
+    const bidDto = {
+      jobDto: {
+        id: jobId,
+      },
+      freelancerDto: {
+        id: userId,
+        experienceLevel: "ENTRY_LEVEL",
+      },
+      amount: bidAmount,
+      timeRequired: timeline,
+      coverLetter: coverLetter,
+    }
+
+    formData.append(
+      "bid",
+      new Blob([JSON.stringify(bidDto)], { type: "application/json" })
+    )
+
+    // Only append file if it exists
+    if (attachments) {
+      formData.append("file", attachments)
+    }
+
     try {
-      const response = await apiClient.post("/api/create-bid", {
-        jobId: jobId,
-        bidAmount: bidAmount,
-        timeline: timeline,
-        coverLetter: coverLetter,
-        attachments: attachments,
+      const response = await apiClient.post("/api/create-bid", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
       })
       console.log(response)
       if (response.status === 200) {
         toast.success("Proposal submitted successfully!")
         navigate("/dashboard/job-posts")
       }
+      setIsSubmitted(true)
     } catch (error) {
       console.error("Error submitting proposal:", error)
       toast.error("Something went wrong while submitting the proposal")
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleSubmit = async () => {
-    setIsSubmitting(true)
-
     await handleBidSubmission()
-
-    setIsSubmitting(false)
-    setIsSubmitted(true)
   }
 
   const formatDate = (dateString) => {
@@ -194,7 +235,7 @@ export default function SubmitProposal() {
                   </div>
                   <div>
                     <div className="text-2xl font-bold">
-                      {attachments.length}
+                      {attachments ? 1 : 0}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       Attachments
@@ -285,7 +326,7 @@ export default function SubmitProposal() {
           <div className="flex items-center justify-center h-screen">
             <InlineLoader />
           </div>
-        ) : (
+        ) : job ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
@@ -474,17 +515,16 @@ Best regards,
 
                       <div className="space-y-4">
                         <label className="text-sm font-medium">
-                          Attachments (Optional)
+                          Attachment (Optional)
                         </label>
 
                         <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
                           <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
                           <p className="text-sm text-muted-foreground mb-2">
-                            Drag and drop files here, or click to browse
+                            Drag and drop a file here, or click to browse
                           </p>
                           <input
                             type="file"
-                            multiple
                             onChange={handleFileUpload}
                             className="hidden"
                             id="file-upload"
@@ -498,45 +538,40 @@ Best regards,
                             }
                             className="bg-transparent"
                           >
-                            Choose Files
+                            Choose File
                           </Button>
                           <p className="text-xs text-muted-foreground mt-2">
                             Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG
-                            (Max 10MB each)
+                            (Max 500kb)
                           </p>
                         </div>
 
-                        {attachments.length > 0 && (
+                        {attachments && (
                           <div className="space-y-2">
                             <h4 className="text-sm font-medium">
-                              Attached Files
+                              Attached File
                             </h4>
-                            {attachments.map((file, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center justify-between p-3 border rounded-lg"
-                              >
-                                <div className="flex items-center space-x-3">
-                                  <FileText className="h-4 w-4 text-muted-foreground" />
-                                  <div>
-                                    <p className="text-sm font-medium">
-                                      {file.name}
-                                    </p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                                    </p>
-                                  </div>
+                            <div className="flex items-center justify-between p-3 border rounded-lg">
+                              <div className="flex items-center space-x-3">
+                                <FileText className="h-4 w-4 text-muted-foreground" />
+                                <div>
+                                  <p className="text-sm font-medium">
+                                    {attachments.name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {(attachments.size / 1024).toFixed(2)} KB
+                                  </p>
                                 </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => removeAttachment(index)}
-                                  className="text-red-500 hover:text-red-700"
-                                >
-                                  <X className="h-4 w-4" />
-                                </Button>
                               </div>
-                            ))}
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={removeAttachment}
+                                className="text-red-500 hover:text-red-700"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -580,33 +615,24 @@ Best regards,
                         </div>
                       </div>
 
-                      {attachments.length > 0 && (
+                      {attachments && (
                         <div className="space-y-3">
-                          <h4 className="font-semibold">
-                            Attachments ({attachments.length})
-                          </h4>
-                          <div className="space-y-2">
-                            {attachments.map((file, index) => (
-                              <div
-                                key={index}
-                                className="flex items-center space-x-3 p-2 border rounded"
-                              >
-                                <FileText className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-sm">{file.name}</span>
-                              </div>
-                            ))}
+                          <h4 className="font-semibold">Attachment (1)</h4>
+                          <div className="flex items-center space-x-3 p-2 border rounded">
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{attachments.name}</span>
                           </div>
                         </div>
                       )}
 
-                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                      <div className="border bg-muted rounded-lg p-4">
                         <div className="flex items-start space-x-3">
-                          <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                          <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
                           <div>
-                            <h4 className="font-medium text-yellow-900 mb-1">
+                            <h4 className="font-medium text-primary mb-1">
                               Before You Submit
                             </h4>
-                            <ul className="text-sm text-yellow-800 space-y-1">
+                            <ul className="text-sm text-primary space-y-1">
                               <li>
                                 • Double-check your bid amount and timeline
                               </li>
@@ -783,6 +809,18 @@ Best regards,
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col justify-center items-center gap-4">
+            <h1 className="text-red-500 font-bold text-3xl">Job not found</h1>
+            <div className="flex gap-2">
+              <Button onClick={() => window.location.reload()} size="sm">
+                Reload Page
+              </Button>
+              <Button onClick={() => navigate(-1)} variant="secondary" size="sm">
+                Go Back
+              </Button>
             </div>
           </div>
         )}

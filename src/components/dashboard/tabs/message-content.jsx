@@ -4,11 +4,10 @@ import { apiClient } from "@/api/AxiosServiceApi"
 import ChatArea from "@/components/ChatArea"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/context/AuthContext"
-import { Search, UserPlus2Icon } from "lucide-react"
+import { Search } from "lucide-react"
 import { useEffect, useState } from "react"
 
 export default function MessagesContent() {
@@ -58,10 +57,10 @@ export default function MessagesContent() {
         >
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">Conversations</CardTitle>
-              <Button size="icon" variant="outline" className="bg-transparent">
+              {/* <CardTitle className="text-lg">Conversations</CardTitle> */}
+              {/* <Button size="icon" variant="outline" className="bg-transparent">
                 <UserPlus2Icon className="h-4 w-4 font-bold" />
-              </Button>
+              </Button> */}
             </div>
             <div className="relative">
               <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />

@@ -23,6 +23,7 @@ import Proposals from "./pages/Proposals"
 import Register from "./pages/register"
 import ReviewProposals from "./pages/review-proposal"
 import Reviews from "./pages/reviews"
+
 function App() {
   const router = createBrowserRouter([
     {

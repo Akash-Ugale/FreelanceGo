@@ -202,8 +202,8 @@ export default function DashboardHeader(props) {
                   Notification Center
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                {notifications.map((notification) => (
-                  <DropdownMenuItem key={notification.id}>
+                {notifications.map((notification, idx) => (
+                  <DropdownMenuItem key={idx}>
                     <div className="flex gap-2">
                       <div className="flex flex-col space-y-1 leading-none">
                         <p className="text-sm font-medium leading-tight">
@@ -239,11 +239,20 @@ export default function DashboardHeader(props) {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <div className="grid gap-2">
-                      <div className="p-1 py-0 font-bold text-center text-xl">
-                        {userRoles.FREELANCER === userRole
-                          ? "Freelancer"
-                          : "Client"}
+                      <div
+                        className={`flex justify-center rounded-md px-3 py-0.5 text-sm font-semibold ${
+                          userRole === userRoles.FREELANCER
+                            ? "bg-primary/20 text-primary"
+                            : "bg-green-500/20 text-green-500"
+                        }`}
+                      >
+                        <span>
+                          {userRole === userRoles.FREELANCER
+                            ? "Freelancer"
+                            : "Client"}
+                        </span>
                       </div>
+
                       <div className="h-[1px] bg-muted"></div>
                       <p className="text-sm font-medium leading-none">
                         {userData?.username}

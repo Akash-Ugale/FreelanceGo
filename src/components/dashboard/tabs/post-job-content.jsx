@@ -432,7 +432,7 @@ export default function PostJobContent({ userRole }) {
                           variant="outline"
                           size="sm"
                           onClick={() => addSkill(skill)}
-                          className="text-xs bg-transparent"
+                          className="text-xs bg-transparent hover:bg-primary"
                         >
                           <Plus className="mr-1 h-3 w-3" />
                           {skill}
@@ -448,8 +448,7 @@ export default function PostJobContent({ userRole }) {
                     />
                     <Button
                       onClick={addCustomSkill}
-                      variant="outline"
-                      className="bg-transparent"
+                      variant="default"
                     >
                       <Plus className="h-4 w-4" />
                     </Button>

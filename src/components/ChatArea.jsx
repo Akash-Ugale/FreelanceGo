@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { useAuth } from "@/context/AuthContext"
-import { ChevronLeft, MoreVertical, Paperclip, Send } from "lucide-react"
+import { ChevronLeft, MoreVertical, Send } from "lucide-react"
 import { useEffect, useRef, useState } from "react"
 import InlineLoader from "./InlineLoader"
 
@@ -229,7 +229,7 @@ export default function ChatArea({
       <CardContent className="relative flex-1 p-0">
         {loading && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-md">
-            <InlineLoader/>
+            <InlineLoader />
           </div>
         )}
 
@@ -293,9 +293,9 @@ export default function ChatArea({
             }`}
           >
             <div className="flex items-center space-x-2">
-              <Button size="icon" variant="outline" className="bg-transparent">
+              {/* <Button size="icon" variant="outline" className="bg-transparent">
                 <Paperclip className="h-4 w-4" />
-              </Button>
+              </Button> */}
               <Input
                 placeholder="Type your message..."
                 value={newMessage}
