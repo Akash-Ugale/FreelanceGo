@@ -1,18 +1,34 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react" // <-- Added useRef and useEffect
-import { useNavigate } from "react-router-dom";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { apiClient } from "@/api/AxiosServiceApi"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Search, Filter, Eye, FileText, Users, MapPin, Briefcase, Star, Loader2 } from "lucide-react" // <-- Added Loader2 icon
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import {
+  Briefcase,
+  Eye,
+  FileText,
+  Filter,
+  Loader2,
+  MapPin,
+  Search,
+  Star,
+  Users,
+} from "lucide-react" // <-- Added Loader2 icon
+import { useEffect, useRef, useState } from "react" // <-- Added useRef and useEffect
+import { useNavigate } from "react-router-dom"
 
 // --- INFINITE SCROLL CONFIGURATION ---
-const ITEMS_PER_PAGE = 3; // Number of items to load initially and in subsequent batches
+const ITEMS_PER_PAGE = 3 // Number of items to load initially and in subsequent batches
 // --- END CONFIGURATION ---
-
 
 const uncontractedProjects = [
   {
@@ -28,7 +44,14 @@ const uncontractedProjects = [
     timeline: "8-10 weeks",
     postedDate: "2024-01-20T10:00:00Z",
     category: "Web Development",
-    skills: ["React", "Node.js", "PostgreSQL", "Stripe API", "TypeScript", "AWS"],
+    skills: [
+      "React",
+      "Node.js",
+      "PostgreSQL",
+      "Stripe API",
+      "TypeScript",
+      "AWS",
+    ],
     experienceLevel: "Expert",
     projectType: "Long-term",
     location: "Remote",
@@ -55,7 +78,14 @@ const uncontractedProjects = [
     timeline: "5-6 weeks",
     postedDate: "2024-01-22T14:30:00Z",
     category: "Design & Creative",
-    skills: ["Figma", "UI/UX Design", "Mobile Design", "Prototyping", "User Research", "Adobe Creative Suite"],
+    skills: [
+      "Figma",
+      "UI/UX Design",
+      "Mobile Design",
+      "Prototyping",
+      "User Research",
+      "Adobe Creative Suite",
+    ],
     experienceLevel: "Intermediate",
     projectType: "Medium-term",
     location: "Remote",
@@ -82,7 +112,14 @@ const uncontractedProjects = [
     timeline: "Ongoing",
     postedDate: "2024-01-25T09:15:00Z",
     category: "Writing & Translation",
-    skills: ["Technical Writing", "SEO", "Content Strategy", "JavaScript", "Python", "Developer Relations"],
+    skills: [
+      "Technical Writing",
+      "SEO",
+      "Content Strategy",
+      "JavaScript",
+      "Python",
+      "Developer Relations",
+    ],
     experienceLevel: "Expert",
     projectType: "Ongoing",
     location: "Remote",
@@ -109,7 +146,14 @@ const uncontractedProjects = [
     timeline: "4-5 weeks",
     postedDate: "2024-01-23T16:45:00Z",
     category: "Web Development",
-    skills: ["WordPress", "PHP", "MySQL", "JavaScript", "Plugin Development", "LMS"],
+    skills: [
+      "WordPress",
+      "PHP",
+      "MySQL",
+      "JavaScript",
+      "Plugin Development",
+      "LMS",
+    ],
     experienceLevel: "Intermediate",
     projectType: "Medium-term",
     location: "Remote",
@@ -164,7 +208,13 @@ const uncontractedProjects = [
     timeline: "12 weeks",
     postedDate: "2024-01-18T15:00:00Z",
     category: "Web Development",
-    skills: ["AWS Lambda", "Serverless", "DynamoDB", "Node.js", "CloudFormation"],
+    skills: [
+      "AWS Lambda",
+      "Serverless",
+      "DynamoDB",
+      "Node.js",
+      "CloudFormation",
+    ],
     experienceLevel: "Expert",
     projectType: "Long-term",
     location: "Remote",
@@ -187,87 +237,116 @@ export default function ReviewProposalsContent() {
   const [budgetFilter, setBudgetFilter] = useState("all")
 
   // --- INFINITE SCROLL & LOADING STATES ---
-  const [itemsToDisplay, setItemsToDisplay] = useState(ITEMS_PER_PAGE); 
-  const [isObservingLoad, setIsObservingLoad] = useState(false); 
-  const loadMoreRef = useRef(null); 
+  const [itemsToDisplay, setItemsToDisplay] = useState(ITEMS_PER_PAGE)
+  const [isObservingLoad, setIsObservingLoad] = useState(false)
+  const loadMoreRef = useRef(null)
   // --- END INFINITE SCROLL & LOADING STATES ---
-
 
   const filteredProjects = uncontractedProjects.filter((project) => {
     const matchesSearch =
       project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      project.skills.some((skill) => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+      project.skills.some((skill) =>
+        skill.toLowerCase().includes(searchTerm.toLowerCase())
+      )
 
-    const matchesCategory = categoryFilter === "all" || project.category === categoryFilter
+    const matchesCategory =
+      categoryFilter === "all" || project.category === categoryFilter
 
     const matchesBudget =
       budgetFilter === "all" ||
       (budgetFilter === "under-1000" && project.budget.amount < 1000) ||
-      (budgetFilter === "1000-3000" && project.budget.amount >= 1000 && project.budget.amount <= 3000) ||
-      (budgetFilter === "3000-5000" && project.budget.amount >= 3000 && project.budget.amount <= 5000) ||
+      (budgetFilter === "1000-3000" &&
+        project.budget.amount >= 1000 &&
+        project.budget.amount <= 3000) ||
+      (budgetFilter === "3000-5000" &&
+        project.budget.amount >= 3000 &&
+        project.budget.amount <= 5000) ||
       (budgetFilter === "over-5000" && project.budget.amount > 5000)
 
     return matchesSearch && matchesCategory && matchesBudget
   })
 
   // --- INFINITE SCROLL LOGIC ---
-  const projectsOnPage = filteredProjects.slice(0, itemsToDisplay);
-  const hasMore = itemsToDisplay < filteredProjects.length;
+  const projectsOnPage = filteredProjects.slice(0, itemsToDisplay)
+  const hasMore = itemsToDisplay < filteredProjects.length
 
   // Effect to reset pagination when filters change
   useEffect(() => {
-    setItemsToDisplay(ITEMS_PER_PAGE);
-    setIsObservingLoad(false); 
-  }, [searchTerm, categoryFilter, budgetFilter]);
+    setItemsToDisplay(ITEMS_PER_PAGE)
+    setIsObservingLoad(false)
+  }, [searchTerm, categoryFilter, budgetFilter])
 
   // Effect to handle Intersection Observer
   useEffect(() => {
     // Only set up observer if there are more items to load and we're not currently loading
-    if (!hasMore || isObservingLoad) return; 
-    
+    if (!hasMore || isObservingLoad) return
+
     const loadNextPage = () => {
-        setIsObservingLoad(true);
-        // Simulate a network/data fetch delay (e.g., 1 second)
-        setTimeout(() => {
-            setItemsToDisplay(prevCount => prevCount + ITEMS_PER_PAGE);
-            setIsObservingLoad(false);
-        }, 1000); 
-    };
+      setIsObservingLoad(true)
+      // Simulate a network/data fetch delay (e.g., 1 second)
+      setTimeout(() => {
+        setItemsToDisplay((prevCount) => prevCount + ITEMS_PER_PAGE)
+        setIsObservingLoad(false)
+      }, 1000)
+    }
 
     const observer = new IntersectionObserver(
       (entries) => {
         // If the ref element is visible (intersecting), load the next page
-        if (entries[0].isIntersecting) { 
-          loadNextPage();
+        if (entries[0].isIntersecting) {
+          loadNextPage()
         }
       },
-      { rootMargin: '200px' } // Start loading when the element is 200px from the viewport
-    );
+      { rootMargin: "200px" } // Start loading when the element is 200px from the viewport
+    )
 
-    const currentRef = loadMoreRef.current;
-    
+    const currentRef = loadMoreRef.current
+
     if (currentRef) {
-      observer.observe(currentRef);
+      observer.observe(currentRef)
     }
-    
+
     return () => {
       if (currentRef) {
         // Clean up the observer when the component unmounts or dependencies change
-        observer.unobserve(currentRef);
+        observer.unobserve(currentRef)
       }
-    };
-  }, [hasMore, isObservingLoad, filteredProjects.length]); 
+    }
+  }, [hasMore, isObservingLoad, filteredProjects.length])
   // --- END INFINITE SCROLL LOGIC ---
 
+  const fetchActiveProjects = async () => {
+    try {
+      const response = await apiClient.get("/api/review-my-proposals")
+      const { data } = response
+      console.log("Review proposals:", response)
+    } catch (error) {
+      console.error("Error fetching active projects:", error)
+    }
+  }
+
+  useEffect(() => {
+    fetchActiveProjects()
+  }, [])
 
   const getProjectStats = () => {
     const totalProjects = uncontractedProjects.length
-    const totalBids = uncontractedProjects.reduce((sum, project) => sum + project.bidsCount, 0)
+    const totalBids = uncontractedProjects.reduce(
+      (sum, project) => sum + project.bidsCount,
+      0
+    )
     const avgBidsPerProject = totalBids / totalProjects
-    const highestBids = Math.max(...uncontractedProjects.map((p) => p.bidsCount))
+    const highestBids = Math.max(
+      ...uncontractedProjects.map((p) => p.bidsCount)
+    )
 
-    return { totalProjects, totalBids, avgBidsPerProject: Math.round(avgBidsPerProject), highestBids }
+    return {
+      totalProjects,
+      totalBids,
+      avgBidsPerProject: Math.round(avgBidsPerProject),
+      highestBids,
+    }
   }
 
   const stats = getProjectStats()
@@ -309,7 +388,9 @@ export default function ReviewProposalsContent() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Review Proposals</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            Review Proposals
+          </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             Manage your active job posts and review incoming proposals
           </p>
@@ -330,7 +411,9 @@ export default function ReviewProposalsContent() {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Active Projects
+            </CardTitle>
             <Briefcase className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -345,18 +428,24 @@ export default function ReviewProposalsContent() {
             <Users className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-blue-600">{stats.totalBids}</div>
+            <div className="text-2xl font-bold text-blue-600">
+              {stats.totalBids}
+            </div>
             <p className="text-xs text-muted-foreground">Across all projects</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Bids/Project</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Avg Bids/Project
+            </CardTitle>
             <Eye className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.avgBidsPerProject}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {stats.avgBidsPerProject}
+            </div>
             <p className="text-xs text-muted-foreground">Average interest</p>
           </CardContent>
         </Card>
@@ -367,8 +456,12 @@ export default function ReviewProposalsContent() {
             <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">{stats.highestBids}</div>
-            <p className="text-xs text-muted-foreground">Most popular project</p>
+            <div className="text-2xl font-bold text-yellow-600">
+              {stats.highestBids}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Most popular project
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -392,7 +485,9 @@ export default function ReviewProposalsContent() {
             <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="Web Development">Web Development</SelectItem>
             <SelectItem value="Design & Creative">Design & Creative</SelectItem>
-            <SelectItem value="Writing & Translation">Writing & Translation</SelectItem>
+            <SelectItem value="Writing & Translation">
+              Writing & Translation
+            </SelectItem>
             <SelectItem value="Data Science">Data Science</SelectItem>
           </SelectContent>
         </Select>
@@ -414,143 +509,189 @@ export default function ReviewProposalsContent() {
       <div className="space-y-6">
         {/* Changed mapping to use projectsOnPage instead of filteredProjects */}
         {projectsOnPage.map((project, index) => {
-            // Determine if this is the last item AND there are more items to load.
-            const isLastProject = index === projectsOnPage.length - 1;
-            const refProps = isLastProject && hasMore ? { ref: loadMoreRef } : {};
+          // Determine if this is the last item AND there are more items to load.
+          const isLastProject = index === projectsOnPage.length - 1
+          const refProps = isLastProject && hasMore ? { ref: loadMoreRef } : {}
 
-            return (
-                <Card key={project.id} className="hover:shadow-lg transition-shadow" {...refProps}>
-                    <CardContent className="p-6">
-                        <div className="space-y-6">
-                            {/* Project Header */}
-                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
-                                <div className="flex-1">
-                                    <h3 className="font-semibold text-xl mb-2">{project.title}</h3>
-                                    <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                                        <span>Posted: {formatDate(project.postedDate)}</span>
-                                        <span>•</span>
-                                        <span>ID: {project.id}</span>
-                                        <span>•</span>
-                                        <Badge variant="outline" className="text-xs">
-                                            {project.category}
-                                        </Badge>
-                                    </div>
-                                    <p className="text-muted-foreground text-sm leading-relaxed">{project.description}</p>
-                                </div>
-                                <div className="flex flex-col items-end space-y-2">
-                                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                        Active
-                                    </Badge>
-                                </div>
-                            </div>
+          return (
+            <Card
+              key={project.id}
+              className="hover:shadow-lg transition-shadow"
+              {...refProps}
+            >
+              <CardContent className="p-6">
+                <div className="space-y-6">
+                  {/* Project Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
+                    <div className="flex-1">
+                      <h3 className="font-semibold text-xl mb-2">
+                        {project.title}
+                      </h3>
+                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
+                        <span>Posted: {formatDate(project.postedDate)}</span>
+                        <span>•</span>
+                        <span>ID: {project.id}</span>
+                        <span>•</span>
+                        <Badge variant="outline" className="text-xs">
+                          {project.category}
+                        </Badge>
+                      </div>
+                      <p className="text-muted-foreground text-sm leading-relaxed">
+                        {project.description}
+                      </p>
+                    </div>
+                    <div className="flex flex-col items-end space-y-2">
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800"
+                      >
+                        Active
+                      </Badge>
+                    </div>
+                  </div>
 
-                            {/* Project Details Grid */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
-                                <div className="text-center">
-                                    <div className={`text-lg font-bold ${getBudgetColor(project.budget.amount)}`}>
-                                        {formatBudget(project.budget)}
-                                    </div>
-                                    <div className="text-sm text-muted-foreground">
-                                        {project.budget.type === "fixed" ? "Fixed Price" : "Hourly Rate"}
-                                    </div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-lg font-bold">{project.timeline}</div>
-                                    <div className="text-sm text-muted-foreground">Timeline</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-lg font-bold">{project.experienceLevel}</div>
-                                    <div className="text-sm text-muted-foreground">Experience</div>
-                                </div>
-                                <div className="text-center">
-                                    <div className="text-lg font-bold">{project.projectType}</div>
-                                    <div className="text-sm text-muted-foreground">Duration</div>
-                                </div>
-                            </div>
+                  {/* Project Details Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-4 bg-muted/30 rounded-lg">
+                    <div className="text-center">
+                      <div
+                        className={`text-lg font-bold ${getBudgetColor(
+                          project.budget.amount
+                        )}`}
+                      >
+                        {formatBudget(project.budget)}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {project.budget.type === "fixed"
+                          ? "Fixed Price"
+                          : "Hourly Rate"}
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold">
+                        {project.timeline}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Timeline
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold">
+                        {project.experienceLevel}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Experience
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-lg font-bold">
+                        {project.projectType}
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Duration
+                      </div>
+                    </div>
+                  </div>
 
-                            {/* Client Information */}
-                            <div className="flex items-center justify-between p-4 border rounded-lg">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                                        {project.clientInfo.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h4 className="font-semibold">{project.clientInfo.name}</h4>
-                                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                                            <div className="flex items-center space-x-1">
-                                                <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                                                <span>{project.clientInfo.rating}</span>
-                                            </div>
-                                            <div className="flex items-center space-x-1">
-                                                <Briefcase className="h-4 w-4" />
-                                                <span>{project.clientInfo.jobsPosted} jobs posted</span>
-                                            </div>
-                                            <div className="flex items-center space-x-1">
-                                                <Users className="h-4 w-4" />
-                                                <span>{project.clientInfo.hireRate}% hire rate</span>
-                                            </div>
-                                            <div className="flex items-center space-x-1">
-                                                <MapPin className="h-4 w-4" />
-                                                <span>{project.clientInfo.location}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Skills */}
-                            <div className="space-y-3">
-                                <h5 className="font-semibold">Required Skills</h5>
-                                <div className="flex flex-wrap gap-2">
-                                    {project.skills.map((skill, index) => (
-                                        <Badge key={index} variant="outline" className="text-xs">
-                                            {skill}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t space-y-3 sm:space-y-0">
-                                <div className="flex items-center space-x-2">
-                                    {/* Edit/View buttons were commented out, keeping them out */}
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                    <div className="text-sm text-muted-foreground">
-                                        { project.bidsCount === 1 ? "proposal" : "proposals"} received
-                                    </div>
-                                    <Button size="sm" onClick={() => handleShowBids(project.id)} disabled={project.bidsCount === 0}>
-                                        <Users className="mr-2 h-4 w-4" />
-                                        Show Bids
-                                    </Button>
-                                </div>
-                            </div>
+                  {/* Client Information */}
+                  <div className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center space-x-4">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                        {project.clientInfo.name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-semibold">
+                          {project.clientInfo.name}
+                        </h4>
+                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                            <span>{project.clientInfo.rating}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Briefcase className="h-4 w-4" />
+                            <span>
+                              {project.clientInfo.jobsPosted} jobs posted
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <Users className="h-4 w-4" />
+                            <span>
+                              {project.clientInfo.hireRate}% hire rate
+                            </span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MapPin className="h-4 w-4" />
+                            <span>{project.clientInfo.location}</span>
+                          </div>
                         </div>
-                    </CardContent>
-                </Card>
-            );
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Skills */}
+                  <div className="space-y-3">
+                    <h5 className="font-semibold">Required Skills</h5>
+                    <div className="flex flex-wrap gap-2">
+                      {project.skills.map((skill, index) => (
+                        <Badge
+                          key={index}
+                          variant="outline"
+                          className="text-xs"
+                        >
+                          {skill}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between pt-4 border-t space-y-3 sm:space-y-0">
+                    <div className="flex items-center space-x-2">
+                      {/* Edit/View buttons were commented out, keeping them out */}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="text-sm text-muted-foreground">
+                        {project.bidsCount === 1 ? "proposal" : "proposals"}{" "}
+                        received
+                      </div>
+                      <Button
+                        size="sm"
+                        onClick={() => handleShowBids(project.id)}
+                        disabled={project.bidsCount === 0}
+                      >
+                        <Users className="mr-2 h-4 w-4" />
+                        Show Bids
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )
         })}
       </div>
 
       {/* --- INFINITE SCROLL LOADING & END OF LIST INDICATORS --- */}
       {hasMore && (
         <div ref={loadMoreRef} className="flex justify-center py-8">
-            {isObservingLoad ? (
-                <div className="flex items-center text-blue-500">
-                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    <span>Loading more proposals...</span>
-                </div>
-            ) : (
-                // This state is hit right before the observer loads the next page
-                <p className="text-muted-foreground text-sm">Scroll down to load more</p>
-            )}
+          {isObservingLoad ? (
+            <div className="flex items-center text-blue-500">
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              <span>Loading more proposals...</span>
+            </div>
+          ) : (
+            // This state is hit right before the observer loads the next page
+            <p className="text-muted-foreground text-sm">
+              Scroll down to load more
+            </p>
+          )}
         </div>
       )}
 
       {!hasMore && filteredProjects.length > 0 && (
-          <div className="text-center py-8 text-muted-foreground text-sm border-t mt-6">
-              You've reached the end of the matching projects list.
-          </div>
+        <div className="text-center py-8 text-muted-foreground text-sm border-t mt-6">
+          You've reached the end of the matching projects list.
+        </div>
       )}
       {/* --- END INFINITE SCROLL INDICATORS --- */}
 
