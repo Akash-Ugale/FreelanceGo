@@ -237,29 +237,32 @@ export default function DashboardHeader(props) {
 
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
-                  <div className="flex flex-col space-y-1">
-                    <div className="grid gap-2">
+                  <div className="flex flex-col">
+                    <div className="grid gap-1">
                       <div
-                        className={`flex justify-center rounded-md px-3 py-0.5 text-sm font-semibold ${
+                        className={`flex justify-start rounded-sm text-sm font-semibold ${
                           userRole === userRoles.FREELANCER
-                            ? "bg-primary/20 text-primary"
-                            : "bg-green-500/20 text-green-500"
+                            ? "text-primary"
+                            : "text-green-500"
                         }`}
                       >
                         <span>
                           {userRole === userRoles.FREELANCER
                             ? "Freelancer"
-                            : "Client"}
+                            : "Client"}{" "}
+                          Login
                         </span>
                       </div>
 
-                      <div className="h-[1px] bg-muted"></div>
-                      <p className="text-sm font-medium leading-none">
-                        {userData?.username}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {userData?.email}
-                      </p>
+                      <DropdownMenuSeparator />
+                      <section className="space-y-1">
+                        <p className="text-sm font-medium leading-none">
+                          {userData?.username}
+                        </p>
+                        <p className="text-xs leading-none text-muted-foreground">
+                          {userData?.email}
+                        </p>
+                      </section>
                     </div>
                   </div>
                 </DropdownMenuLabel>
