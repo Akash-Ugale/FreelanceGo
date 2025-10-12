@@ -1,26 +1,39 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import {
-  FileText,
-  Clock,
-  Star,
-  Search,
-  Filter,
-  Eye,
-  MessageSquare,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  User,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { userRoles } from "@/utils/constants"
+import {
   Briefcase,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Eye,
+  FileText,
+  Filter,
+  MessageSquare,
+  Search,
+  Star,
+  User,
+  XCircle,
 } from "lucide-react"
+import { useState } from "react"
 
 const freelancerProposals = [
   {
@@ -31,7 +44,8 @@ const freelancerProposals = [
     bidAmount: 2500,
     status: "Under Review",
     submittedDate: "2024-01-25",
-    coverLetter: "I have extensive experience in e-commerce development with React and Node.js...",
+    coverLetter:
+      "I have extensive experience in e-commerce development with React and Node.js...",
     timeline: "6 weeks",
     category: "Web Development",
     skills: ["React", "Node.js", "MongoDB", "Stripe"],
@@ -46,7 +60,8 @@ const freelancerProposals = [
     bidAmount: 1800,
     status: "Accepted",
     submittedDate: "2024-01-20",
-    coverLetter: "Your fitness app project aligns perfectly with my design expertise...",
+    coverLetter:
+      "Your fitness app project aligns perfectly with my design expertise...",
     timeline: "4 weeks",
     category: "Design",
     skills: ["Figma", "UI/UX", "Mobile Design", "Prototyping"],
@@ -61,7 +76,8 @@ const freelancerProposals = [
     bidAmount: 800,
     status: "Declined",
     submittedDate: "2024-01-18",
-    coverLetter: "I specialize in technical content writing with 5+ years experience...",
+    coverLetter:
+      "I specialize in technical content writing with 5+ years experience...",
     timeline: "2 weeks",
     category: "Writing",
     skills: ["Technical Writing", "SEO", "Content Strategy"],
@@ -79,7 +95,8 @@ const clientProposals = [
     bidAmount: 3500,
     status: "New",
     submittedDate: "2024-01-25",
-    coverLetter: "I'm excited to work on your full-stack project. With 8+ years of experience...",
+    coverLetter:
+      "I'm excited to work on your full-stack project. With 8+ years of experience...",
     timeline: "8 weeks",
     freelancerRating: 4.9,
     completedJobs: 47,
@@ -94,7 +111,8 @@ const clientProposals = [
     bidAmount: 2200,
     status: "Shortlisted",
     submittedDate: "2024-01-23",
-    coverLetter: "Your brand identity project caught my attention. I have extensive experience...",
+    coverLetter:
+      "Your brand identity project caught my attention. I have extensive experience...",
     timeline: "5 weeks",
     freelancerRating: 4.8,
     completedJobs: 32,
@@ -109,7 +127,8 @@ const clientProposals = [
     bidAmount: 4500,
     status: "Interviewed",
     submittedDate: "2024-01-20",
-    coverLetter: "I'm passionate about mobile development and would love to bring your app idea to life...",
+    coverLetter:
+      "I'm passionate about mobile development and would love to bring your app idea to life...",
     timeline: "10 weeks",
     freelancerRating: 5.0,
     completedJobs: 28,
@@ -118,13 +137,13 @@ const clientProposals = [
   },
 ]
 
-
 export default function ProposalsContent({ userRole }) {
   const [searchTerm, setSearchTerm] = useState("")
   const [statusFilter, setStatusFilter] = useState("all")
   const [selectedTab, setSelectedTab] = useState("all")
 
-  const proposals = userRole === "freelancer" ? freelancerProposals : clientProposals
+  const proposals =
+    userRole === userRoles.FREELANCER ? freelancerProposals : clientProposals
 
   const getStatusColor = (status) => {
     switch (status.toLowerCase()) {
@@ -145,17 +164,29 @@ export default function ProposalsContent({ userRole }) {
   }
 
   const getProposalStats = () => {
-    if (userRole === "freelancer") {
+    if (userRole === userRoles.FREELANCER) {
       const total = freelancerProposals.length
-      const accepted = freelancerProposals.filter((p) => p.status === "Accepted").length
-      const pending = freelancerProposals.filter((p) => p.status === "Under Review").length
-      const declined = freelancerProposals.filter((p) => p.status === "Declined").length
+      const accepted = freelancerProposals.filter(
+        (p) => p.status === "Accepted"
+      ).length
+      const pending = freelancerProposals.filter(
+        (p) => p.status === "Under Review"
+      ).length
+      const declined = freelancerProposals.filter(
+        (p) => p.status === "Declined"
+      ).length
       return { total, accepted, pending, declined }
     } else {
       const total = clientProposals.length
-      const new_proposals = clientProposals.filter((p) => p.status === "New").length
-      const shortlisted = clientProposals.filter((p) => p.status === "Shortlisted").length
-      const interviewed = clientProposals.filter((p) => p.status === "Interviewed").length
+      const new_proposals = clientProposals.filter(
+        (p) => p.status === "New"
+      ).length
+      const shortlisted = clientProposals.filter(
+        (p) => p.status === "Shortlisted"
+      ).length
+      const interviewed = clientProposals.filter(
+        (p) => p.status === "Interviewed"
+      ).length
       return { total, new: new_proposals, shortlisted, interviewed }
     }
   }
@@ -168,10 +199,12 @@ export default function ProposalsContent({ userRole }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {userRole === "freelancer" ? "My Proposals" : "Review Proposals"}
+            {userRole === userRoles.FREELANCER
+              ? "My Proposals"
+              : "Review Proposals"}
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            {userRole === "freelancer"
+            {userRole === userRoles.FREELANCER
               ? "Track your submitted proposals and their status"
               : "Review and manage incoming proposals from freelancers"}
           </p>
@@ -194,16 +227,20 @@ export default function ProposalsContent({ userRole }) {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Proposals</CardTitle>
+            <CardTitle className="text-sm font-medium">
+              Total Proposals
+            </CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">{userRole === "freelancer" ? "Submitted" : "Received"}</p>
+            <p className="text-xs text-muted-foreground">
+              {userRole === userRoles.FREELANCER ? "Submitted" : "Received"}
+            </p>
           </CardContent>
         </Card>
 
-        {userRole === "freelancer" ? (
+        {userRole === userRoles.FREELANCER ? (
           <>
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -213,7 +250,8 @@ export default function ProposalsContent({ userRole }) {
               <CardContent>
                 <div className="text-2xl font-bold">{stats.accepted}</div>
                 <p className="text-xs text-muted-foreground">
-                  Success rate: {((stats.accepted / stats.total) * 100).toFixed(1)}%
+                  Success rate:{" "}
+                  {((stats.accepted / stats.total) * 100).toFixed(1)}%
                 </p>
               </CardContent>
             </Card>
@@ -255,7 +293,9 @@ export default function ProposalsContent({ userRole }) {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Shortlisted</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Shortlisted
+                </CardTitle>
                 <Star className="h-4 w-4 text-yellow-600" />
               </CardHeader>
               <CardContent>
@@ -266,7 +306,9 @@ export default function ProposalsContent({ userRole }) {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Interviewed</CardTitle>
+                <CardTitle className="text-sm font-medium">
+                  Interviewed
+                </CardTitle>
                 <MessageSquare className="h-4 w-4 text-green-600" />
               </CardHeader>
               <CardContent>
@@ -283,7 +325,9 @@ export default function ProposalsContent({ userRole }) {
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder={`Search ${userRole === "freelancer" ? "jobs" : "freelancers"}...`}
+            placeholder={`Search ${
+              userRole === userRoles.FREELANCER ? "jobs" : "freelancers"
+            }...`}
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -295,7 +339,7 @@ export default function ProposalsContent({ userRole }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
-            {userRole === "freelancer" ? (
+            {userRole === userRoles.FREELANCER ? (
               <>
                 <SelectItem value="under-review">Under Review</SelectItem>
                 <SelectItem value="accepted">Accepted</SelectItem>
@@ -316,10 +360,12 @@ export default function ProposalsContent({ userRole }) {
       <Card>
         <CardHeader>
           <CardTitle className="text-xl">
-            {userRole === "freelancer" ? "Submitted Proposals" : "Received Proposals"}
+            {userRole === userRoles.FREELANCER
+              ? "Submitted Proposals"
+              : "Received Proposals"}
           </CardTitle>
           <CardDescription>
-            {userRole === "freelancer"
+            {userRole === userRoles.FREELANCER
               ? "Track the status of your job applications"
               : "Review and manage proposals from talented freelancers"}
           </CardDescription>
@@ -327,17 +373,24 @@ export default function ProposalsContent({ userRole }) {
         <CardContent>
           <div className="space-y-4">
             {proposals.map((proposal) => (
-              <div key={proposal.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+              <div
+                key={proposal.id}
+                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
+              >
                 <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
                   <div className="flex-1 space-y-3">
                     <div className="flex items-start space-x-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage
-                          src={userRole === "freelancer" ? proposal.clientAvatar : proposal.freelancerAvatar}
+                          src={
+                            userRole === userRoles.FREELANCER
+                              ? proposal.clientAvatar
+                              : proposal.freelancerAvatar
+                          }
                           alt="Avatar"
                         />
                         <AvatarFallback>
-                          {userRole === "freelancer"
+                          {userRole === userRoles.FREELANCER
                             ? proposal.client
                                 .split(" ")
                                 .map((n) => n[0])
@@ -349,29 +402,50 @@ export default function ProposalsContent({ userRole }) {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{proposal.jobTitle}</h3>
+                        <h3 className="font-semibold text-lg">
+                          {proposal.jobTitle}
+                        </h3>
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <User className="h-4 w-4" />
-                            <span>{userRole === "freelancer" ? proposal.client : proposal.freelancer}</span>
+                            <span>
+                              {userRole === userRoles.FREELANCER
+                                ? proposal.client
+                                : proposal.freelancer}
+                            </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{userRole === "freelancer" ? proposal.clientRating : proposal.freelancerRating}</span>
+                            <span>
+                              {userRole === userRoles.FREELANCER
+                                ? proposal.clientRating
+                                : proposal.freelancerRating}
+                            </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Briefcase className="h-4 w-4" />
-                            <span>{userRole === "freelancer" ? proposal.clientJobs : proposal.completedJobs} jobs</span>
+                            <span>
+                              {userRole === userRoles.FREELANCER
+                                ? proposal.clientJobs
+                                : proposal.completedJobs}{" "}
+                              jobs
+                            </span>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <p className="text-sm text-muted-foreground line-clamp-2">{proposal.coverLetter}</p>
+                    <p className="text-sm text-muted-foreground line-clamp-2">
+                      {proposal.coverLetter}
+                    </p>
 
                     <div className="flex flex-wrap gap-2">
                       {proposal.skills.map((skill) => (
-                        <Badge key={skill} variant="secondary" className="text-xs">
+                        <Badge
+                          key={skill}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {skill}
                         </Badge>
                       ))}
@@ -390,24 +464,38 @@ export default function ProposalsContent({ userRole }) {
                   </div>
 
                   <div className="flex flex-col items-end space-y-3">
-                    <Badge variant={getStatusColor(proposal.status)}>{proposal.status}</Badge>
+                    <Badge variant={getStatusColor(proposal.status)}>
+                      {proposal.status}
+                    </Badge>
                     <div className="text-right">
-                      <div className="text-2xl font-bold">${proposal.bidAmount.toLocaleString()}</div>
+                      <div className="text-2xl font-bold">
+                        ${proposal.bidAmount.toLocaleString()}
+                      </div>
                       {userRole === "client" && (
-                        <div className="text-sm text-muted-foreground">${proposal.hourlyRate}/hr</div>
+                        <div className="text-sm text-muted-foreground">
+                          ${proposal.hourlyRate}/hr
+                        </div>
                       )}
                     </div>
                     <div className="flex space-x-2">
                       {userRole === "client" ? (
                         <>
-                          <Button variant="outline" size="sm" className="bg-transparent">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-transparent"
+                          >
                             <MessageSquare className="mr-2 h-4 w-4" />
                             Message
                           </Button>
                           <Button size="sm">Hire</Button>
                         </>
                       ) : (
-                        <Button variant="outline" size="sm" className="bg-transparent">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-transparent"
+                        >
                           <Eye className="mr-2 h-4 w-4" />
                           View Details
                         </Button>

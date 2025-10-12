@@ -152,7 +152,6 @@ export default function SubmitProposal() {
       console.log(response)
       if (response.status === 200) {
         toast.success("Proposal submitted successfully!")
-        navigate("/dashboard/job-posts")
       }
       setIsSubmitted(true)
     } catch (error) {
@@ -818,7 +817,11 @@ Best regards,
               <Button onClick={() => window.location.reload()} size="sm">
                 Reload Page
               </Button>
-              <Button onClick={() => navigate(-1)} variant="secondary" size="sm">
+              <Button
+                onClick={() => navigate(-1)}
+                variant="secondary"
+                size="sm"
+              >
                 Go Back
               </Button>
             </div>
