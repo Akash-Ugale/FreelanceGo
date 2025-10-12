@@ -26,19 +26,21 @@ import {
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Textarea } from "@/components/ui/textarea"
-import { useAuth } from "@/context/AuthContext"
 import { userRoles } from "@/utils/constants"
 import { format, formatISO, isBefore, startOfToday } from "date-fns"
 import {
   AlertCircle,
+  ArrowLeft,
   Briefcase,
   CalendarIcon,
   Clock,
-  DollarSign,
   FileText,
+  IndianRupee,
   Plus,
   Send,
   Settings,
+  Trash2,
+  Upload,
   Users,
   X,
 } from "lucide-react"
@@ -84,8 +86,8 @@ export default function PostJobContent({ userRole }) {
   const [currentTab, setCurrentTab] = useState("basics")
   const [selectedSkills, setSelectedSkills] = useState([])
   const [customSkill, setCustomSkill] = useState("")
-  const { token } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [attachment, setAttachment] = useState(null)
   const navigate = useNavigate()
 
   const [jobData, setJobData] = useState({
@@ -163,10 +165,41 @@ export default function PostJobContent({ userRole }) {
     setJobData({ ...jobData, screeningQuestions: updated })
   }
 
+  const handleFileUpload = (event) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const maxSize = 500 * 1024 // 500 KB in bytes
+      if (file.size > maxSize) {
+        toast.warning("File size exceeds 500 KB. Please select a smaller file.")
+        return
+      }
+      setAttachment(file)
+      toast.success("File uploaded successfully!")
+    } else {
+      toast.warning("File upload failed. Please try again.")
+    }
+  }
+
+  const removeAttachment = () => {
+    setAttachment(null)
+    // Reset the file input
+    const fileInput = document.getElementById("file-upload")
+    if (fileInput) {
+      fileInput.value = ""
+    }
+    toast.info("File removed")
+  }
+
   // Validation
   const validateFields = () => {
+    // Basic info validation
     if (!jobData.jobTitle.trim()) {
       toast.error("Job title is required")
+      setCurrentTab("basics")
+      return false
+    }
+    if (jobData.jobTitle.trim().length < 10) {
+      toast.error("Job title must be at least 10 characters long")
       setCurrentTab("basics")
       return false
     }
@@ -185,8 +218,20 @@ export default function PostJobContent({ userRole }) {
       setCurrentTab("basics")
       return false
     }
+    if (selectedSkills.length > 15) {
+      toast.error("Maximum 15 skills allowed")
+      setCurrentTab("basics")
+      return false
+    }
+
+    // Details validation
     if (!jobData.jobDescription.trim()) {
       toast.error("Job description is required")
+      setCurrentTab("details")
+      return false
+    }
+    if (jobData.jobDescription.trim().length < 50) {
+      toast.error("Job description must be at least 50 characters long")
       setCurrentTab("details")
       return false
     }
@@ -195,11 +240,30 @@ export default function PostJobContent({ userRole }) {
       setCurrentTab("details")
       return false
     }
+    if (jobData.requirement.trim().length < 20) {
+      toast.error("Requirements must be at least 20 characters long")
+      setCurrentTab("details")
+      return false
+    }
+
+    // Budget validation
     if (!jobData.budget) {
       toast.error("Project budget is required")
       setCurrentTab("details")
       return false
     }
+    if (parseFloat(jobData.budget) <= 0) {
+      toast.error("Budget must be greater than 0")
+      setCurrentTab("details")
+      return false
+    }
+    if (parseFloat(jobData.budget) > 10000000) {
+      toast.error("Budget cannot exceed 10,000,000")
+      setCurrentTab("details")
+      return false
+    }
+
+    // Date validation
     if (!jobData.projectStartTime) {
       toast.error("Project start date is required")
       setCurrentTab("details")
@@ -210,6 +274,7 @@ export default function PostJobContent({ userRole }) {
       setCurrentTab("details")
       return false
     }
+
     const today = startOfToday()
     if (isBefore(new Date(jobData.projectStartTime), today)) {
       toast.error("Project start date cannot be in the past")
@@ -231,32 +296,91 @@ export default function PostJobContent({ userRole }) {
       setCurrentTab("details")
       return false
     }
+
+    // Screening questions validation
+    const nonEmptyQuestions = jobData.screeningQuestions.filter((q) => q.trim())
+    if (
+      nonEmptyQuestions.length > 0 &&
+      nonEmptyQuestions.length !== jobData.screeningQuestions.length
+    ) {
+      toast.error("Please remove empty screening questions or fill them in")
+      setCurrentTab("details")
+      return false
+    }
+
     return true
   }
 
   const handlePostJob = async () => {
     if (!validateFields()) return
+
     setLoading(true)
     try {
+      // Create FormData object
+      const formData = new FormData()
+
+      // Filter out empty screening questions
+      const filteredScreeningQuestions = jobData.screeningQuestions.filter(
+        (q) => q.trim()
+      )
+
+      // Create the job DTO object
+      const jobDto = {
+        jobTitle: jobData.jobTitle.trim(),
+        category: jobData.category,
+        experienceLevel: jobData.experienceLevel,
+        jobDescription: jobData.jobDescription.trim(),
+        requirement: jobData.requirement.trim(),
+        timeline: jobData.timeline,
+        budgetType: jobData.budgetType,
+        budget: parseFloat(jobData.budget),
+        hourlyRateMin: jobData.hourlyRateMin
+          ? parseFloat(jobData.hourlyRateMin)
+          : null,
+        hourlyRateMax: jobData.hourlyRateMax
+          ? parseFloat(jobData.hourlyRateMax)
+          : null,
+        projectSize: jobData.projectSize,
+        screeningQuestions: filteredScreeningQuestions,
+        visibility: jobData.visibility,
+        featuredListing: jobData.featuredListing,
+        projectStartTime: jobData.projectStartTime,
+        projectEndTime: jobData.projectEndTime,
+        requiredSkills: selectedSkills,
+      }
+
+      // Append job data as JSON blob
+      formData.append(
+        "job",
+        new Blob([JSON.stringify(jobDto)], { type: "application/json" })
+      )
+
+      // Append file if exists
+      if (attachment) {
+        formData.append("file", attachment)
+      }
+
       const response = await apiClient.post(
         "/api/dashboard/create-post",
-        {
-          ...jobData,
-          requiredSkills: selectedSkills,
-        },
+        formData,
         {
           headers: {
-            Authorization: "Bearer " + token,
+            "Content-Type": "multipart/form-data",
           },
         }
       )
+
       if (response.status === 200) {
         toast.success("Job posted successfully!")
         navigate("/dashboard/job-posts")
       }
     } catch (error) {
       console.error("Error posting job:", error)
-      toast.error("Something went wrong while posting the job")
+      if (error.response?.data?.message) {
+        toast.error(error.response.data.message)
+      } else {
+        toast.error("Something went wrong while posting the job")
+      }
     } finally {
       setLoading(false)
     }
@@ -279,6 +403,8 @@ export default function PostJobContent({ userRole }) {
           jobData.projectStartTime &&
           jobData.projectEndTime
         )
+      case "attachment":
+        return true // Optional tab
       case "review":
         return true
       default:
@@ -313,7 +439,7 @@ export default function PostJobContent({ userRole }) {
             onValueChange={setCurrentTab}
             className="w-full"
           >
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger
                 value="basics"
                 className="flex items-center space-x-2"
@@ -331,6 +457,16 @@ export default function PostJobContent({ userRole }) {
                 <FileText className="h-4 w-4" />
                 <span className="hidden sm:inline">Details</span>
                 {isTabComplete("details") && (
+                  <div className="w-2 h-2 bg-green-500 rounded-full" />
+                )}
+              </TabsTrigger>
+              <TabsTrigger
+                value="attachment"
+                className="flex items-center space-x-2"
+              >
+                <Upload className="h-4 w-4" />
+                <span className="hidden sm:inline">Attachment</span>
+                {attachment && (
                   <div className="w-2 h-2 bg-green-500 rounded-full" />
                 )}
               </TabsTrigger>
@@ -357,6 +493,9 @@ export default function PostJobContent({ userRole }) {
                   }
                   className="mt-1"
                 />
+                <p className="text-xs text-muted-foreground mt-1">
+                  {jobData.jobTitle.length}/100 characters (minimum 10)
+                </p>
               </div>
 
               {/* Category */}
@@ -422,6 +561,9 @@ export default function PostJobContent({ userRole }) {
                       </Badge>
                     ))}
                   </div>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedSkills.length}/15 skills selected
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     {skillSuggestions
                       .filter((skill) => !selectedSkills.includes(skill))
@@ -433,6 +575,7 @@ export default function PostJobContent({ userRole }) {
                           size="sm"
                           onClick={() => addSkill(skill)}
                           className="text-xs bg-transparent hover:bg-primary"
+                          disabled={selectedSkills.length >= 15}
                         >
                           <Plus className="mr-1 h-3 w-3" />
                           {skill}
@@ -445,10 +588,12 @@ export default function PostJobContent({ userRole }) {
                       value={customSkill}
                       onChange={(e) => setCustomSkill(e.target.value)}
                       onKeyPress={(e) => e.key === "Enter" && addCustomSkill()}
+                      disabled={selectedSkills.length >= 15}
                     />
                     <Button
                       onClick={addCustomSkill}
                       variant="default"
+                      disabled={selectedSkills.length >= 15}
                     >
                       <Plus className="h-4 w-4" />
                     </Button>
@@ -464,32 +609,38 @@ export default function PostJobContent({ userRole }) {
                   <Label htmlFor="description">Project Description *</Label>
                   <Textarea
                     id="description"
-                    placeholder="Describe your project in detail"
+                    placeholder="Describe your project in detail..."
                     value={jobData.jobDescription}
                     onChange={(e) =>
                       setJobData({ ...jobData, jobDescription: e.target.value })
                     }
                     className="mt-1 min-h-[120px]"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {jobData.jobDescription.length}/5000 characters (minimum 50)
+                  </p>
                 </div>
 
                 <div>
                   <Label htmlFor="requirements">Requirements *</Label>
                   <Textarea
                     id="requirements"
-                    placeholder="List specific requirements"
+                    placeholder="List specific requirements..."
                     value={jobData.requirement}
                     onChange={(e) =>
                       setJobData({ ...jobData, requirement: e.target.value })
                     }
                     className="mt-1 min-h-[100px]"
                   />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {jobData.requirement.length}/2000 characters (minimum 20)
+                  </p>
                 </div>
 
                 <div>
                   <Label htmlFor="budget-amount">Project Budget *</Label>
                   <div className="relative mt-1">
-                    <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                    <IndianRupee className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
                     <Input
                       id="budget-amount"
                       type="number"
@@ -499,8 +650,13 @@ export default function PostJobContent({ userRole }) {
                         setJobData({ ...jobData, budget: e.target.value })
                       }
                       className="pl-10"
+                      min="1"
+                      max="10000000"
                     />
                   </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter amount between ₹1 and ₹10,000,000
+                  </p>
                 </div>
 
                 {/* Dates */}
@@ -534,6 +690,7 @@ export default function PostJobContent({ userRole }) {
                             projectStartTime: date ? formatISO(date) : null,
                           })
                         }
+                        disabled={(date) => isBefore(date, startOfToday())}
                         initialFocus
                       />
                     </PopoverContent>
@@ -570,6 +727,15 @@ export default function PostJobContent({ userRole }) {
                             projectEndTime: date ? formatISO(date) : null,
                           })
                         }
+                        disabled={(date) => {
+                          const today = startOfToday()
+                          const startDate = jobData.projectStartTime
+                            ? new Date(jobData.projectStartTime)
+                            : today
+                          return (
+                            isBefore(date, today) || isBefore(date, startDate)
+                          )
+                        }}
                         initialFocus
                       />
                     </PopoverContent>
@@ -579,6 +745,9 @@ export default function PostJobContent({ userRole }) {
                 {/* Screening Questions */}
                 <div>
                   <Label>Screening Questions (Optional)</Label>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Ask specific questions to filter applicants
+                  </p>
                   <div className="mt-2 space-y-3">
                     {jobData.screeningQuestions.map((question, index) => (
                       <div key={index} className="flex space-x-2">
@@ -601,17 +770,90 @@ export default function PostJobContent({ userRole }) {
                         )}
                       </div>
                     ))}
+                    {jobData.screeningQuestions.length < 5 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={addScreeningQuestion}
+                        className="bg-transparent"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Question
+                      </Button>
+                    )}
+                    <p className="text-xs text-muted-foreground">
+                      {jobData.screeningQuestions.length}/5 questions
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* ATTACHMENT TAB */}
+            <TabsContent value="attachment" className="space-y-6 mt-6">
+              <div className="space-y-4">
+                <div>
+                  <Label>Project Attachment (Optional)</Label>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Upload relevant documents, requirements, or reference
+                    materials
+                  </p>
+                </div>
+
+                {!attachment ? (
+                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center">
+                    <Upload className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground mb-2">
+                      Drag and drop a file here, or click to browse
+                    </p>
+                    <input
+                      type="file"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                      accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    />
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={addScreeningQuestion}
+                      onClick={() =>
+                        document.getElementById("file-upload")?.click()
+                      }
                       className="bg-transparent"
                     >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Question
+                      Choose File
                     </Button>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Supported formats: PDF, DOC, DOCX, TXT, JPG, PNG (Max
+                      500KB)
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Attached File</h4>
+                    <div className="flex items-center justify-between p-3 border rounded-lg bg-muted/20">
+                      <div className="flex items-center space-x-3">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                          <p className="text-sm font-medium">
+                            {attachment.name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {(attachment.size / 1024).toFixed(2)} KB
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={removeAttachment}
+                        className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </TabsContent>
 
@@ -620,6 +862,9 @@ export default function PostJobContent({ userRole }) {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-lg">Job Preview</CardTitle>
+                  <CardDescription>
+                    Review your job posting before publishing
+                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div>
@@ -628,49 +873,151 @@ export default function PostJobContent({ userRole }) {
                     </h3>
                     <p className="text-muted-foreground">
                       {jobData.category || "Category"} -{" "}
-                      {jobData.experienceLevel || "Experience"}
+                      {jobData.experienceLevel
+                        ? jobData.experienceLevel
+                            .replace(/_/g, " ")
+                            .toLowerCase()
+                            .replace(/\b\w/g, (l) => l.toUpperCase())
+                        : "Experience Level"}
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
-                    {selectedSkills.map((skill) => (
-                      <Badge key={skill} variant="secondary">
-                        {skill}
-                      </Badge>
-                    ))}
-                  </div>
+                  {selectedSkills.length > 0 && (
+                    <div>
+                      <h4 className="font-medium mb-2 text-sm">
+                        Required Skills
+                      </h4>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedSkills.map((skill) => (
+                          <Badge key={skill} variant="secondary">
+                            {skill}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <p className="text-sm text-muted-foreground">
+                    <h4 className="font-medium mb-2 text-sm">Description</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
                       {jobData.jobDescription ||
                         "Project description will appear here..."}
                     </p>
                   </div>
 
-                  <div className="flex items-center space-x-6 text-sm">
-                    <div className="flex items-center space-x-1">
-                      <DollarSign className="h-4 w-4" />
-                      <span>{jobData.budget || "N/A"}</span>
+                  <div>
+                    <h4 className="font-medium mb-2 text-sm">Requirements</h4>
+                    <p className="text-sm text-muted-foreground whitespace-pre-line">
+                      {jobData.requirement ||
+                        "Project requirements will appear here..."}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <IndianRupee className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">Budget</p>
+                        <p className="font-semibold">
+                          ₹
+                          {jobData.budget
+                            ? parseFloat(jobData.budget).toLocaleString("en-IN")
+                            : "N/A"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex items-center space-x-1">
-                      <Clock className="h-4 w-4" />
-                      <span>
-                        {jobData.projectStartTime
-                          ? format(new Date(jobData.projectStartTime), "PP")
-                          : "Start Date"}{" "}
-                        -{" "}
-                        {jobData.projectEndTime
-                          ? format(new Date(jobData.projectEndTime), "PP")
-                          : "End Date"}
-                      </span>
+                    <div className="flex items-center space-x-2">
+                      <div className="bg-primary/10 p-2 rounded-full">
+                        <Clock className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Timeline
+                        </p>
+                        <p className="font-semibold text-sm">
+                          {jobData.projectStartTime && jobData.projectEndTime
+                            ? `${format(
+                                new Date(jobData.projectStartTime),
+                                "MMM dd, yyyy"
+                              )} - ${format(
+                                new Date(jobData.projectEndTime),
+                                "MMM dd, yyyy"
+                              )}`
+                            : "Not set"}
+                        </p>
+                      </div>
                     </div>
                   </div>
+
+                  {jobData.screeningQuestions.filter((q) => q.trim()).length >
+                    0 && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium mb-2 text-sm">
+                        Screening Questions
+                      </h4>
+                      <ul className="space-y-2">
+                        {jobData.screeningQuestions
+                          .filter((q) => q.trim())
+                          .map((question, index) => (
+                            <li
+                              key={index}
+                              className="text-sm text-muted-foreground flex items-start"
+                            >
+                              <span className="mr-2">{index + 1}.</span>
+                              <span>{question}</span>
+                            </li>
+                          ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {attachment && (
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium mb-2 text-sm">Attachment</h4>
+                      <div className="flex items-center space-x-2 p-2 border rounded bg-muted/20">
+                        <FileText className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{attachment.name}</span>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
-              <div className="flex justify-end">
-                <Button onClick={handlePostJob}>
+              <div className="bg-blue-50/50 border border-blue-200/50 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <h4 className="font-medium text-blue-900 mb-1">
+                      Before You Post
+                    </h4>
+                    <ul className="text-sm text-blue-800 space-y-1">
+                      <li>• Verify all information is accurate and complete</li>
+                      <li>• Ensure budget and timeline are realistic</li>
+                      <li>• Review screening questions for clarity</li>
+                      <li>• Check that skills match your requirements</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center pt-4">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentTab("details")}
+                  className="bg-transparent"
+                >
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  Back to Edit
+                </Button>
+                <Button
+                  onClick={handlePostJob}
+                  disabled={
+                    !isTabComplete("basics") || !isTabComplete("details")
+                  }
+                  size="lg"
+                >
                   <Send className="mr-2 h-4 w-4" />
                   Post Job
                 </Button>
