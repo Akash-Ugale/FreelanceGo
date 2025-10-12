@@ -10,6 +10,8 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
+import { apiClient } from "@/api/AxiosServiceApi"
+import { userRoles } from "@/utils/constants"
 import {
   Select,
   SelectContent,
@@ -29,8 +31,8 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react"
-import { useState } from "react"
-
+import { useState ,useEffect} from "react"
+import axios from "axios"
 const freelancerAnalytics = {
   overview: {
     totalEarnings: 45750,
@@ -100,27 +102,75 @@ const clientAnalytics = {
 }
 
 export default function AnalyticsContent({ userRole }) {
-  const [timeRange, setTimeRange] = useState("6months")
-  const [selectedTab, setSelectedTab] = useState("overview")
+  const [timeRange, setTimeRange] = useState("6months");
+  const [selectedTab, setSelectedTab] = useState("overview");
+  const [analytics, setAnalytics] = useState(null);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
-  const data = userRole === "freelancer" ? freelancerAnalytics : clientAnalytics
+  // 📊 Fetch Analytics based on user role
+   useEffect(() => {
+    const fetchAnalytics = async () => {
+      try {
+        setLoading(true);
+        const token = localStorage.getItem("token");
+        console.log("Fetching analytics with token:", token);
+        console.log(userRole)
+        // ✅ Choose API endpoint dynamically
+        const response = await apiClient.get(
+          `/api/${
+            userRole === userRoles.FREELANCER
+              ? "freelancer-analytics"
+              : "dashboard/client-analytics"
+          }`
+        );
 
+        console.log("Analytics Response:", response.data);
+
+        // ✅ Set analytics data
+        setAnalytics(response.data);
+      } catch (err) {
+        console.error("Fetch error:", err);
+        setError("Failed to load analytics data");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAnalytics();
+  }, [userRole]);
+
+
+  // 📈 Percentage Change Calculator
   const getChangePercentage = (current, previous) => {
-    const change = ((current - previous) / previous) * 100
+    if (!previous || previous === 0) return { value: "0.0", isPositive: true };
+    const change = ((current - previous) / previous) * 100;
     return {
       value: Math.abs(change).toFixed(1),
       isPositive: change > 0,
-    }
-  }
+    };
+  };
 
-  const earningsChange = getChangePercentage(
-    userRole === "freelancer"
-      ? data.overview.thisMonth
-      : data.overview.thisMonth,
-    userRole === "freelancer"
-      ? freelancerAnalytics.overview.lastMonth
-      : clientAnalytics.overview.lastMonth
-  )
+ // 🧮 Compute Earnings Change (example metric)
+const earningsChange =
+  analytics && analytics.overview
+    ? getChangePercentage(
+        analytics.overview.thisMonth || 0,
+        analytics.overview.lastMonth || 0
+      )
+    : { value: "0.0", isPositive: true }; // Use a fallback
+
+  // 🌀 Loading / Error / Empty states
+  if (loading)
+    return <p className="p-6 text-muted-foreground">Loading analytics...</p>;
+  if (error) return <p className="p-6 text-red-500">{error}</p>;
+  if (!analytics)
+    return (
+      <p className="p-6 text-muted-foreground">
+        No analytics data available.
+      </p>
+    );
+
 
   return (
     <div className="space-y-6">
@@ -131,7 +181,7 @@ export default function AnalyticsContent({ userRole }) {
             Analytics
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            {userRole === "freelancer"
+            {userRole === userRoles.FREELANCER
               ? "Track your freelance performance and growth"
               : "Monitor your hiring metrics and project outcomes"}
           </p>
@@ -160,18 +210,19 @@ export default function AnalyticsContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === "freelancer" ? "Total Earnings" : "Total Spent"}
+              {userRole === userRoles.FREELANCER ? "Total Earnings" : "Total Spent"}
             </CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
               $
-              {(userRole === "freelancer"
-                ? data.overview.totalEarnings
-                : data.overview.totalSpent
+              {(userRole === userRoles.FREELANCER
+                ? analytics.overview?.totalEarnings ?? 0 // Safely access overview and use 0 as a fallback
+                : analytics.overview?.totalSpent ?? 0      // Safely access overview and use 0 as a fallback
               ).toLocaleString()}
-            </div>
+            </div> 
+
             <p className="text-xs text-muted-foreground flex items-center">
               {earningsChange.isPositive ? (
                 <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
@@ -199,7 +250,7 @@ export default function AnalyticsContent({ userRole }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {data.overview.activeProjects}
+              {analytics.overview?.activeProjects??0}
             </div>
             <p className="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
@@ -208,9 +259,9 @@ export default function AnalyticsContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === "freelancer" ? "Avg Rating" : "Hired Freelancers"}
+              {userRole === userRoles.FREELANCER ? "Avg Rating" : "Hired Freelancers"}
             </CardTitle>
-            {userRole === "freelancer" ? (
+            {userRole === userRoles.FREELANCER ? (
               <Star className="h-4 w-4 text-yellow-600" />
             ) : (
               <Users className="h-4 w-4 text-purple-600" />
@@ -218,12 +269,12 @@ export default function AnalyticsContent({ userRole }) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userRole === "freelancer"
-                ? data.overview.avgRating
-                : data.overview.hiredFreelancers}
+              {userRole === userRoles.FREELANCER
+                ? analytics?.overview?.avgRating ?? 'N/A'
+                : analytics?.overview?.hiredFreelancers?? 0}
             </div>
             <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer"
+              {userRole === userRoles.FREELANCER
                 ? "Client satisfaction"
                 : "Total hired"}
             </p>
@@ -233,22 +284,22 @@ export default function AnalyticsContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === "freelancer" ? "Success Rate" : "Avg Time to Hire"}
+              {userRole === userRoles.FREELANCER ? "Success Rate" : "Avg Time to Hire"}
             </CardTitle>
             <Target className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userRole === "freelancer"
+              {userRole === userRoles.FREELANCER
                 ? `${(
-                    (data.overview.proposalsAccepted /
-                      data.overview.proposalsSent) *
+                    (analytics?.overview?.proposalsAccepted ??0 /
+                      analytics?.overview?.proposalsSent ?? 1) *
                     100
                   ).toFixed(1)}%`
-                : `${data.overview.avgTimeToHire} days`}
+                : `${analytics.overview?.avgTimeToHire??'N/A'} days`}
             </div>
             <p className="text-xs text-muted-foreground">
-              {userRole === "freelancer"
+              {userRole === userRoles.FREELANCER
                 ? "Proposal acceptance"
                 : "Average hiring time"}
             </p>
@@ -262,21 +313,21 @@ export default function AnalyticsContent({ userRole }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === "freelancer"
+                {userRole === userRoles.FREELANCER
                   ? "Earnings Trend"
                   : "Spending Trend"}
               </CardTitle>
               <CardDescription>
-                {userRole === "freelancer"
+                {userRole === userRoles.FREELANCER
                   ? "Track your income over time"
                   : "Monitor your project spending patterns"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {(userRole === "freelancer"
-                  ? data.earningsTrend
-                  : data.spendingTrend
+                {(userRole === userRoles.FREELANCER
+                  ? analytics.earningsTrend??[]
+                  : analytics.spendingTrend??[]
                 ).map((item, index) => (
                   <div
                     key={index}
@@ -291,9 +342,9 @@ export default function AnalyticsContent({ userRole }) {
                             width: `${
                               (item.amount /
                                 Math.max(
-                                  ...(userRole === "freelancer"
-                                    ? data.earningsTrend
-                                    : data.spendingTrend
+                                  ...(userRole === userRoles.FREELANCER
+                                    ? analytics.earningsTrend ?? []
+                                    : analytics.spendingTrend ?? []
                                   ).map((d) => d.amount)
                                 )) *
                               100
@@ -316,20 +367,20 @@ export default function AnalyticsContent({ userRole }) {
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === "freelancer"
+                {userRole === userRoles.FREELANCER
                   ? "Top Skills"
                   : "Category Breakdown"}
               </CardTitle>
               <CardDescription>
-                {userRole === "freelancer"
+                {userRole === userRoles.FREELANCER
                   ? "Your most profitable skills"
                   : "Spending by project category"}
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {userRole === "freelancer"
-                  ? data.skillsPerformance.map((skill, index) => (
+                {userRole === userRoles.FREELANCER
+                  ? (analytics.skillsPerformance??[]).map((skill, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
@@ -351,7 +402,7 @@ export default function AnalyticsContent({ userRole }) {
                           value={
                             (skill.earnings /
                               Math.max(
-                                ...data.skillsPerformance.map((s) => s.earnings)
+                                ...(analytics.skillsPerformance??[]).map((s) => s.earnings)
                               )) *
                             100
                           }
@@ -359,7 +410,7 @@ export default function AnalyticsContent({ userRole }) {
                         />
                       </div>
                     ))
-                  : data.categoryBreakdown.map((category, index) => (
+                  : (analytics.categoryBreakdown??[]).map((category, index) => (
                       <div key={index} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
@@ -376,7 +427,7 @@ export default function AnalyticsContent({ userRole }) {
                           value={
                             (category.spent /
                               Math.max(
-                                ...data.categoryBreakdown.map((c) => c.spent)
+                                ...(analytics.categoryBreakdown??[]).map((c) => c.spent)
                               )) *
                             100
                           }
@@ -392,7 +443,7 @@ export default function AnalyticsContent({ userRole }) {
 
       {/* Additional Insights */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {userRole === "freelancer" ? (
+        {userRole === userRoles.FREELANCER ? (
           <>
             <Card>
               <CardHeader>
@@ -407,11 +458,11 @@ export default function AnalyticsContent({ userRole }) {
                     <div className="flex justify-between">
                       <span className="text-sm">Excellent (5 stars)</span>
                       <span className="text-sm font-medium">
-                        {data.clientSatisfaction.excellent}%
+                        {analytics.clientSatisfaction?.excellent??'0'}%
                       </span>
                     </div>
                     <Progress
-                      value={data.clientSatisfaction.excellent}
+                      value={analytics.clientSatisfaction?.excellent??'0'}
                       className="h-2"
                     />
                   </div>
@@ -419,11 +470,11 @@ export default function AnalyticsContent({ userRole }) {
                     <div className="flex justify-between">
                       <span className="text-sm">Good (4 stars)</span>
                       <span className="text-sm font-medium">
-                        {data.clientSatisfaction.good}%
+                        {analytics.clientSatisfaction?.good??'0'}%
                       </span>
                     </div>
                     <Progress
-                      value={data.clientSatisfaction.good}
+                      value={analytics.clientSatisfaction?.good??'0'}
                       className="h-2"
                     />
                   </div>
@@ -431,11 +482,11 @@ export default function AnalyticsContent({ userRole }) {
                     <div className="flex justify-between">
                       <span className="text-sm">Average (3 stars)</span>
                       <span className="text-sm font-medium">
-                        {data.clientSatisfaction.average}%
+                        {analytics.clientSatisfaction?.average??'0'}%
                       </span>
                     </div>
                     <Progress
-                      value={data.clientSatisfaction.average}
+                      value={analytics.clientSatisfaction?.average??'0'}
                       className="h-2"
                     />
                   </div>
@@ -443,11 +494,11 @@ export default function AnalyticsContent({ userRole }) {
                     <div className="flex justify-between">
                       <span className="text-sm">Poor (1-2 stars)</span>
                       <span className="text-sm font-medium">
-                        {data.clientSatisfaction.poor}%
+                        {analytics.clientSatisfaction?.poor??'0'}%
                       </span>
                     </div>
                     <Progress
-                      value={data.clientSatisfaction.poor}
+                      value={analytics.clientSatisfaction?.poor??'0'}
                       className="h-2"
                     />
                   </div>
@@ -509,25 +560,25 @@ export default function AnalyticsContent({ userRole }) {
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Average Time to Hire</span>
                     <span className="text-lg font-bold">
-                      {data.hiringMetrics.timeToHire} days
+                      {analytics.hiringMetrics?.timeToHire??'N/A'} days
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Proposals per Job</span>
                     <span className="text-lg font-bold">
-                      {data.hiringMetrics.proposalsPerJob}
+                      {analytics.hiringMetrics?.proposalsPerJob??'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Successful Hires</span>
                     <span className="text-lg font-bold">
-                      {data.hiringMetrics.successfulHires}%
+                      {analytics.hiringMetrics?.successfulHires??'N/A'}%
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-sm">Rehire Rate</span>
                     <span className="text-lg font-bold">
-                      {data.hiringMetrics.rehireRate}%
+                      {analytics.hiringMetrics?.rehireRate??'N/A'}%
                     </span>
                   </div>
                 </div>

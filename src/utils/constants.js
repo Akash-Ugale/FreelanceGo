@@ -7,3 +7,5 @@ export const JobStatus = {
   ACTIVE: "ACTIVE",
   IN_ACTIVE: "IN_ACTIVE",
 }
+
+export const RUPEE = "₹"

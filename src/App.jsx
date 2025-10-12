@@ -1,28 +1,28 @@
-import { createBrowserRouter, RouterProvider } from "react-router-dom"
-import { Toaster } from "sonner"
-import DashboardContent from "./components/dashboard/dashboard-content"
-import SubmitProposal from "./components/dashboard/submit-proposal"
-import JobPostsContent from "./components/dashboard/tabs/job-post-content"
-import PostJobContent from "./components/dashboard/tabs/post-job-content"
-import AuthContextProvider from "./context/AuthContext"
-import AboutUs from "./pages/about-us"
-import Projects from "./pages/ActiveProjects"
-import Analytics from "./pages/analytics"
-import BidHistory from "./pages/BidHistory"
-import BrowseJobs from "./pages/BrowseJobs"
-import CreateProfile from "./pages/create-profile"
-import Dashboard from "./pages/dashboard"
-import Earnings from "./pages/earnings"
-import HiredFreelancers from "./pages/hired-freelancer"
-import Home from "./pages/landingpage"
-import Login from "./pages/login"
-import Messages from "./pages/message"
-import ProfileSetup from "./pages/profile-setup"
-import ProjectBids from "./pages/project-bids"
-import Proposals from "./pages/Proposals"
-import Register from "./pages/register"
-import ReviewProposals from "./pages/review-proposal"
-import Reviews from "./pages/reviews"
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { Toaster } from "sonner";
+import DashboardContent from "./components/dashboard/dashboard-content";
+import SubmitProposal from "./components/dashboard/submit-proposal";
+import JobPostsContent from "./components/dashboard/tabs/job-post-content";
+import PostJobContent from "./components/dashboard/tabs/post-job-content";
+import AuthContextProvider from "./context/AuthContext";
+import AboutUs from "./pages/about-us";
+import Projects from "./pages/ActiveProjects";
+import Analytics from "./pages/analytics";
+import BidHistory from "./pages/BidHistory";
+import BrowseJobs from "./pages/BrowseJobs";
+import CreateProfile from "./pages/create-profile";
+import Dashboard from "./pages/dashboard";
+import Earnings from "./pages/earnings";
+import HiredFreelancers from "./pages/hired-freelancer";
+import Home from "./pages/landingpage";
+import Login from "./pages/login";
+import Messages from "./pages/message";
+import ProfileSetup from "./pages/profile-setup";
+import ProjectBids from "./pages/project-bids";
+import Proposals from "./pages/Proposals";
+import Register from "./pages/register";
+import ReviewProposals from "./pages/review-proposal";
+import Reviews from "./pages/reviews";
 
 function App() {
   const router = createBrowserRouter([
@@ -42,7 +42,7 @@ function App() {
         { path: "browse-jobs", element: <BrowseJobs /> },
         { path: "bid-history", element: <BidHistory /> },
         { path: "proposals-review", element: <ReviewProposals /> },
-        { path: "hired-freelancer", element: <HiredFreelancers /> },
+        { path: "hired-freelancers", element: <HiredFreelancers /> },
         { path: "submit-proposal", element: <SubmitProposal /> },
         { path: "project-bids/:projectId", element: <ProjectBids /> },
       ],
@@ -53,14 +53,14 @@ function App() {
     { path: "/register", element: <Register /> },
     { path: "/create-profile", element: <CreateProfile /> },
     { path: "/profile-setup", element: <ProfileSetup /> },
-  ])
+  ]);
 
   return (
     <AuthContextProvider>
       <Toaster />
       <RouterProvider router={router} />
     </AuthContextProvider>
-  )
+  );
 }
 
-export default App
+export default App;

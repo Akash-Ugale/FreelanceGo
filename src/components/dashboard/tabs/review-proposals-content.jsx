@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { apiClient } from "@/api/AxiosServiceApi"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { apiClient } from "@/api/AxiosServiceApi";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 import {
   Briefcase,
   Eye,
@@ -22,12 +22,12 @@ import {
   Search,
   Star,
   Users,
-} from "lucide-react" // <-- Added Loader2 icon
-import { useEffect, useRef, useState } from "react" // <-- Added useRef and useEffect
-import { useNavigate } from "react-router-dom"
+} from "lucide-react"; // <-- Added Loader2 icon
+import { useEffect, useRef, useState } from "react"; // <-- Added useRef and useEffect
+import { useNavigate } from "react-router-dom";
 
 // --- INFINITE SCROLL CONFIGURATION ---
-const ITEMS_PER_PAGE = 3 // Number of items to load initially and in subsequent batches
+const ITEMS_PER_PAGE = 3; // Number of items to load initially and in subsequent batches
 // --- END CONFIGURATION ---
 
 const uncontractedProjects = [
@@ -228,18 +228,18 @@ const uncontractedProjects = [
       location: "Seattle, WA",
     },
   },
-]
+];
 
 export default function ReviewProposalsContent() {
-  const navigate = useNavigate()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const [budgetFilter, setBudgetFilter] = useState("all")
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [budgetFilter, setBudgetFilter] = useState("all");
 
   // --- INFINITE SCROLL & LOADING STATES ---
-  const [itemsToDisplay, setItemsToDisplay] = useState(ITEMS_PER_PAGE)
-  const [isObservingLoad, setIsObservingLoad] = useState(false)
-  const loadMoreRef = useRef(null)
+  const [itemsToDisplay, setItemsToDisplay] = useState(ITEMS_PER_PAGE);
+  const [isObservingLoad, setIsObservingLoad] = useState(false);
+  const loadMoreRef = useRef(null);
   // --- END INFINITE SCROLL & LOADING STATES ---
 
   const filteredProjects = uncontractedProjects.filter((project) => {
@@ -248,10 +248,10 @@ export default function ReviewProposalsContent() {
       project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
       project.skills.some((skill) =>
         skill.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      );
 
     const matchesCategory =
-      categoryFilter === "all" || project.category === categoryFilter
+      categoryFilter === "all" || project.category === categoryFilter;
 
     const matchesBudget =
       budgetFilter === "all" ||
@@ -262,126 +262,126 @@ export default function ReviewProposalsContent() {
       (budgetFilter === "3000-5000" &&
         project.budget.amount >= 3000 &&
         project.budget.amount <= 5000) ||
-      (budgetFilter === "over-5000" && project.budget.amount > 5000)
+      (budgetFilter === "over-5000" && project.budget.amount > 5000);
 
-    return matchesSearch && matchesCategory && matchesBudget
-  })
+    return matchesSearch && matchesCategory && matchesBudget;
+  });
 
   // --- INFINITE SCROLL LOGIC ---
-  const projectsOnPage = filteredProjects.slice(0, itemsToDisplay)
-  const hasMore = itemsToDisplay < filteredProjects.length
+  const projectsOnPage = filteredProjects.slice(0, itemsToDisplay);
+  const hasMore = itemsToDisplay < filteredProjects.length;
 
   // Effect to reset pagination when filters change
   useEffect(() => {
-    setItemsToDisplay(ITEMS_PER_PAGE)
-    setIsObservingLoad(false)
-  }, [searchTerm, categoryFilter, budgetFilter])
+    setItemsToDisplay(ITEMS_PER_PAGE);
+    setIsObservingLoad(false);
+  }, [searchTerm, categoryFilter, budgetFilter]);
 
   // Effect to handle Intersection Observer
   useEffect(() => {
     // Only set up observer if there are more items to load and we're not currently loading
-    if (!hasMore || isObservingLoad) return
+    if (!hasMore || isObservingLoad) return;
 
     const loadNextPage = () => {
-      setIsObservingLoad(true)
+      setIsObservingLoad(true);
       // Simulate a network/data fetch delay (e.g., 1 second)
       setTimeout(() => {
-        setItemsToDisplay((prevCount) => prevCount + ITEMS_PER_PAGE)
-        setIsObservingLoad(false)
-      }, 1000)
-    }
+        setItemsToDisplay((prevCount) => prevCount + ITEMS_PER_PAGE);
+        setIsObservingLoad(false);
+      }, 1000);
+    };
 
     const observer = new IntersectionObserver(
       (entries) => {
         // If the ref element is visible (intersecting), load the next page
         if (entries[0].isIntersecting) {
-          loadNextPage()
+          loadNextPage();
         }
       },
       { rootMargin: "200px" } // Start loading when the element is 200px from the viewport
-    )
+    );
 
-    const currentRef = loadMoreRef.current
+    const currentRef = loadMoreRef.current;
 
     if (currentRef) {
-      observer.observe(currentRef)
+      observer.observe(currentRef);
     }
 
     return () => {
       if (currentRef) {
         // Clean up the observer when the component unmounts or dependencies change
-        observer.unobserve(currentRef)
+        observer.unobserve(currentRef);
       }
-    }
-  }, [hasMore, isObservingLoad, filteredProjects.length])
+    };
+  }, [hasMore, isObservingLoad, filteredProjects.length]);
   // --- END INFINITE SCROLL LOGIC ---
 
   const fetchActiveProjects = async () => {
     try {
-      const response = await apiClient.get("/api/review-my-proposals")
-      const { data } = response
-      console.log("Review proposals:", response)
+      const response = await apiClient.get("/api/review-my-proposals");
+      const { data } = response;
+      console.log("Review proposals:", response);
     } catch (error) {
-      console.error("Error fetching active projects:", error)
+      console.error("Error fetching active projects:", error);
     }
-  }
+  };
 
   useEffect(() => {
-    fetchActiveProjects()
-  }, [])
+    fetchActiveProjects();
+  }, []);
 
   const getProjectStats = () => {
-    const totalProjects = uncontractedProjects.length
+    const totalProjects = uncontractedProjects.length;
     const totalBids = uncontractedProjects.reduce(
       (sum, project) => sum + project.bidsCount,
       0
-    )
-    const avgBidsPerProject = totalBids / totalProjects
+    );
+    const avgBidsPerProject = totalBids / totalProjects;
     const highestBids = Math.max(
       ...uncontractedProjects.map((p) => p.bidsCount)
-    )
+    );
 
     return {
       totalProjects,
       totalBids,
       avgBidsPerProject: Math.round(avgBidsPerProject),
       highestBids,
-    }
-  }
+    };
+  };
 
-  const stats = getProjectStats()
+  const stats = getProjectStats();
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
       year: "numeric",
       month: "short",
       day: "numeric",
-    })
-  }
+    });
+  };
 
   const formatBudget = (budget) => {
     if (budget.type === "hourly") {
-      return `$${budget.amount}/hr`
+      return `${RUPEE}${budget.amount}/hr`;
     }
-    return `$${budget.amount.toLocaleString()}`
-  }
+    return `${RUPEE}${budget.amount.toLocaleString()}`;
+  };
 
   const getBudgetColor = (amount) => {
-    if (amount < 1000) return "text-orange-600"
-    if (amount < 3000) return "text-blue-600"
-    if (amount < 5000) return "text-green-600"
-    return "text-purple-600"
-  }
+    if (amount < 1000) return "text-orange-600";
+    if (amount < 3000) return "text-blue-600";
+    if (amount < 5000) return "text-green-600";
+    return "text-purple-600";
+  };
 
   const getBidsColor = (count) => {
-    if (count < 5) return "text-red-600"
-    if (count < 10) return "text-yellow-600"
-    return "text-green-600"
-  }
+    if (count < 5) return "text-red-600";
+    if (count < 10) return "text-yellow-600";
+    return "text-green-600";
+  };
 
   const handleShowBids = (projectId) => {
-    navigate(`/dashboard/project-bids/${projectId}`)
-  }
+    navigate(`/dashboard/project-bids/${projectId}`);
+  };
 
   return (
     <div className="space-y-6">
@@ -510,8 +510,8 @@ export default function ReviewProposalsContent() {
         {/* Changed mapping to use projectsOnPage instead of filteredProjects */}
         {projectsOnPage.map((project, index) => {
           // Determine if this is the last item AND there are more items to load.
-          const isLastProject = index === projectsOnPage.length - 1
-          const refProps = isLastProject && hasMore ? { ref: loadMoreRef } : {}
+          const isLastProject = index === projectsOnPage.length - 1;
+          const refProps = isLastProject && hasMore ? { ref: loadMoreRef } : {};
 
           return (
             <Card
@@ -667,7 +667,7 @@ export default function ReviewProposalsContent() {
                 </div>
               </CardContent>
             </Card>
-          )
+          );
         })}
       </div>
 
@@ -709,5 +709,5 @@ export default function ReviewProposalsContent() {
         </div>
       )}
     </div>
-  )
+  );
 }
