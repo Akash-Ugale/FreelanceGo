@@ -9,6 +9,10 @@
   box-sizing: border-box;
 }
 
+.font-poppins {
+  font-family: "Poppins", !important;
+}
+
 
 @layer base {
   :root {

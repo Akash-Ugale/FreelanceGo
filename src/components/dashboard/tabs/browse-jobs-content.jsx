@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { apiClient } from "@/api/AxiosServiceApi"
-import InlineLoader from "@/components/InlineLoader"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+import { apiClient } from "@/api/AxiosServiceApi";
+import InlineLoader from "@/components/InlineLoader";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { format } from "date-fns"
+} from "@/components/ui/select";
+import { format } from "date-fns";
 import {
   Eye,
   Filter,
@@ -23,108 +23,107 @@ import {
   PhoneCall,
   Search,
   Send,
-} from "lucide-react"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function BrowseJobsContent() {
-  const navigate = useNavigate()
-  const [searchTerm, setSearchTerm] = useState("")
-  const [categoryFilter, setCategoryFilter] = useState("all")
-  const [experienceFilter, setExperienceFilter] = useState("all")
-  const [savedJobs, setSavedJobs] = useState([])
-  const [jobs, setJobs] = useState([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [experienceFilter, setExperienceFilter] = useState("all");
+  const [savedJobs, setSavedJobs] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // ✅ Pagination states
-  const [page, setPage] = useState(0)
-  const [size] = useState(5)
-  const [totalPages, setTotalPages] = useState(0)
+  const [page, setPage] = useState(0);
+  const [size] = useState(5);
+  const [totalPages, setTotalPages] = useState(0);
 
   // ✅ Fetch paginated jobs
   useEffect(() => {
-    async function fetchJobs() {
+    (async function fetchJobs() {
       try {
-        setLoading(true)
+        setLoading(true);
         const res = await apiClient.get(`/api/browse-job`, {
           params: { page, size },
-        })
-        const { data } = res
-        setJobs(data.content || data) // if your backend sends `content` like Spring Pageable
-        setTotalPages(data.totalPages || 1)
+        });
+        const { data } = res;
+        setJobs(data.content || data); // if your backend sends `content` like Spring Pageable
+        setTotalPages(data.totalPages || 1);
       } catch (error) {
-        console.error("Error fetching jobs:", error)
+        console.error("Error fetching jobs:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-    fetchJobs()
-  }, [page, size])
+    })();
+  }, [page, size]);
 
   // ✅ Filtering
   const filteredJobs = jobs.filter((item) => {
-    const job = item.job
+    const job = item.job;
     const matchesSearch =
       job.jobTitle.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.jobDescription.toLowerCase().includes(searchTerm.toLowerCase()) ||
       job.requiredSkills.some((s) =>
-        s.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+        s.toLowerCase().includes(searchTerm.toLowerCase()),
+      );
 
     const matchesCategory =
       categoryFilter === "all" ||
-      job.status.toLowerCase() === categoryFilter.toLowerCase()
+      job.status.toLowerCase() === categoryFilter.toLowerCase();
 
     const matchesExperience =
       experienceFilter === "all" ||
-      job.experienceLevel.toLowerCase() === experienceFilter.toLowerCase()
+      job.experienceLevel.toLowerCase() === experienceFilter.toLowerCase();
 
-    return matchesSearch && matchesCategory && matchesExperience
-  })
+    return matchesSearch && matchesCategory && matchesExperience;
+  });
 
   const toggleSaveJob = (jobId) => {
     setSavedJobs((prev) =>
       prev.includes(jobId)
         ? prev.filter((id) => id !== jobId)
-        : [...prev, jobId]
-    )
-  }
+        : [...prev, jobId],
+    );
+  };
 
   const handleSubmitProposal = (jobId) => {
-    navigate(`/dashboard/submit-proposal?jobId=${jobId}`)
-  }
+    navigate(`/dashboard/submit-proposal?jobId=${jobId}`);
+  };
 
   const formatDate = (dateString) => {
-    const now = new Date()
-    const posted = new Date(dateString)
-    const diffTime = Math.abs(now.getTime() - posted.getTime())
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+    const now = new Date();
+    const posted = new Date(dateString);
+    const diffTime = Math.abs(now.getTime() - posted.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDays === 1) return "1 day ago"
-    if (diffDays < 7) return `${diffDays} days ago`
-    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`
-    return `${Math.ceil(diffDays / 30)} months ago`
-  }
+    if (diffDays === 1) return "1 day ago";
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+    return `${Math.ceil(diffDays / 30)} months ago`;
+  };
 
   const getExperienceColor = (level) => {
     switch (level?.toLowerCase()) {
       case "entry":
-        return "text-green-600"
+        return "text-green-600";
       case "intermediate":
-        return "text-blue-600"
+        return "text-blue-600";
       case "expert":
-        return "text-purple-600"
+        return "text-purple-600";
       default:
-        return "text-gray-600"
+        return "text-gray-600";
     }
-  }
+  };
 
   const getBudgetColor = (amount) => {
-    if (amount < 1000) return "text-orange-600"
-    if (amount < 3000) return "text-blue-600"
-    if (amount < 5000) return "text-green-600"
-    return "text-purple-600"
-  }
+    if (amount < 1000) return "text-orange-600";
+    if (amount < 3000) return "text-blue-600";
+    if (amount < 5000) return "text-green-600";
+    return "text-purple-600";
+  };
 
   return (
     <div className="space-y-6">
@@ -188,15 +187,15 @@ export default function BrowseJobsContent() {
           {/* Job Listings */}
           <div className="space-y-6">
             {filteredJobs.map((item) => {
-              const job = item.job
-              const client = job.clientDto
-              const user = client?.userDto
+              const job = item.job;
+              const client = job.clientDto;
+              const user = client?.userDto;
 
-              const startDate = new Date(job.projectStartTime)
-              const endDate = new Date(job.projectEndTime)
+              const startDate = new Date(job.projectStartTime);
+              const endDate = new Date(job.projectEndTime);
               const duration = Math.ceil(
-                (endDate - startDate) / (1000 * 60 * 60 * 24)
-              )
+                (endDate - startDate) / (1000 * 60 * 60 * 24),
+              );
 
               return (
                 <Card
@@ -253,7 +252,7 @@ export default function BrowseJobsContent() {
                       <div className="text-center">
                         <div
                           className={`text-lg font-bold flex gap-0 items-center justify-center ${getBudgetColor(
-                            job.budget
+                            job.budget,
                           )}`}
                         >
                           <IndianRupee className="h-4 w-4" />{" "}
@@ -350,7 +349,7 @@ export default function BrowseJobsContent() {
                     </div>
                   </CardContent>
                 </Card>
-              )
+              );
             })}
           </div>
 
@@ -389,9 +388,9 @@ export default function BrowseJobsContent() {
               <Button
                 variant="outline"
                 onClick={() => {
-                  setSearchTerm("")
-                  setCategoryFilter("all")
-                  setExperienceFilter("all")
+                  setSearchTerm("");
+                  setCategoryFilter("all");
+                  setExperienceFilter("all");
                 }}
               >
                 Clear Filters
@@ -401,5 +400,5 @@ export default function BrowseJobsContent() {
         </>
       )}
     </div>
-  )
+  );
 }
