@@ -1,22 +1,23 @@
-import DashboardHeader from "@/components/dashboard/dashboard-header"
-import DashboardSidebar from "@/components/dashboard/dashboard-sidebar"
-import FullscreenLoader from "@/components/FullScreenLoader"
-import { useAuth } from "@/context/AuthContext"
-import { useState } from "react"
-import { Outlet, useNavigate } from "react-router-dom"
+import DashboardHeader from "@/components/dashboard/dashboard-header";
+import DashboardSidebar from "@/components/dashboard/dashboard-sidebar";
+import FullscreenLoader from "@/components/FullScreenLoader";
+import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from "react";
+import { Outlet, useNavigate } from "react-router-dom";
 
 export default function Dashboard() {
-  const { userRole, authLoading, isAuthenticated } = useAuth()
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
-  const [activeItem, setActiveItem] = useState("/dashboard")
-  const navigate = useNavigate()
+  const { userRole, authLoading, isAuthenticated } = useAuth();
+  const [activeItem, setActiveItem] = useState("/dashboard");
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      navigate("/", { replace: true });
+    }
+  }, [authLoading, isAuthenticated, navigate]);
 
   if (authLoading) {
-    return <FullscreenLoader show={true} />
-  }
-
-  if (!authLoading && !isAuthenticated) {
-    navigate("/", { replace: true })
+    return <FullscreenLoader show={true} />;
   }
 
   return (
@@ -42,5 +43,5 @@ export default function Dashboard() {
         </main>
       </div>
     </div>
-  )
+  );
 }

@@ -25,10 +25,11 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  DollarSign,
+  ExternalLink,
   Eye,
   FileText,
   Filter,
+  IndianRupee,
   Pause,
   Plus,
   Search,
@@ -260,9 +261,28 @@ export default function JobPostsContent({ userRole }) {
                             ))}
                           </div>
 
+                          {job.file && (
+                            <div className="mb-3 text-sm">
+                              <a
+                                href={job.file}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <Button
+                                  variant="link"
+                                  size="sm"
+                                  className="p-0"
+                                >
+                                  <span>View Attachment</span>
+                                  <ExternalLink className="h-4 w-4" />{" "}
+                                </Button>
+                              </a>
+                            </div>
+                          )}
+
                           <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                             <div className="flex items-center space-x-1">
-                              <DollarSign className="h-4 w-4" />
+                              <IndianRupee className="h-4 w-4" />
                               <span>
                                 {job.budget
                                   ? job.budget.toLocaleString()
@@ -273,10 +293,6 @@ export default function JobPostsContent({ userRole }) {
                             <div className="flex items-center space-x-1">
                               <Users className="h-4 w-4" />
                               <span>{job.bidDto?.length || 0} proposals</span>
-                            </div>
-                            <div className="flex items-center space-x-1">
-                              <Eye className="h-4 w-4" />
-                              <span>0 views</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-4 w-4" />
@@ -305,7 +321,11 @@ export default function JobPostsContent({ userRole }) {
                               View
                             </Button>
                           </Link>
-                          <Button variant="destructive" size="sm">
+                          <Button
+                            variant="destructive"
+                            size="icon"
+                            className="p-0"
+                          >
                             <Trash className="h-3 w-3" />
                           </Button>
                         </div>
