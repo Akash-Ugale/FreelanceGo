@@ -7,4 +7,7 @@ export default function Proposals() {
   const { userRole } = useAuth() // no type annotation here
 
   return <ProposalsContent userRole={userRole} />
+  
+
+
 }
