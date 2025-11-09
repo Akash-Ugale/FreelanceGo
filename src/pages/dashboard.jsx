@@ -16,6 +16,10 @@ export default function Dashboard() {
     }
   }, [authLoading, isAuthenticated, navigate]);
 
+  if (userRole === null) {
+    return null;
+  }
+
   if (authLoading) {
     return <FullscreenLoader show={true} />;
   }

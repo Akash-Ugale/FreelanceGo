@@ -1,25 +1,25 @@
-import { apiClient } from "@/api/AxiosServiceApi"
-import InlineLoader from "@/components/InlineLoader"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { apiClient } from "@/api/AxiosServiceApi";
+import InlineLoader from "@/components/InlineLoader";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { useAuth } from "@/context/AuthContext"
-import { userRoles } from "@/utils/constants"
-import { format } from "date-fns"
+} from "@/components/ui/select";
+import { useAuth } from "@/context/AuthContext";
+import { userRoles } from "@/utils/constants";
+import { format } from "date-fns";
 import {
   AlertCircle,
   Calendar,
@@ -35,21 +35,90 @@ import {
   Search,
   Trash,
   Users,
-} from "lucide-react"
-import { useEffect, useState } from "react"
-import { Link } from "react-router-dom"
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 export default function JobPostsContent({ userRole }) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [jobPosts, setJobPosts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [totalPages, setTotalPages] = useState(0)
-  const [totalJobs, setTotalJobs] = useState(0)
-  const { authLoading } = useAuth()
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [jobPosts, setJobPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalJobs, setTotalJobs] = useState(0);
+  const { authLoading } = useAuth();
 
-  const CURRENT_THEME = localStorage.getItem("theme")
+  const CURRENT_THEME = localStorage.getItem("theme");
+
+  // 🧩 Fetch paginated job posts
+  const fetchPosts = async (
+    pageNum = 0,
+    status = statusFilter,
+    search = searchTerm,
+  ) => {
+    setLoading(true);
+    try {
+      const response = await apiClient.get("/api/dashboard/get-post", {
+        params: {
+          page: pageNum,
+          size: 5,
+          status: status === "all" ? undefined : status,
+          search: search.trim() || undefined,
+        },
+      });
+      const { content, totalPages, totalElements } = response.data;
+
+      setJobPosts(Array.isArray(content) ? content : []);
+      setTotalPages(totalPages);
+      setTotalJobs(totalElements);
+      setPage(pageNum);
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPosts(0, statusFilter, searchTerm);
+  }, [statusFilter, searchTerm]);
+
+  const getStatusColor = (status) => {
+    switch (status?.toUpperCase()) {
+      case "ACTIVE":
+        return "default";
+      case "COMPLETED":
+        return "secondary";
+      case "PAUSED":
+        return "outline";
+      case "DRAFT":
+        return "destructive";
+      default:
+        return "outline";
+    }
+  };
+
+  const getStatusIcon = (status) => {
+    switch (status?.toUpperCase()) {
+      case "ACTIVE":
+        return <CheckCircle className="h-4 w-4" />;
+      case "COMPLETED":
+        return <CheckCircle className="h-4 w-4" />;
+      case "PAUSED":
+        return <Pause className="h-4 w-4" />;
+      case "DRAFT":
+        return <FileText className="h-4 w-4" />;
+      default:
+        return null;
+    }
+  };
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      fetchPosts(newPage);
+    }
+  };
 
   // 🧠 If user is freelancer — block job management
   if (userRole === userRoles.FREELANCER) {
@@ -72,79 +141,10 @@ export default function JobPostsContent({ userRole }) {
           </CardContent>
         </Card>
       </div>
-    )
+    );
   }
 
-  // 🧩 Fetch paginated job posts
-  const fetchPosts = async (
-    pageNum = 0,
-    status = statusFilter,
-    search = searchTerm
-  ) => {
-    setLoading(true)
-    try {
-      const response = await apiClient.get("/api/dashboard/get-post", {
-        params: {
-          page: pageNum,
-          size: 5,
-          status: status === "all" ? undefined : status,
-          search: search.trim() || undefined,
-        },
-      })
-      const { content, totalPages, totalElements } = response.data
-
-      setJobPosts(Array.isArray(content) ? content : [])
-      setTotalPages(totalPages)
-      setTotalJobs(totalElements)
-      setPage(pageNum)
-    } catch (error) {
-      console.error(error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchPosts(0, statusFilter, searchTerm)
-  }, [statusFilter, searchTerm])
-
-  const getStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-      case "ACTIVE":
-        return "default"
-      case "COMPLETED":
-        return "secondary"
-      case "PAUSED":
-        return "outline"
-      case "DRAFT":
-        return "destructive"
-      default:
-        return "outline"
-    }
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status?.toUpperCase()) {
-      case "ACTIVE":
-        return <CheckCircle className="h-4 w-4" />
-      case "COMPLETED":
-        return <CheckCircle className="h-4 w-4" />
-      case "PAUSED":
-        return <Pause className="h-4 w-4" />
-      case "DRAFT":
-        return <FileText className="h-4 w-4" />
-      default:
-        return null
-    }
-  }
-
-  const handlePageChange = (newPage) => {
-    if (newPage >= 0 && newPage < totalPages) {
-      fetchPosts(newPage)
-    }
-  }
-
-  if (authLoading) return null
+  if (authLoading) return null;
 
   return (
     <div className="space-y-6">
@@ -187,8 +187,8 @@ export default function JobPostsContent({ userRole }) {
               <Select
                 value={statusFilter}
                 onValueChange={(val) => {
-                  setStatusFilter(val)
-                  setPage(0)
+                  setStatusFilter(val);
+                  setPage(0);
                 }}
               >
                 <SelectTrigger className="w-[150px]">
@@ -307,7 +307,7 @@ export default function JobPostsContent({ userRole }) {
                                 Deadline:{" "}
                                 {format(
                                   new Date(job.projectEndTime),
-                                  "MMM d, yyyy"
+                                  "MMM d, yyyy",
                                 )}
                               </span>
                             </div>
@@ -364,5 +364,5 @@ export default function JobPostsContent({ userRole }) {
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

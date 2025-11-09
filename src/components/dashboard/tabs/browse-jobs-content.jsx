@@ -190,6 +190,7 @@ export default function BrowseJobsContent() {
               const job = item.job;
               const client = job.clientDto;
               const user = client?.userDto;
+              const isAlreadyBid = item.alreadyBid;
 
               const startDate = new Date(job.projectStartTime);
               const endDate = new Date(job.projectEndTime);
@@ -343,6 +344,7 @@ export default function BrowseJobsContent() {
                       <Button
                         size="sm"
                         onClick={() => handleSubmitProposal(job.id)}
+                        className={`${isAlreadyBid ? "opacity-50 pointer-events-none" : ""}`}
                       >
                         <Send className="mr-2 h-4 w-4" /> Submit Proposal
                       </Button>
