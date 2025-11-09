@@ -57,7 +57,7 @@ export default function Navbar() {
             <Button
               variant="ghost"
               size="icon"
-              className="hover:bg-primary/10 hover:text-primary transition-all duration-300 hover:scale-110"
+              className="hover:bg-primary/10 hover:text-primary transition-all duration-300"
             >
               <Github className="h-4 w-4" />
               <span className="sr-only">GitHub</span>

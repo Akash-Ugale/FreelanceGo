@@ -1,5 +1,3 @@
-"use client";
-
 import { apiClient } from "@/api/AxiosServiceApi";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,14 +20,11 @@ import {
   Search,
   Star,
   Users,
-} from "lucide-react"; // <-- Added Loader2 icon
-import { useEffect, useRef, useState } from "react"; // <-- Added useRef and useEffect
+} from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RUPEE } from "@/utils/constants";
 
-// --- INFINITE SCROLL CONFIGURATION ---
-const ITEMS_PER_PAGE = 3; // Number of items to load initially and in subsequent batches
-// --- END CONFIGURATION ---
+const ITEMS_PER_PAGE = 3;
 
 const uncontractedProjects = [
   {
@@ -237,40 +232,33 @@ export default function ReviewProposalsContent() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [budgetFilter, setBudgetFilter] = useState("all");
 
-  const [projects, setProjects] = useState([])  // array to store fetched projects
-  const [isLoading, setIsLoading] = useState(true); // Loading state for initial fetch
   // --- INFINITE SCROLL & LOADING STATES ---
   const [itemsToDisplay, setItemsToDisplay] = useState(ITEMS_PER_PAGE);
   const [isObservingLoad, setIsObservingLoad] = useState(false);
   const loadMoreRef = useRef(null);
   // --- END INFINITE SCROLL & LOADING STATES ---
 
-  const filteredProjects = projects.filter((project) => {
-    const title = project.jobTitle || "";
-    const description = project.jobDescription || "";
-    const skills = project.requiredSkills || [];
-
+  const filteredProjects = uncontractedProjects.filter((project) => {
     const matchesSearch =
-      title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      skills.some((skill) =>
-        skill.toLowerCase().includes(searchTerm.toLowerCase())
+      project.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      project.skills.some((skill) =>
+        skill.toLowerCase().includes(searchTerm.toLowerCase()),
       );
 
     const matchesCategory =
       categoryFilter === "all" || project.category === categoryFilter;
-    
-    const budgetAmount = project.budget || 0; // use budget directly 
+
     const matchesBudget =
       budgetFilter === "all" ||
-      (budgetFilter === "under-1000" && budgetAmount < 1000) ||
+      (budgetFilter === "under-1000" && project.budget.amount < 1000) ||
       (budgetFilter === "1000-3000" &&
-        budgetAmount >= 1000 &&
-        budgetAmount <= 3000) ||
+        project.budget.amount >= 1000 &&
+        project.budget.amount <= 3000) ||
       (budgetFilter === "3000-5000" &&
-        budgetAmount >= 3000 &&
-        budgetAmount <= 5000) ||
-      (budgetFilter === "over-5000" && budgetAmount > 5000);
+        project.budget.amount >= 3000 &&
+        project.budget.amount <= 5000) ||
+      (budgetFilter === "over-5000" && project.budget.amount > 5000);
 
     return matchesSearch && matchesCategory && matchesBudget;
   });
@@ -306,7 +294,7 @@ export default function ReviewProposalsContent() {
           loadNextPage();
         }
       },
-      { rootMargin: "200px" } // Start loading when the element is 200px from the viewport
+      { rootMargin: "200px" }, // Start loading when the element is 200px from the viewport
     );
 
     const currentRef = loadMoreRef.current;
@@ -325,20 +313,12 @@ export default function ReviewProposalsContent() {
   // --- END INFINITE SCROLL LOGIC ---
 
   const fetchActiveProjects = async () => {
-    setIsLoading(true);  
     try {
-      const response = await apiClient.get("/api/dashboard/review-proposals");
-      // const { data } = response;
-      const projectContent = response.data?.content || [];
-
-      // setProjects(data);
-      setProjects(projectContent);
+      const response = await apiClient.get("/api/review-my-proposals");
+      const { data } = response;
       console.log("Review proposals:", response);
     } catch (error) {
       console.error("Error fetching active projects:", error);
-      setProjects([]);
-    }finally{
-      setIsLoading(false);
     }
   };
 
@@ -347,31 +327,24 @@ export default function ReviewProposalsContent() {
   }, []);
 
   const getProjectStats = () => {
-    const totalProjects = projects.length;
-    // const totalBids = projects.reduce(
-    //   (sum, project) => sum + project.bidsCount,
-    //   0
-    // );
-    const totalBids  = 0;
-
-    // const avgBidsPerProject = totalBids / totalProjects;
-    const avgBidsPerProject = 0;
-
-    // const highestBids = Math.max(
-    //   ...uncontractedProjects.map((p) => p.bidsCount)
-    // );
-
-    const highestBids = 0;
-
+    const totalProjects = uncontractedProjects.length;
+    const totalBids = uncontractedProjects.reduce(
+      (sum, project) => sum + project.bidsCount,
+      0,
+    );
+    const avgBidsPerProject = totalBids / totalProjects;
+    const highestBids = Math.max(
+      ...uncontractedProjects.map((p) => p.bidsCount),
+    );
 
     return {
       totalProjects,
       totalBids,
-      avgBidsPerProject,
+      avgBidsPerProject: Math.round(avgBidsPerProject),
       highestBids,
     };
   };
-  
+
   const stats = getProjectStats();
 
   const formatDate = (dateString) => {
@@ -383,19 +356,16 @@ export default function ReviewProposalsContent() {
   };
 
   const formatBudget = (budget) => {
-    // if (budget.type === "hourly") {
-    //   return `${RUPEE}${budget.amount}/hr`;
-    // }
-    if(typeof budget !== 'number'){
-      return 'N/A'; 
+    if (budget.type === "hourly") {
+      return `${RUPEE}${budget.amount}/hr`;
     }
-    return `${RUPEE}${budget.toLocaleString()}`;
+    return `${RUPEE}${budget.amount.toLocaleString()}`;
   };
 
-  const getBudgetColor = (budgetAmount) => {
-    if (budgetAmount < 1000) return "text-orange-600";
-    if (budgetAmount < 3000) return "text-blue-600";
-    if (budgetAmount < 5000) return "text-green-600";
+  const getBudgetColor = (amount) => {
+    if (amount < 1000) return "text-orange-600";
+    if (amount < 3000) return "text-blue-600";
+    if (amount < 5000) return "text-green-600";
     return "text-purple-600";
   };
 
@@ -408,15 +378,6 @@ export default function ReviewProposalsContent() {
   const handleShowBids = (projectId) => {
     navigate(`/dashboard/project-bids/${projectId}`);
   };
-
-  if (isLoading) {
-        return (
-            <div className="flex justify-center items-center h-64">
-                <Loader2 className="mr-2 h-8 w-8 animate-spin text-blue-500" />
-                <span className="text-lg">Fetching active projects...</span>
-            </div>
-        );
-    }
 
   return (
     <div className="space-y-6">
@@ -560,10 +521,10 @@ export default function ReviewProposalsContent() {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between space-y-3 sm:space-y-0">
                     <div className="flex-1">
                       <h3 className="font-semibold text-xl mb-2">
-                        {project.jobTitle}
+                        {project.title}
                       </h3>
                       <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                        <span>Posted: {formatDate(project.createdAt)}</span>
+                        <span>Posted: {formatDate(project.postedDate)}</span>
                         <span>•</span>
                         <span>ID: {project.id}</span>
                         <span>•</span>
@@ -572,7 +533,7 @@ export default function ReviewProposalsContent() {
                         </Badge>
                       </div>
                       <p className="text-muted-foreground text-sm leading-relaxed">
-                        {project.jobDescription}
+                        {project.description}
                       </p>
                     </div>
                     <div className="flex flex-col items-end space-y-2">
@@ -590,7 +551,7 @@ export default function ReviewProposalsContent() {
                     <div className="text-center">
                       <div
                         className={`text-lg font-bold ${getBudgetColor(
-                          project.budget
+                          project.budget.amount,
                         )}`}
                       >
                         {formatBudget(project.budget)}
@@ -630,46 +591,33 @@ export default function ReviewProposalsContent() {
                   {/* Client Information */}
                   <div className="flex items-center justify-between p-4 border rounded-lg">
                     <div className="flex items-center space-x-4">
-                      {/* <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                      <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
                         {project.clientInfo.name.charAt(0)}
-                      </div> */}
-                       <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                       {/* Use companyName or username for the avatar text */}
-                         {project.clientDto?.companyName?.charAt(0) || project.clientDto?.userDto?.username?.charAt(0) || '?'} 
-                        </div>
+                      </div>
                       <div>
-                        {/* <h4 className="font-semibold">
-                          {project.clientInfo.name}
-                        </h4> */}
                         <h4 className="font-semibold">
-                        {/* Use companyName if available, otherwise fallback to the username */}
-                         {project.clientDto?.companyName || project.clientDto?.userDto?.username}
-                      </h4> 
+                          {project.clientInfo.name}
+                        </h4>
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                           <div className="flex items-center space-x-1">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>N/A</span>
+                            <span>{project.clientInfo.rating}</span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Briefcase className="h-4 w-4" />
                             <span>
-                            {/* {project.clientInfo.jobsPosted} jobs posted */}
-                            N/A jobs posted
+                              {project.clientInfo.jobsPosted} jobs posted
                             </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <Users className="h-4 w-4" />
                             <span>
-                              {/* {project.clientInfo.hireRate}% hire rate */}
-                              N/A hire rate
+                              {project.clientInfo.hireRate}% hire rate
                             </span>
                           </div>
                           <div className="flex items-center space-x-1">
                             <MapPin className="h-4 w-4" />
-                            <span>
-                              {/* {project.clientInfo.location} */}
-                              Remote 
-                              </span>
+                            <span>{project.clientInfo.location}</span>
                           </div>
                         </div>
                       </div>
@@ -680,7 +628,7 @@ export default function ReviewProposalsContent() {
                   <div className="space-y-3">
                     <h5 className="font-semibold">Required Skills</h5>
                     <div className="flex flex-wrap gap-2">
-                      {project.requiredSkills?.map((skill, index) => (
+                      {project.skills.map((skill, index) => (
                         <Badge
                           key={index}
                           variant="outline"

@@ -1,6 +1,6 @@
-import { apiClient } from "@/api/AxiosServiceApi"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
+import { apiClient } from "@/api/AxiosServiceApi";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,10 +8,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
-import { useAuth } from "@/context/AuthContext"
-import { userRoles } from "@/utils/constants"
+} from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useAuth } from "@/context/AuthContext";
+import { userRoles } from "@/utils/constants";
 import {
   Bell,
   CirclePower,
@@ -22,11 +22,11 @@ import {
   Settings,
   Sun,
   User2,
-} from "lucide-react"
-import { useEffect, useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { toast } from "sonner"
-import FullScreenLoader from "../FullScreenLoader"
+} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import FullScreenLoader from "../FullScreenLoader";
 import {
   Dialog,
   DialogClose,
@@ -35,8 +35,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog"
-import DashboardSidebarContent from "./dashboard-sidebar-content"
+} from "../ui/dialog";
+import DashboardSidebarContent from "./dashboard-sidebar-content";
 
 const notifications = [
   {
@@ -59,88 +59,110 @@ const notifications = [
     description: "3 hours ago",
     type: "comment",
   },
-]
+];
 
 export default function DashboardHeader(props) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [userData, setUserData] = useState(null)
-  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false)
-  const [menuOpen, setMenuOpen] = useState(false)
-  const [theme, setTheme] = useState("light")
-  const [userExistingProfiles, setUserExistingProfiles] = useState({})
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userData, setUserData] = useState(null);
+  const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
+  const [userExistingProfiles, setUserExistingProfiles] = useState({});
 
-  const { logoutUser, userRole, setUserId } = useAuth()
-  const navigate = useNavigate()
+  const { logoutUser, userRole, setUserId } = useAuth();
+  const navigate = useNavigate();
 
   const fetchProfileDetails = async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const response = await apiClient.get("/api/me")
-      const { status, data } = response
-      setUserId(data?.id)
+      const response = await apiClient.get("/api/me");
+      const { status, data } = response;
+      setUserId(data?.id);
       if (status === 200) {
-        setUserData(data)
-        toast.success("Profile details fetched successfully")
+        setUserData(data);
+        toast.success("Profile details fetched successfully");
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const fetchExistingProfiles = async () => {
-    setLoading(false)
+    setLoading(false);
     try {
-      const response = await apiClient.get("/api/check-role")
-      const { status, data } = response
+      const response = await apiClient.get("/api/check-role");
+      const { status, data } = response;
       if (status === 200) {
-        setUserExistingProfiles(data)
+        setUserExistingProfiles(data);
       }
     } catch (error) {
-      console.log(error)
+      console.log(error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   const handleLogout = () => {
-    logoutUser()
-    navigate("/", { replace: true })
-    setLogoutDialogOpen(false)
-  }
+    logoutUser();
+    navigate("/", { replace: true });
+    setLogoutDialogOpen(false);
+  };
 
   const toggleTheme = () => {
-    const newTheme = theme === "dark" ? "light" : "dark"
-    setTheme(newTheme)
-    localStorage.setItem("theme", newTheme)
-    document.body.classList.toggle("dark", newTheme === "dark")
-  }
+    const newTheme = theme === "dark" ? "light" : "dark";
+    setTheme(newTheme);
+    localStorage.setItem("theme", newTheme);
+    document.body.classList.toggle("dark", newTheme === "dark");
+  };
 
   useEffect(() => {
-    const storedTheme = localStorage.getItem("theme")
+    const storedTheme = localStorage.getItem("theme");
     if (storedTheme) {
-      setTheme(storedTheme)
-      document.body.classList.toggle("dark", storedTheme === "dark")
+      setTheme(storedTheme);
+      document.body.classList.toggle("dark", storedTheme === "dark");
     } else {
       const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches
+        "(prefers-color-scheme: dark)",
+      ).matches;
       if (prefersDark) {
-        setTheme("dark")
-        document.body.classList.add("dark")
+        setTheme("dark");
+        document.body.classList.add("dark");
       }
     }
-    fetchProfileDetails()
-    fetchExistingProfiles()
-  }, [])
+    fetchProfileDetails();
+    fetchExistingProfiles();
+  }, []);
 
-  const handleRoleSwitch = () => {
+  const handleRoleSwitch = async () => {
+    setLoading(true);
     const targetRole =
-      userRole === userRoles.FREELANCER ? "client" : "freelancer"
-    navigate(`/switch-role/${targetRole}`)
-  }
+      userRole === userRoles.FREELANCER
+        ? userRoles.CLIENT
+        : userRoles.FREELANCER;
+
+    try {
+      const response = await apiClient.post(
+        "/api/update-role",
+        {},
+        {
+          params: {
+            role: targetRole,
+          },
+        },
+      );
+      const { status, data } = response;
+      if (status === 200) {
+        localStorage.setItem("token", data);
+        navigate("/dashboard", { replace: true });
+        window.location.reload();
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };
 
   return (
     <>
@@ -300,8 +322,8 @@ export default function DashboardHeader(props) {
                 <DropdownMenuItem
                   className="text-red-600"
                   onClick={() => {
-                    setMenuOpen(false)
-                    setLogoutDialogOpen(true)
+                    setMenuOpen(false);
+                    setLogoutDialogOpen(true);
                   }}
                 >
                   <LogOut className="mr-2 h-4 w-4" />
@@ -332,5 +354,5 @@ export default function DashboardHeader(props) {
         </DialogContent>
       </Dialog>
     </>
-  )
+  );
 }

@@ -1,167 +1,166 @@
-import { apiClient } from "@/api/AxiosServiceApi"
-import { initChat } from "@/components/realtimechat/ably"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { apiClient } from "@/api/AxiosServiceApi";
+import { initChat } from "@/components/realtimechat/ably";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
-import { useAuth } from "@/context/AuthContext"
-import { ChevronLeft, MoreVertical, Send } from "lucide-react"
-import { useEffect, useRef, useState } from "react"
-import InlineLoader from "./InlineLoader"
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { useAuth } from "@/context/AuthContext";
+import { ChevronLeft, MoreVertical, Send } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import InlineLoader from "./InlineLoader";
 
 function timeAgoFromOffset(offsetDateTime) {
-  const start = new Date(offsetDateTime)
-  const now = new Date()
-  const diffMs = now - start
-  if (diffMs < 0) return "just now"
-  const seconds = Math.floor(diffMs / 1000)
-  if (seconds < 10) return "just now"
-  if (seconds < 60) return `${seconds}s ago`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60) return `${minutes}m ago`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
-  const days = Math.floor(hours / 24)
-  if (days < 7) return `${days}d ago`
-  const weeks = Math.floor(days / 7)
-  if (weeks < 4) return `${weeks}w ago`
-  const months = Math.floor(days / 30)
-  if (months < 12) return `${months}mo ago`
-  const years = Math.floor(days / 365)
-  return `${years}y ago`
+  const start = new Date(offsetDateTime);
+  const now = new Date();
+  const diffMs = now - start;
+  if (diffMs < 0) return "just now";
+  const seconds = Math.floor(diffMs / 1000);
+  if (seconds < 10) return "just now";
+  if (seconds < 60) return `${seconds}s ago`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  const years = Math.floor(days / 365);
+  return `${years}y ago`;
 }
 
-const PAGE_SIZE = 5
+const PAGE_SIZE = 5;
 
 export default function ChatArea({
   selectedConversation,
   mobileView,
   setMobileView,
 }) {
-  const { userId } = useAuth()
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState("")
-  const [ablyChannel, setAblyChannel] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(true)
-  const [isFetchingMore, setIsFetchingMore] = useState(false)
+  const { userId } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const [ablyChannel, setAblyChannel] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [isFetchingMore, setIsFetchingMore] = useState(false);
 
-  const containerRef = useRef(null)
-  const messagesEndRef = useRef(null)
+  const containerRef = useRef(null);
+  const messagesEndRef = useRef(null);
 
   const fetchPreviousMessages = async (nextPage = 0) => {
-    if (!selectedConversation || !hasMore || isFetchingMore) return
+    if (!selectedConversation || !hasMore || isFetchingMore) return;
     try {
-      setIsFetchingMore(true)
+      setIsFetchingMore(true);
       const response = await apiClient.get(
-        `/api/chat/history/${userId}/${selectedConversation.opponent.id}?page=${nextPage}&size=${PAGE_SIZE}`
-      )
-      const { data } = response
+        `/api/chat/history/${userId}/${selectedConversation.opponent.id}?page=${nextPage}&size=${PAGE_SIZE}`,
+      );
+      const { data } = response;
 
       if (!Array.isArray(data) || data.length === 0) {
-        setHasMore(false)
-        return
+        setHasMore(false);
+        return;
       }
 
-      const container = containerRef.current
-      const oldScrollHeight = container?.scrollHeight
+      const container = containerRef.current;
+      const oldScrollHeight = container?.scrollHeight;
 
-      setMessages((prev) => [...data, ...prev])
+      setMessages((prev) => [...data, ...prev]);
 
       requestAnimationFrame(() => {
         if (container && oldScrollHeight) {
-          const newScrollHeight = container.scrollHeight
-          container.scrollTop = newScrollHeight - oldScrollHeight
+          const newScrollHeight = container.scrollHeight;
+          container.scrollTop = newScrollHeight - oldScrollHeight;
         }
-      })
+      });
 
-      setPage(nextPage)
+      setPage(nextPage);
     } catch (err) {
-      console.error("Error fetching previous messages:", err)
+      console.error("Error fetching previous messages:", err);
     } finally {
-      setIsFetchingMore(false)
+      setIsFetchingMore(false);
+      setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (!selectedConversation) return
-    setLoading(true)
-    setMessages([])
-    setPage(0)
-    setHasMore(true)
+    if (!selectedConversation) return;
+    setLoading(true);
+    setMessages([]);
+    setPage(0);
+    setHasMore(true);
 
-    let channel
+    let channel;
 
-    const init = async () => {
+    (async () => {
       try {
         channel = await initChat(
           selectedConversation.opponent.id,
           (msg) => setMessages((prev) => [...prev, msg]),
-          userId
-        )
-        setAblyChannel(channel)
-        await fetchPreviousMessages(0)
+          userId,
+        );
+        setAblyChannel(channel);
+        await fetchPreviousMessages(0);
       } catch (err) {
-        console.error("Chat init failed:", err)
+        console.error("Chat init failed:", err);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-
-    init()
+    })();
 
     return () => {
-      if (channel) channel.unsubscribe("message")
-    }
-  }, [selectedConversation, userId])
+      if (channel) channel.unsubscribe("message");
+    };
+  }, [selectedConversation, userId]);
 
   useEffect(() => {
-    const container = containerRef.current
-    if (!container) return
+    const container = containerRef.current;
+    if (!container) return;
 
     const handleScroll = () => {
-      if (!hasMore || isFetchingMore) return
+      if (!hasMore || isFetchingMore) return;
       if (container.scrollTop < 500) {
-        fetchPreviousMessages(page + 1)
+        fetchPreviousMessages(page + 1);
       }
-    }
+    };
 
-    container.addEventListener("scroll", handleScroll)
-    return () => container.removeEventListener("scroll", handleScroll)
-  }, [page, hasMore, isFetchingMore, selectedConversation])
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [page, hasMore, isFetchingMore, selectedConversation]);
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !ablyChannel || !selectedConversation) return
-    const token = localStorage.getItem("token")
-    if (!token) return
+    if (!newMessage.trim() || !ablyChannel || !selectedConversation) return;
+    const token = localStorage.getItem("token");
+    if (!token) return;
 
     const messageData = {
       senderId: userId,
       receiverId: selectedConversation.opponent.id,
       content: newMessage,
-    }
+    };
 
     try {
       await apiClient.post(
         "/api/chat/send",
         { channelName: ablyChannel.name, ...messageData },
-        { headers: { Authorization: `Bearer ${token}` } }
-      )
-      setNewMessage("")
+        { headers: { Authorization: `Bearer ${token}` } },
+      );
+      setNewMessage("");
     } catch (err) {
-      console.error("Send message failed:", err)
+      console.error("Send message failed:", err);
     }
-  }
+  };
 
   const lastMessageTimestamp =
-    selectedConversation?.chats?.timestamp ?? new Date()
+    selectedConversation?.chats?.timestamp ?? new Date();
 
   return (
     <Card
@@ -303,8 +302,8 @@ export default function ChatArea({
                 className="resize-none flex-1 min-h-[20px]"
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault()
-                    handleSendMessage()
+                    e.preventDefault();
+                    handleSendMessage();
                   }
                 }}
               />
@@ -322,5 +321,5 @@ export default function ChatArea({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }
