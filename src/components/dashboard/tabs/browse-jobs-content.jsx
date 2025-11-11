@@ -25,7 +25,7 @@ import {
   Send,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function BrowseJobsContent() {
   const navigate = useNavigate();
@@ -332,15 +332,11 @@ export default function BrowseJobsContent() {
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() =>
-                          navigate(`/dashboard/job-details/${job.id}`)
-                        }
-                      >
-                        <Eye className="mr-2 h-4 w-4" /> View Details
-                      </Button>
+                      <Link to={`/dashboard/job/${job.id}`}>
+                        <Button variant="outline" size="sm">
+                          <Eye className="mr-2 h-4 w-4" /> View Details
+                        </Button>
+                      </Link>
                       <Button
                         size="sm"
                         onClick={() => handleSubmitProposal(job.id)}

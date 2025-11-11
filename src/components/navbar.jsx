@@ -105,7 +105,7 @@ export default function Navbar() {
       {/* Mobile Navigation */}
       {isMenuOpen && (
         <div className="md:hidden border-t bg-gradient-to-b from-background/95 to-background/98 backdrop-blur-xl animate-in slide-in-from-top-2 duration-300">
-          <nav className="container py-4 space-y-4">
+          <nav className="py-4 space-y-4 w-full">
             <Link
               to="/how-it-works"
               className="block text-sm font-medium transition-all hover:text-primary hover:translate-x-1 duration-300"
