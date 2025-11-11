@@ -1,6 +1,7 @@
 import { apiClient } from "@/api/AxiosServiceApi";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -289,9 +290,11 @@ export default function DashboardHeader(props) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User2 className="mr-2 h-4 w-4" />
-                  <span>Profile</span>
+               <DropdownMenuItem asChild>
+                  <Link to="/profile" className="flex items-center">
+                    <User2 className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
                 </DropdownMenuItem>
 
                 {/* ✅ Conditionally show Switch Role item */}

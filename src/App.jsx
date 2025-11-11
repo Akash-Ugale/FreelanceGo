@@ -23,6 +23,8 @@ import Proposals from "./pages/Proposals";
 import Register from "./pages/register";
 import ReviewProposals from "./pages/review-proposal";
 import Reviews from "./pages/reviews";
+import ProfilePage from "./pages/profile";
+
 
 function App() {
   const router = createBrowserRouter([
@@ -45,6 +47,7 @@ function App() {
         { path: "hired-freelancers", element: <HiredFreelancers /> },
         { path: "submit-proposal", element: <SubmitProposal /> },
         { path: "project-bids/:projectId", element: <ProjectBids /> },
+
       ],
     },
     { path: "/", element: <Home /> },
@@ -53,6 +56,8 @@ function App() {
     { path: "/register", element: <Register /> },
     { path: "/create-profile", element: <CreateProfile /> },
     { path: "/profile-setup", element: <ProfileSetup /> },
+    { path: "/profile", element: <ProfilePage /> },
+
   ]);
 
   return (
