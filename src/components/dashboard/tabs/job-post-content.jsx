@@ -315,17 +315,13 @@ export default function JobPostsContent({ userRole }) {
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <Link to={`/dashboard/job-posts/${job.id}`}>
-                            <Button variant="outline" size="sm">
+                          <Link to={`/dashboard/job/${job.id}`}>
+                            <Button variant="outline">
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </Button>
                           </Link>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="p-0"
-                          >
+                          <Button variant="destructive" size={"sm"}>
                             <Trash className="h-3 w-3" />
                           </Button>
                         </div>

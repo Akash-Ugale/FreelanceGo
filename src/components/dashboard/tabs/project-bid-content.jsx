@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,10 +15,13 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Search,
@@ -41,7 +42,6 @@ import {
   DollarSign,
   Loader2,
   Calendar,
-  Download,
   ChevronLeft,
   ChevronRight,
   ExternalLink,
@@ -49,6 +49,7 @@ import {
 import { RUPEE } from "@/utils/constants";
 import { apiClient } from "@/api/AxiosServiceApi.js";
 import { format } from "date-fns";
+import { useAuth } from "@/context/AuthContext.jsx";
 import { toast } from "sonner";
 
 export default function ProjectBidsContent() {
@@ -58,14 +59,12 @@ export default function ProjectBidsContent() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("newest");
   const [selectedBid, setSelectedBid] = useState(null);
-  const [showHireDialog, setShowHireDialog] = useState(false);
-  const [showDeclineDialog, setShowDeclineDialog] = useState(false);
-  const [hireMessage, setHireMessage] = useState("");
-  const [declineReason, setDeclineReason] = useState("");
   const [jobDetails, setJobDetails] = useState(null);
   const [bids, setBids] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const { userId } = useAuth();
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(0);
@@ -236,14 +235,20 @@ export default function ProjectBidsContent() {
 
   const stats = getBidStats();
 
-  const handleHire = (bid) => {
-    setSelectedBid(bid);
-    setShowHireDialog(true);
-  };
-
-  const handleDecline = (bid) => {
-    setSelectedBid(bid);
-    setShowDeclineDialog(true);
+  const handleHire = async (bid) => {
+    try {
+      /*@PostMapping("/create-contract/{bidId}/{jobId}/{clientId}/{freelancerId}")*/
+      const response = await apiClient.post(
+        `/api/create-contract/${bid.id}/${projectId}/${userId}/${bid.freelancer.id}`,
+      );
+      const { status } = response;
+      if (status === 200) {
+        toast.success("Contract created successfully");
+        navigate("/dashboard/projects");
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const formatDate = (dateString) => {
@@ -406,22 +411,30 @@ export default function ProjectBidsContent() {
               </div>
             )}
 
-            <div>
-              <h3 className="font-semibold mb-2">Project Timeline</h3>
-              <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {format(new Date(jobDetails.projectStartTime), "PP")}
-                  </span>
+            <div className={"grid grid-cols-1 sm:grid-cols-2 gap-4"}>
+              <div>
+                <h3 className="font-semibold mb-2">Project Timeline</h3>
+                <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {format(new Date(jobDetails.projectStartTime), "PP")}
+                    </span>
+                  </div>
+                  <div className={"sm:hidden"}>|</div>
+                  <div className={"hidden sm:block"}>-</div>
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4" />
+                    <span>
+                      {format(new Date(jobDetails.projectEndTime), "PP")}
+                    </span>
+                  </div>
                 </div>
-                <div className={"sm:hidden"}>|</div>
-                <div className={"hidden sm:block"}>-</div>
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4" />
-                  <span>
-                    {format(new Date(jobDetails.projectEndTime), "PP")}
-                  </span>
+              </div>
+              <div>
+                <h3 className={"font-semibold mb-2"}>Experience Required</h3>
+                <div className={"text-muted-foreground text-sm"}>
+                  {getExperienceLevelLabel(jobDetails.experienceLevel)}
                 </div>
               </div>
             </div>
@@ -438,9 +451,6 @@ export default function ProjectBidsContent() {
             </div>
 
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="capitalize">
-                {getExperienceLevelLabel(jobDetails.experienceLevel)}
-              </Badge>
               {jobDetails.file && (
                 <Button variant="link" size="sm" asChild>
                   <a
@@ -754,19 +764,40 @@ export default function ProjectBidsContent() {
                     bid.proposal.status === "pending" ||
                     bid.proposal.status === "shortlisted" ? (
                       <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDecline(bid)}
-                          className="bg-transparent"
-                        >
-                          <ThumbsDown className="mr-2 h-4 w-4" />
-                          Decline
-                        </Button>
-                        <Button size="sm" onClick={() => handleHire(bid)}>
-                          <ThumbsUp className="mr-2 h-4 w-4" />
-                          Hire Freelancer
-                        </Button>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button size="sm">
+                              <ThumbsUp className="mr-2 h-4 w-4" />
+                              Hire Freelancer
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Hire Confirmation</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to hire{" "}
+                                {selectedBid?.freelancer?.name} for this job?
+                                <p className={"text-red-500"}>
+                                  Every other candidate will be automatically
+                                  rejected...
+                                </p>
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <DialogClose asChild>
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => setSelectedBid(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </DialogClose>
+                              <Button onClick={() => handleHire(bid)}>
+                                Hire
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                       </>
                     ) : (
                       <Badge
@@ -820,84 +851,6 @@ export default function ProjectBidsContent() {
           </Button>
         </div>
       )}
-
-      <Dialog open={showHireDialog} onOpenChange={setShowHireDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Hire {selectedBid?.freelancer.name}</DialogTitle>
-            <DialogDescription>
-              Send a hiring message to start working with this freelancer on "
-              {jobDetails.jobTitle}".
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Message to Freelancer
-              </label>
-              <Textarea
-                placeholder="Welcome to the team! I'm excited to work with you on this project..."
-                value={hireMessage}
-                onChange={(e) => setHireMessage(e.target.value)}
-                rows={4}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowHireDialog(false)}
-                className="bg-transparent"
-              >
-                Cancel
-              </Button>
-              <Button onClick={() => setShowHireDialog(false)}>
-                <Send className="mr-2 h-4 w-4" />
-                Send Hire Message
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={showDeclineDialog} onOpenChange={setShowDeclineDialog}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Decline Proposal</DialogTitle>
-            <DialogDescription>
-              Let {selectedBid?.freelancer.name} know why their proposal wasn't
-              selected (optional).
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">
-                Reason for Declining (Optional)
-              </label>
-              <Textarea
-                placeholder="Thank you for your proposal. While your skills are impressive, we've decided to go with another candidate..."
-                value={declineReason}
-                onChange={(e) => setDeclineReason(e.target.value)}
-                rows={4}
-              />
-            </div>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
-                onClick={() => setShowDeclineDialog(false)}
-                className="bg-transparent"
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                onClick={() => setShowDeclineDialog(false)}
-              >
-                Decline Proposal
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

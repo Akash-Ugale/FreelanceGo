@@ -263,7 +263,7 @@ export default function DashboardHeader(props) {
                   <div className="flex flex-col">
                     <div className="grid gap-1">
                       <div
-                        className={`flex justify-start rounded-sm text-sm font-semibold ${
+                        className={`flex justify-center rounded-sm text-sm font-semibold ${
                           userRole === userRoles.FREELANCER
                             ? "text-primary"
                             : "text-green-500"
@@ -272,8 +272,7 @@ export default function DashboardHeader(props) {
                         <span>
                           {userRole === userRoles.FREELANCER
                             ? "Freelancer"
-                            : "Client"}{" "}
-                          Login
+                            : "Client"}
                         </span>
                       </div>
 
@@ -290,7 +289,7 @@ export default function DashboardHeader(props) {
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-               <DropdownMenuItem asChild>
+                <DropdownMenuItem asChild>
                   <Link to="/profile" className="flex items-center">
                     <User2 className="mr-2 h-4 w-4" />
                     <span>Profile</span>
