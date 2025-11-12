@@ -280,7 +280,7 @@ export default function JobPostsContent({ userRole }) {
                             </div>
                           )}
 
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground *:border *:px-2 *:py-1 *:bg-muted *:rounded-md *:text-xs md:*:test-sm">
                             <div className="flex items-center space-x-1">
                               <IndianRupee className="h-4 w-4" />
                               <span>
@@ -292,7 +292,7 @@ export default function JobPostsContent({ userRole }) {
                             </div>
                             <div className="flex items-center space-x-1">
                               <Users className="h-4 w-4" />
-                              <span>{job.bidDto?.length || 0} proposals</span>
+                              <span>{job.proposalsCount || 0} proposals</span>
                             </div>
                             <div className="flex items-center space-x-1">
                               <Calendar className="h-4 w-4" />
@@ -315,17 +315,13 @@ export default function JobPostsContent({ userRole }) {
                         </div>
 
                         <div className="flex items-center space-x-2">
-                          <Link to={`/dashboard/job-posts/${job.id}`}>
-                            <Button variant="outline" size="sm">
+                          <Link to={`/dashboard/job/${job.id}`}>
+                            <Button variant="outline">
                               <Eye className="mr-2 h-4 w-4" />
                               View
                             </Button>
                           </Link>
-                          <Button
-                            variant="destructive"
-                            size="icon"
-                            className="p-0"
-                          >
+                          <Button variant="destructive" size={"sm"}>
                             <Trash className="h-3 w-3" />
                           </Button>
                         </div>
