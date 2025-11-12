@@ -18,7 +18,7 @@ export default function Navbar() {
         >
           <div className="relative">
             <img
-              src="/freelancego-logo.svg"
+              src="/freelancego-logo-old.svg"
               alt=""
               className="w-5 h-5 transition-transform group-hover:scale-110 group-hover:rotate-12 duration-300"
             />

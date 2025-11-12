@@ -187,7 +187,8 @@ export default function DashboardHeader(props) {
               </SheetContent>
             </Sheet>
 
-            <a href="/dashboard" className="flex items-center">
+            <a href="/dashboard" className="flex items-center space-x-2">
+              <img src={"/freelancego-logo.svg"} width={20} height={20} />
               <span className="font-bold text-lg md:text-xl">FreelanceGo</span>
             </a>
           </div>
@@ -290,7 +291,7 @@ export default function DashboardHeader(props) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to="/profile" className="flex items-center">
+                  <Link to="/dashboard/profile" className="flex items-center">
                     <User2 className="mr-2 h-4 w-4" />
                     <span>Profile</span>
                   </Link>

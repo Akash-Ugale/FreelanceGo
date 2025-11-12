@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from "react";
 import {
   Card,
@@ -14,16 +12,17 @@ import { Progress } from "@/components/ui/progress";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DollarSign,
-  Calendar,
   Target,
-  ArrowUp,
-  ArrowDown,
   ChevronUp,
   ChevronDown,
+  ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { apiClient } from "@/api/AxiosServiceApi";
 import { userRoles } from "@/utils/constants";
 import { useAuth } from "@/context/AuthContext.jsx";
+import { format } from "date-fns";
 
 export default function ProjectsContent() {
   const { userRole } = useAuth();
@@ -32,6 +31,8 @@ export default function ProjectsContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [showFullDesc, setShowFullDesc] = useState(false);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
+  const [isProjectsPaneCollapsed, setIsProjectsPaneCollapsed] = useState(false);
 
   useEffect(() => {
     const fetchProjects = async () => {
@@ -86,8 +87,8 @@ export default function ProjectsContent() {
           budget: p.job?.budget ?? 0,
           status: p.phase ?? p.status ?? "IN_PROGRESS",
           progress: typeof p.progress === "number" ? p.progress : 50,
-          startDate: p.job?.projectStartTime?.split("T")[0] ?? "N/A",
-          deadline: p.job?.projectEndTime?.split("T")[0] ?? "N/A",
+          startDate: new Date(p.job?.projectStartTime),
+          deadline: new Date(p.job?.projectEndTime),
           milestones: p.milestones ?? p.job?.milestones ?? [],
           files: p.job?.file ? [p.job.file] : [],
         }));
@@ -122,6 +123,11 @@ export default function ProjectsContent() {
   const handleSelectProject = (project) => {
     setSelectedProject(project);
     setShowFullDesc(false);
+    setShowMobileDetails(true);
+  };
+
+  const handleBackToList = () => {
+    setShowMobileDetails(false);
   };
 
   return (
@@ -137,61 +143,103 @@ export default function ProjectsContent() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-4">
-        {/* Left list */}
-        <Card className="lg:col-span-1">
-          <CardHeader>
-            <CardTitle className="text-lg">Projects</CardTitle>
-            <CardDescription>Your active projects</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {projects.map((project) => (
-              <div
-                key={project.id}
-                role="button"
-                tabIndex={0}
-                onClick={() => handleSelectProject(project)}
-                onKeyDown={(e) =>
-                  e.key === "Enter" && handleSelectProject(project)
-                }
-                className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                  selectedProject?.id === project.id
-                    ? "bg-accent"
-                    : "hover:bg-accent/50"
-                }`}
-              >
-                <h4 className="font-medium text-sm mb-1">{project.title}</h4>
-                <p className="text-xs text-muted-foreground mb-2 truncate">
-                  {userRole === userRoles.FREELANCER
-                    ? project.client.name
-                    : project.freelancer.name}
-                </p>
-                <div className="flex items-center justify-between text-xs">
-                  <Badge
-                    variant={
-                      project.status?.toLowerCase?.() === "completed"
-                        ? "default"
-                        : "secondary"
-                    }
-                    className="text-xs"
-                  >
-                    {project.status}
-                  </Badge>
-                  <span className="text-muted-foreground">
-                    {project.progress}%
-                  </span>
+      <div className="flex gap-6 lg:flex-row flex-col">
+        {/* Left list - Hidden on mobile when details are shown */}
+        {isProjectsPaneCollapsed ? (
+          <div className="hidden lg:flex items-start pt-6">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setIsProjectsPaneCollapsed(false)}
+              aria-label="Expand projects pane"
+              className="h-9 w-9"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        ) : (
+          <Card
+            className={`lg:w-80 lg:flex-shrink-0 ${showMobileDetails ? "hidden lg:block" : ""}`}
+          >
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-lg">Projects</CardTitle>
+                  <CardDescription>Your active projects</CardDescription>
                 </div>
-                <Progress value={project.progress} className="h-1 mt-2" />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="hidden lg:flex h-8 w-8"
+                  onClick={() => setIsProjectsPaneCollapsed(true)}
+                  aria-label="Collapse projects pane"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
               </div>
-            ))}
-          </CardContent>
-        </Card>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelectProject(project)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleSelectProject(project)
+                  }
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedProject?.id === project.id
+                      ? "bg-accent"
+                      : "hover:bg-accent/50"
+                  }`}
+                >
+                  <h4 className="font-medium text-sm mb-1">{project.title}</h4>
+                  <p className="text-xs text-muted-foreground mb-2 truncate">
+                    {userRole === userRoles.FREELANCER
+                      ? project.client.name
+                      : project.freelancer.name}
+                  </p>
+                  <div className="flex items-center justify-between text-xs">
+                    <Badge
+                      variant={
+                        project.status?.toLowerCase?.() === "completed"
+                          ? "default"
+                          : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {project.status}
+                    </Badge>
+                    <span className="text-muted-foreground">
+                      {project.progress}%
+                    </span>
+                  </div>
+                  <Progress value={project.progress} className="h-1 mt-2" />
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
 
-        {/* Right details */}
-        <Card className="lg:col-span-3">
+        {/* Right details - Shown on mobile when project is selected */}
+        <Card
+          className={`flex-1 ${!showMobileDetails ? "hidden lg:block" : ""}`}
+        >
           <CardHeader>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
               <div className="w-full">
+                <div className="flex items-center gap-2 mb-2 lg:hidden">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleBackToList}
+                    className="gap-2"
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back to Projects
+                  </Button>
+                </div>
                 <CardTitle className="text-xl flex items-center gap-2">
                   <h1>{selectedProject?.title}</h1>
                   <Badge
@@ -220,7 +268,7 @@ export default function ProjectsContent() {
                         aria-expanded={showFullDesc}
                         onClick={() => setShowFullDesc((s) => !s)}
                         variant={"link"}
-                        className={"p-0"}
+                        className={"p-0 text-sm"}
                       >
                         {showFullDesc ? "Show less" : "Show more"}
                         {showFullDesc ? (
@@ -237,7 +285,7 @@ export default function ProjectsContent() {
 
           <CardContent>
             {/* Top meta row */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-4 *:bg-muted/30 *:border *:p-3 *:rounded-md">
               <div className="space-y-1">
                 <div className="text-sm font-medium">Budget</div>
                 <div className="text-lg font-bold">
@@ -254,15 +302,15 @@ export default function ProjectsContent() {
 
               <div className="space-y-1">
                 <div className="text-sm font-medium">Start Date</div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedProject?.startDate}
+                <div className="text-lg font-bold">
+                  {format(selectedProject?.startDate, "PP")}
                 </div>
               </div>
 
               <div className="space-y-1">
                 <div className="text-sm font-medium">Deadline</div>
-                <div className="text-sm text-muted-foreground">
-                  {selectedProject?.deadline}
+                <div className="text-lg font-bold">
+                  {format(selectedProject?.deadline, "PP")}
                 </div>
               </div>
             </div>
@@ -275,7 +323,7 @@ export default function ProjectsContent() {
 
               <div
                 className={
-                  "relative p-4 bg-muted/50 rounded-lg flex gap-4 overflow-hidden"
+                  "relative p-4 bg-muted/50 border rounded-lg flex gap-4 overflow-hidden"
                 }
               >
                 <div className="absolute top-0 right-0">
@@ -319,7 +367,7 @@ export default function ProjectsContent() {
               {/* Freelancer card */}
               <div
                 className={
-                  "relative p-4 rounded-lg flex gap-4 bg-muted/50 flex-1 overflow-hidden"
+                  "relative p-4 rounded-lg flex gap-4 border bg-muted/50 flex-1 overflow-hidden"
                 }
               >
                 <div className="absolute top-0 right-0">
