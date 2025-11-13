@@ -26,7 +26,7 @@ const PLATFORM_ICONS = {
   portfolio: <Globe className="h-4 w-4" />,
 }
 
-export default function SocialLinksSection({ socialLinks = [] }) {
+export default function SocialLinksSection({ socialLinks = [], onSave }) {
   const [isEditing, setIsEditing] = useState(false)
   const [links, setLinks] = useState(
     socialLinks.length > 0
@@ -93,37 +93,19 @@ export default function SocialLinksSection({ socialLinks = [] }) {
               </div>
             ))}
 
-            {/* Add New Link */}
-            <div className="space-y-2 border-t border-slate-200 dark:border-slate-800 pt-4">
-              <p className="text-sm font-medium">Add New Link</p>
-              <div className="flex items-center gap-2">
-                <select
-                  value={newLink.platform}
-                  onChange={(e) => setNewLink({ ...newLink, platform: e.target.value })}
-                  className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-950 text-sm"
-                >
-                  <option value="github">GitHub</option>
-                  <option value="linkedin">LinkedIn</option>
-                  <option value="twitter">Twitter</option>
-                  <option value="portfolio">Portfolio</option>
-                </select>
-                <Input
-                  value={newLink.url}
-                  onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                  placeholder="https://..."
-                  className="flex-1"
-                />
-                <Button size="sm" onClick={handleAddLink} className="gap-2">
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-
             <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-2">
+              <Button
+              variant="outline"
+                onClick={() => {
+                  setIsEditing(false)
+                  if (typeof onSave === "function") onSave(links) // ✅ call parent handler
+                }}
+                className="gap-2"
+              >
                 <X className="h-4 w-4" />
                 Done
               </Button>
+
             </div>
           </div>
         ) : (

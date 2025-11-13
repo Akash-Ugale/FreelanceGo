@@ -8,15 +8,8 @@ import { Input } from "@/components/ui/input"
 import { Edit2, X, Trash2, Plus, Award, Upload } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
-// interface Certification {
-//   id: string
-//   name: string
-//   issuer: string
-//   certificateImage?: string
-// }
 
-
-export default function CertificationsSection({ certifications = [] }) {
+export default function CertificationsSection({ certifications = [],userId, onSave }) {
   const [isEditing, setIsEditing] = useState(false)
   const [selectedCertImage, setSelectedCertImage] = useState(null)
 
@@ -53,20 +46,23 @@ export default function CertificationsSection({ certifications = [] }) {
     setItems(items.filter((cert) => cert.id !== id))
   }
 
-  const handleCertificateImageUpload = (e , certId) => {
-    const file = e.target.files?.[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        if (certId) {
-          setItems(items.map((c) => (c.id === certId ? { ...c, certificateImage: reader.result } : c)))
-        } else {
-          setNewCert({ ...newCert, certificateImage: reader.result})
-        }
+const handleCertificateImageUpload = (e, certId) => {
+  const file = e.target.files?.[0];
+  if (file) {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (certId) {
+        setItems(items.map((c) =>
+          c.id === certId ? { ...c, certificateImage: reader.result, file } : c
+        ));
+      } else {
+        setNewCert({ ...newCert, certificateImage: reader.result, file });
       }
-      reader.readAsDataURL(file)
-    }
+    };
+    reader.readAsDataURL(file);
   }
+};
+
 
   return (
     <Card className="border-border shadow-sm">
@@ -204,10 +200,33 @@ export default function CertificationsSection({ certifications = [] }) {
             </div>
 
             <div className="flex gap-2 justify-end pt-2">
-              <Button variant="outline" onClick={() => setIsEditing(false)} className="gap-2 h-8">
-                <X className="h-4 w-4" />
-                Done
-              </Button>
+           <Button
+              variant="outline"
+              onClick={async () => {
+                setIsEditing(false);
+                console.log("Saving certifications:", items.map(i => ({
+                  name: i.name,
+                  issuer: i.issuer,
+                  hasFile: !!i.file
+                })));
+
+
+                if (onSave) {
+                  const profilePayload = {
+                    user: { id: userId }, // ✅ Add the logged-in user's ID (or fetch dynamically)
+                    certifications: items,
+                  };
+                  await onSave(profilePayload,items);
+                }
+              }}
+              className="gap-2 h-8"
+            >
+              <X className="h-4 w-4" />
+              Save & Done
+            </Button>
+
+
+
             </div>
           </div>
         ) : (

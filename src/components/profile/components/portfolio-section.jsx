@@ -26,7 +26,7 @@ import { useEffect } from "react";
 //   isFreelancer?: boolean
 // }
 
-export default function PortfolioSection({ portfolioItems = [], isFreelancer = true }) {
+export default function PortfolioSection({ portfolioItems = [], isFreelancer = true,onSave }) {
   const [isManaging, setIsManaging] = useState(false)
   const [editingId, setEditingId] = useState(null)
 
@@ -125,20 +125,26 @@ useEffect(() => {
           <CardDescription>Showcase your previous work and projects</CardDescription>
         </div>
         <Button
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          if (isManaging) {
-            // Save updated items to localStorage
-            localStorage.setItem("portfolioItems", JSON.stringify(items));
-          }
-          setIsManaging(!isManaging);
-        }}
-        className="gap-2 bg-transparent"
-      >
-        <Edit2 className="h-4 w-4" />
-        {isManaging ? "Done" : "Manage"}
-        </Button>
+  variant="outline"
+  size="sm"
+  onClick={() => {
+    if (isManaging) {
+      // Save to localStorage for backup
+      localStorage.setItem("portfolioItems", JSON.stringify(items));
+
+      // 🔥 Trigger backend API call through parent
+      if (typeof onSave === "function") {
+        onSave(items);
+      }
+    }
+    setIsManaging(!isManaging);
+  }}
+  className="gap-2 bg-transparent"
+>
+  <Edit2 className="h-4 w-4" />
+  {isManaging ? "Done" : "Manage"}
+</Button>
+
 
         {/* <Button variant="outline" size="sm" onClick={() => setIsManaging(!isManaging)} className="gap-2 bg-transparent">
           <Edit2 className="h-4 w-4" />
@@ -313,20 +319,6 @@ useEffect(() => {
                   placeholder="Description"
                   className="text-sm h-8"
                 />
-                <div className="grid grid-cols-2 gap-2">
-                  <Input
-                    value={newItem.duration}
-                    onChange={(e) => setNewItem({ ...newItem, duration: e.target.value })}
-                    placeholder="Duration"
-                    className="text-sm h-8"
-                  />
-                  <Input
-                    value={newItem.budget}
-                    onChange={(e) => setNewItem({ ...newItem, budget: e.target.value })}
-                    placeholder="Budget"
-                    className="text-sm h-8"
-                  />
-                </div>
                 <div>
                   <label className="block text-xs font-medium text-muted-foreground mb-1">Image</label>
                   <label className="cursor-pointer">

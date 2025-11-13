@@ -1,42 +1,24 @@
-"use client"
+"use client";
 
-import React from "react"
-import { useState } from "react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Edit2, Upload, MapPin, Star, X, Save, Eye, EyeOff } from "lucide-react"
-
-// interface ProfileHeaderProps {
-//   coverPhoto?: string
-//   profileImage: string
-//   name: string
-//   title: string
-//   designation?: string
-//   location?: string
-//   rating?: number
-//   bio: string
-//   mobileNumber?: string
-//   isEditing: boolean
-//   onEditToggle: () => void
-//   isViewOnly?: boolean
-//   onToggleViewOnly?: () => void
-//   onCoverPhotoChange?: (file: File) => void
-//   onProfileImageChange?: (file: File) => void
-//   onSave?: (data: Partial<ProfileHeaderData>) => void
-// }
-
-// export interface ProfileHeaderDat {
-//   name: string
-//   designation: string
-//   bio: string
-//   mobileNumber: string
-//   coverPhoto: string
-//   profileImage: string
-// }
+import React from "react";
+import { useState } from "react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Edit2,
+  Upload,
+  MapPin,
+  Star,
+  X,
+  Save,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 
 export default function ProfileHeader({
+  originalData,
   coverPhoto = "/professional-cover.jpg",
   profileImage,
   name,
@@ -54,54 +36,74 @@ export default function ProfileHeader({
   onProfileImageChange,
   onSave,
 }) {
-  const [tempCoverPhoto, setTempCoverPhoto] = useState(coverPhoto)
-  const [tempProfileImage, setTempProfileImage] = useState(profileImage)
-  const [tempName, setTempName] = useState(name)
-  const [tempDesignation, setTempDesignation] = useState(designation || title)
-  const [tempBio, setTempBio] = useState(bio)
-  const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber)
+  const [tempCoverPhoto, setTempCoverPhoto] = useState(coverPhoto);
+  const [tempProfileImage, setTempProfileImage] = useState(profileImage);
+  const [tempName, setTempName] = useState(name);
+  const [tempDesignation, setTempDesignation] = useState(designation || title);
+  const [tempBio, setTempBio] = useState(bio);
+  const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
 
   const handleCoverPhotoUpload = (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      onCoverPhotoChange?.(file)
-      const reader = new FileReader()
+      onCoverPhotoChange?.(file);
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setTempCoverPhoto(reader.result)
-      }
-      reader.readAsDataURL(file)
+        setTempCoverPhoto(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
-  }
+  };
 
   const handleProfileImageUpload = (e) => {
-    const file = e.target.files?.[0]
+    const file = e.target.files?.[0];
     if (file) {
-      onProfileImageChange?.(file)
-      const reader = new FileReader()
+      onProfileImageChange?.(file);
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setTempProfileImage(reader.result)
-      }
-      reader.readAsDataURL(file)
+        setTempProfileImage(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
-  }
-
+  };
   const handleSave = () => {
-    onSave?.({
-      name: tempName,
-      designation: tempDesignation,
-      bio: tempBio,
-      mobileNumber: tempMobileNumber,
-      coverPhoto: tempCoverPhoto,
-      profileImage: tempProfileImage,
-    })
-    onEditToggle()
-  }
+    console.log("handleSave called", {
+      tempName,
+      tempDesignation,
+      tempBio,
+      tempMobileNumber,
+      tempCoverPhoto,
+      tempProfileImage,
+    }); // <-- Add this
+
+    const coverPhoto = tempCoverPhoto;
+    const profileImage = tempProfileImage;
+
+    originalData.user.username = tempName
+    originalData.freelancer.designation = tempDesignation
+    originalData.freelancer.bio = tempBio
+    originalData.freelancer.phone = tempMobileNumber
+
+    const profileDto = {
+      id: originalData.id,
+      user: originalData.user,
+      client: originalData.client,
+      freelancer: originalData.freelancer,
+    }
+
+    onSave?.(profileDto, coverPhoto, profileImage);
+    onEditToggle();
+  };
 
   return (
     <div className="bg-card rounded-lg overflow-hidden shadow-md border border-border mb-4">
       {/* Cover Photo Section */}
       <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20">
-        <img src={tempCoverPhoto || "/placeholder.svg"} alt="Cover photo" className="w-full h-full object-cover" />
+        <img
+          src={tempCoverPhoto || "/placeholder.svg"}
+          alt="Cover photo"
+          className="w-full h-full object-cover"
+        />
 
         <div className="absolute top-3 right-3 flex gap-2">
           {onToggleViewOnly && (
@@ -137,7 +139,12 @@ export default function ProfileHeader({
                   Change Cover
                 </span>
               </Button>
-              <input type="file" accept="image/*" onChange={handleCoverPhotoUpload} className="hidden" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleCoverPhotoUpload}
+                className="hidden"
+              />
             </label>
           )}
         </div>
@@ -150,14 +157,23 @@ export default function ProfileHeader({
           <div className="relative flex-shrink-0">
             <Avatar className="h-28 w-28 border-4 border-card shadow-md bg-card -mt-20">
               <AvatarImage src={tempProfileImage || "/placeholder.svg"} />
-              <AvatarFallback className="text-lg">{name.charAt(0)}</AvatarFallback>
+              <AvatarFallback className="text-lg">
+                {name && typeof name === "string" && name.length > 0
+                  ? name.charAt(0).toUpperCase()
+                  : "?"}
+              </AvatarFallback>
             </Avatar>
             {isEditing && (
               <label className="absolute bottom-0 right-0 cursor-pointer">
                 <Button size="sm" className="rounded-full h-8 w-8 p-0">
                   <Upload className="h-3 w-3" />
                 </Button>
-                <input type="file" accept="image/*" onChange={handleProfileImageUpload} className="hidden" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleProfileImageUpload}
+                  className="hidden"
+                />
               </label>
             )}
           </div>
@@ -182,7 +198,9 @@ export default function ProfileHeader({
             ) : (
               <div>
                 <h1 className="text-2xl font-bold text-foreground">{name}</h1>
-                <p className="text-base font-medium text-primary">{designation || title}</p>
+                <p className="text-base font-medium text-primary">
+                  {designation || title}
+                </p>
               </div>
             )}
 
@@ -199,11 +217,17 @@ export default function ProfileHeader({
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-3.5 w-3.5 ${i < Math.floor(rating) ? "fill-accent text-accent" : "text-muted"}`}
+                      className={`h-3.5 w-3.5 ${
+                        i < Math.floor(rating)
+                          ? "fill-accent text-accent"
+                          : "text-muted"
+                      }`}
                     />
                   ))}
                 </div>
-                <span className="font-medium text-foreground">{rating?.toFixed(1)}</span>
+                <span className="font-medium text-foreground">
+                  {rating?.toFixed(1)}
+                </span>
               </div>
             </div>
           </div>
@@ -217,13 +241,23 @@ export default function ProfileHeader({
                     <Save className="h-3.5 w-3.5" />
                     Save
                   </Button>
-                  <Button size="sm" variant="outline" onClick={onEditToggle} className="gap-1.5 bg-transparent">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={onEditToggle}
+                    className="gap-1.5 bg-transparent"
+                  >
                     <X className="h-3.5 w-3.5" />
                     Cancel
                   </Button>
                 </>
               ) : (
-                <Button size="sm" variant="outline" onClick={onEditToggle} className="gap-1.5 bg-transparent">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={onEditToggle}
+                  className="gap-1.5 bg-transparent"
+                >
                   <Edit2 className="h-3.5 w-3.5" />
                   Edit Info
                 </Button>
@@ -236,7 +270,9 @@ export default function ProfileHeader({
         {isEditing ? (
           <div className="space-y-2 border-t border-border pt-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Bio</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Bio
+              </label>
               <Textarea
                 value={tempBio}
                 onChange={(e) => setTempBio(e.target.value)}
@@ -246,7 +282,9 @@ export default function ProfileHeader({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">Mobile Number</label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Mobile Number
+              </label>
               <Input
                 value={tempMobileNumber}
                 onChange={(e) => setTempMobileNumber(e.target.value)}
@@ -267,5 +305,5 @@ export default function ProfileHeader({
         )}
       </div>
     </div>
-  )
+  );
 }

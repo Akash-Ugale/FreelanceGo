@@ -117,7 +117,7 @@ export default function ReviewProposalsContent() {
     setIsLoading(true);
     try {
       const response = await apiClient.get("/api/dashboard/review-proposals");
-      const projectContent = response.data || [];
+      const projectContent = response.data.content || [];
       setProjects(projectContent);
     } catch (error) {
       console.error("Error fetching active projects:", error);
