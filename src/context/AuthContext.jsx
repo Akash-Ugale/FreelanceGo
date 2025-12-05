@@ -58,7 +58,19 @@ export default function AuthContextProvider({ children }) {
           logoutUser();
           return;
         }
+        // ❌ Role missing
+        if (!decoded?.role) {
+          logoutUser();
+          return;
+        }
 
+        // 🔥 Extract USER ID from token
+        if (decoded?.id) {
+          setUserId(decoded.id);
+          console.log("Authenticated user ID:", decoded.id);
+        } else {
+          console.warn("⚠ Token does NOT contain user ID!");
+        }
         const valid = await isTokenValid(token);
         if (!valid) {
           logoutUser();

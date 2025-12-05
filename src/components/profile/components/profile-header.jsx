@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,16 +37,35 @@ export default function ProfileHeader({
   onSave,
 }) {
   const [tempCoverPhoto, setTempCoverPhoto] = useState(coverPhoto);
+  const [coverPhotoFile, setCoverPhotoFile] = useState(null);
+  const [profileImageFile, setProfileImageFile] = useState(null);
   const [tempProfileImage, setTempProfileImage] = useState(profileImage);
   const [tempName, setTempName] = useState(name);
   const [tempDesignation, setTempDesignation] = useState(designation || title);
   const [tempBio, setTempBio] = useState(bio);
   const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
 
+    // Sync coverPhoto prop on refresh
+  useEffect(() => {
+    if (coverPhoto) setTempCoverPhoto(coverPhoto);
+  }, [coverPhoto]);
+
+  
+  useEffect(() => {
+  if (originalData?.user?.imageData) {
+    const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
+    setTempProfileImage(imgUrl);
+  }
+}, [originalData]);
+
+
   const handleCoverPhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      onCoverPhotoChange?.(file);
+      // onCoverPhotoChange?.(file);
+      // 1. save the actual file object to be sent to the backend
+      setCoverPhotoFile(file);
+
       const reader = new FileReader();
       reader.onloadend = () => {
         setTempCoverPhoto(reader.result);
@@ -58,7 +77,9 @@ export default function ProfileHeader({
   const handleProfileImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      onProfileImageChange?.(file);
+      //onProfileImageChange?.(file);
+      // Save the actual file object
+      setProfileImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setTempProfileImage(reader.result);
@@ -66,6 +87,7 @@ export default function ProfileHeader({
       reader.readAsDataURL(file);
     }
   };
+
   const handleSave = () => {
     console.log("handleSave called", {
       tempName,
@@ -74,24 +96,34 @@ export default function ProfileHeader({
       tempMobileNumber,
       tempCoverPhoto,
       tempProfileImage,
+      coverPhotoFile,
+      profileImageFile,
     }); // <-- Add this
 
-    const coverPhoto = tempCoverPhoto;
-    const profileImage = tempProfileImage;
+    // const coverPhoto = tempCoverPhoto;
+    // const profileImage = tempProfileImage;
+    // Pass the actual File object if it was uploaded, otherwise pass null/undefined
+    const coverPhotoToSave = coverPhotoFile;
+    const profileImageToSave = profileImageFile; // Assuming you do the same for profileImage
 
-    originalData.user.username = tempName
-    originalData.freelancer.designation = tempDesignation
-    originalData.freelancer.bio = tempBio
-    originalData.freelancer.phone = tempMobileNumber
+    originalData.user.username = tempName;
+    originalData.freelancer.designation = tempDesignation;
+    originalData.freelancer.bio = tempBio;
+    originalData.freelancer.phone = tempMobileNumber;
 
     const profileDto = {
       id: originalData.id,
       user: originalData.user,
       client: originalData.client,
       freelancer: originalData.freelancer,
-    }
+    };
+    console.log("profile DTO:", profileDto);
 
-    onSave?.(profileDto, coverPhoto, profileImage);
+    onSave?.(profileDto, profileImageToSave, coverPhotoToSave);
+
+    // Reset file state after successful save attempt
+    setCoverPhotoFile(null);
+    setProfileImageFile(null);
     onEditToggle();
   };
 
@@ -127,25 +159,26 @@ export default function ProfileHeader({
             </Button>
           )}
           {isEditing && (
-            <label className="cursor-pointer">
-              <Button
-                variant="secondary"
-                size="sm"
-                asChild
-                className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
-              >
-                <span>
-                  <Upload className="h-4 w-4" />
-                  Change Cover
-                </span>
-              </Button>
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleCoverPhotoUpload}
-                className="hidden"
-              />
-            </label>
+          <div>
+  <input
+    type="file"
+    accept="image/*"
+    id="coverUploadInput"
+    onChange={handleCoverPhotoUpload}
+    className="hidden"
+  />
+
+  <Button
+    variant="secondary"
+    size="sm"
+    onClick={() => document.getElementById("coverUploadInput").click()}
+    className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
+  >
+    <Upload className="h-4 w-4" />
+    Change Cover
+  </Button>
+</div>
+
           )}
         </div>
       </div>
@@ -164,17 +197,35 @@ export default function ProfileHeader({
               </AvatarFallback>
             </Avatar>
             {isEditing && (
-              <label className="absolute bottom-0 right-0 cursor-pointer">
-                <Button size="sm" className="rounded-full h-8 w-8 p-0">
-                  <Upload className="h-3 w-3" />
-                </Button>
+              // <label className="absolute bottom-0 right-0 cursor-pointer">
+              //   <Button size="sm" className="rounded-full h-8 w-8 p-0">
+              //     <Upload className="h-3 w-3" />
+              //   </Button>
+              //   <input
+              //     type="file"
+              //     accept="image/*"
+              //     onChange={handleProfileImageUpload}
+              //     className="hidden"
+              //   />
+              // </label>
+              <div className="absolute bottom-0 right-0">
                 <input
                   type="file"
                   accept="image/*"
+                  id="profileUploadInput"
                   onChange={handleProfileImageUpload}
                   className="hidden"
                 />
-              </label>
+                
+                <Button
+                  size="sm"
+                  className="rounded-full h-8 w-8 p-0"
+                  onClick={() => document.getElementById("profileUploadInput").click()}
+                >
+                  <Upload className="h-3 w-3" />
+                </Button>
+              </div>
+
             )}
           </div>
 
