@@ -19,6 +19,13 @@ export default function FreelancerProfile() {
   const [isHeaderEditing, setIsHeaderEditing] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
 
+  // ✅ 1. ADD HELPER HERE
+  const getFullUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith("http")) return path; // Supabase link
+    return `https://freelancegobackend.onrender.com/${path}`; // Local fallback
+  };
+
   // ✅ Fetch freelancer profile on mount (runtime)
   useEffect(() => {
     const fetchProfile = async () => {
@@ -35,11 +42,12 @@ export default function FreelancerProfile() {
           withCredentials: true, // ensures cookies (if Spring Security uses JWT/session)
         });
         setData(response.data);
-        if (response.data.freelancerProfile) {
-    setCoverPhoto(response.data.freelancerProfile.bannerUrl);
-    setProfilePhoto(response.data.freelancerProfile.imageUrl);
-  }
-
+        const profile = response.data.freelancerProfile;
+      if (profile) {
+        // ✅ Use the helper here
+        if (profile.bannerUrl) setCoverPhoto(getFullUrl(profile.bannerUrl));
+        // Note: profilePhoto (imageData) is still handled via Base64 in your child component
+      }
       } catch (error) {
         console.error("Error fetching freelancer profile:", error);
       } finally {
@@ -50,7 +58,7 @@ export default function FreelancerProfile() {
     fetchProfile();
   }, [userId]);
 
-  // ✅ Update profile header (Section 1)
+// ✅ Update profile header (Section 1)
 // Update profile header (Section 1)
 const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
   console.log("handleHeaderSave called:", { profileDto, profileImageFile, coverPhotoFile });
@@ -80,8 +88,14 @@ const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) =>
     );
 
     console.log("Header updated successfully:", response.data);
+// ⭐ UPDATE LOCAL UI STATE WITH BACKEND URLs
+const updated = response.data.freelancerProfile;
 
-    // Merge updated data
+if (updated?.bannerUrl) {
+      // ✅ Critical fix: Don't just prepend Render URL
+      setCoverPhoto(getFullUrl(updated.bannerUrl));
+    }
+
     setData((prev) => ({ ...prev, ...response.data }));
 
   } catch (error) {
@@ -207,8 +221,10 @@ const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) =>
       {/* ProfileHeader */}
       <ProfileHeader
         originalData={data}
-        coverPhoto={profileDetails.bannerUrl}
-        profileImage={data.user?.imageData}
+        coverPhoto={coverPhoto}
+        profileImage={profilePhoto}
+        // coverPhoto={profileDetails.bannerUrl}
+        // profileImage={data.user?.imageData}
         //profileImage={data.profileImage}
         //profileImage = {data.user.imageData}
         name={data.user.username}
@@ -234,7 +250,7 @@ const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) =>
       {/* Portfolio Section */}
       <PortfolioSection
         // isFreelancer={true}
-        //portfolio={data.portfolio || []}
+        // portfolio={data.portfolio || []}
         portfolioItems={data.portfolioItems || []}
         onSave={handlePortfolioSave}
       />

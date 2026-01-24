@@ -46,9 +46,11 @@ export default function ProfileHeader({
   const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
 
     // Sync coverPhoto prop on refresh
-  useEffect(() => {
-    if (coverPhoto) setTempCoverPhoto(coverPhoto);
-  }, [coverPhoto]);
+useEffect(() => {
+  if (coverPhoto && !coverPhotoFile) {
+    setTempCoverPhoto(coverPhoto);   // show backend URL after refresh
+  }
+}, [coverPhoto, coverPhotoFile]);
 
   
   useEffect(() => {
@@ -122,8 +124,8 @@ export default function ProfileHeader({
     onSave?.(profileDto, profileImageToSave, coverPhotoToSave);
 
     // Reset file state after successful save attempt
-    setCoverPhotoFile(null);
-    setProfileImageFile(null);
+    // setCoverPhotoFile(null);
+    // setProfileImageFile(null);
     onEditToggle();
   };
 
@@ -189,7 +191,16 @@ export default function ProfileHeader({
           {/* Profile Image */}
           <div className="relative flex-shrink-0">
             <Avatar className="h-28 w-28 border-4 border-card shadow-md bg-card -mt-20">
-              <AvatarImage src={tempProfileImage || "/placeholder.svg"} />
+              <AvatarImage
+  src={
+    tempProfileImage ||   // 1. Show the locally uploaded preview first
+    profileImage ||       // 2. Show the backend URL passed from parent
+    (originalData?.user?.imageData
+      ? `data:image/jpeg;base64,${originalData.user.imageData}` // 3. Base64 fallback
+      : "/placeholder.svg") // 4. Final placeholder
+  }
+/>
+
               <AvatarFallback className="text-lg">
                 {name && typeof name === "string" && name.length > 0
                   ? name.charAt(0).toUpperCase()
