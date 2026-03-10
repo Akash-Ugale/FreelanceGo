@@ -1,101 +1,122 @@
-"use client"
-import { useState, useEffect } from "react"
-import ProfileHeader from "./components/profile-header"
-import SocialLinksSection from "./components/social-links-section"
-import { apiClient } from "@/api/AxiosServiceApi"
-export default function ClientProfile() {
-  const [data, setData] = useState(null)
-  const [activeProjects, setActiveProjects] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [isHeaderEditing, setIsHeaderEditing] = useState(false)
-  const [isViewOnly, setIsViewOnly] = useState(false)
+"use client";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/context/AuthContext";
+import ProfileHeader from "./components/profile-header";
+import SocialLinksSection from "./components/social-links-section";
+import { apiClient } from "@/api/AxiosServiceApi";
+import { toast } from "sonner";
 
-  // ✅ Fetch client profile and active projects from backend
+export default function ClientProfile() {
+  const { userId } = useAuth();
+  const [data, setData] = useState(null);
+  const [activeProjects, setActiveProjects] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isHeaderEditing, setIsHeaderEditing] = useState(false);
+  const [isViewOnly, setIsViewOnly] = useState(false);
+
   useEffect(() => {
     const fetchClientData = async () => {
+      // ✅ Guard clause: Wait until userId is available from AuthContext
+      if (!userId) return;
+
       try {
-        // 1️⃣ Fetch client profile
-        const profileRes = await apiClient.get("/api/get-profile/6", {
-          credentials: "include",
-        })
-        if (!profileRes.ok) throw new Error("Failed to fetch profile data")
-        const profileData = await profileRes.json()
-        setData(profileData)
+        setLoading(true);
 
-        // 2️⃣ Fetch active projects
-        const projectsRes = await fetch("/api/profile/update-section-three-for-client", {
-          credentials: "include",
-        })
-        if (!projectsRes.ok) throw new Error("Failed to fetch active projects")
-        const projectsData = await projectsRes.json()
-        setActiveProjects(projectsData)
+        // 1️⃣ Fetch client profile (Matches @GetMapping("/get-profile/{id}"))
+        const profileRes = await apiClient.get(`/api/get-profile/${userId}`, {
+          withCredentials: true,
+        });
+        setData(profileRes.data);
+
+        // 2️⃣ Fetch analytics/projects (Matches corrected @GetMapping("/profile/get-client-analytics/{userId}"))
+        // We use the new userId variable path the backend dev fixed
+        const projectsRes = await apiClient.get(`/api/profile/get-client-analytics/${userId}`, {
+          withCredentials: true,
+        });
+        setActiveProjects(projectsRes.data);
+
       } catch (error) {
-        console.error("Error fetching client profile:", error)
+        console.error("Error fetching client profile:", error);
+        toast.error("Failed to load profile data");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
-    fetchClientData()
-  }, [])
+    fetchClientData();
+  }, [userId]);
 
-  // ✅ Handle header update (Section One)
-  const handleHeaderSave = async (headerData) => {
+  const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
     try {
-      const formData = new FormData()
+      const formData = new FormData();
+      
+      // We send the whole DTO as a Blob so the backend can parse it as @RequestPart("profile")
       formData.append(
         "profile",
-        new Blob([JSON.stringify(headerData)], { type: "application/json" })
-      )
-      if (headerData.profileImage) formData.append("profileImage", headerData.profileImage)
-      if (headerData.coverPhoto) formData.append("coverPhoto", headerData.coverPhoto)
+        new Blob([JSON.stringify(profileDto)], { type: "application/json" })
+      );
+      
+      if (profileImageFile) formData.append("profileImage", profileImageFile);
+      if (coverPhotoFile) formData.append("coverPhoto", coverPhotoFile);
 
-      const res = await fetch("/api/profile/update-client-profile", {
-        method: "POST",
-        body: formData,
-        credentials: "include",
-      })
-      if (!res.ok) throw new Error("Failed to update profile header")
-      const updatedData = await res.json()
-      setData(updatedData)
+      const res = await apiClient.post("/api/profile/update-client-profile", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      });
+
+      setData(res.data); // Update state with the fresh object from backend
+      setIsHeaderEditing(false);
+      toast.success("Profile updated successfully!");
     } catch (error) {
-      console.error("Error updating client header:", error)
+      console.error("Error updating client profile:", error);
+      toast.error("Update failed. Please check your connection.");
     }
-  }
-
-  // ✅ Handle social links update (Section Two)
+  };
+  
   const handleSocialLinksSave = async (socialData) => {
-    try {
-      const res = await fetch("/api/profile/update-client-social-links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(socialData),
-        credentials: "include",
-      })
-      if (!res.ok) throw new Error("Failed to update social links")
-      const updatedData = await res.json()
-      setData((prev) => ({ ...prev, ...updatedData }))
-    } catch (error) {
-      console.error("Error updating social links:", error)
-    }
-  }
+  try {
+    // Construct the payload to match ProfileDto
+    const payload = {
+      ...data,
+      clientProfile: {
+        ...data.clientProfile,
+        linkedinUrl: socialData.linkedinUrl,
+        githubUrl: socialData.githubUrl,
+      },
+      client: {
+        ...data.client,
+        companyUrl: socialData.portfolioUrl, // Mapping "portfolioUrl" from UI to "companyUrl" for backend
+      }
+    };
 
-  if (loading) return <p className="text-center text-gray-500">Loading profile...</p>
-  if (!data) return <p className="text-center text-red-500">No client data found.</p>
+    const res = await apiClient.post("/api/profile/update-client-social-links", payload, {
+      withCredentials: true,
+    });
+    
+    setData(res.data);
+    toast.success("Links updated!");
+  } catch (error) {
+    console.error("Error updating social links:", error);
+    toast.error("Failed to update links");
+  }
+};
+
+  if (loading) return <p className="text-center py-10 text-gray-500">Loading profile...</p>;
+  if (!data) return <p className="text-center py-10 text-red-500">No client data found.</p>;
 
   return (
-    <div className="space-y-6">
-      {/* Profile Header */}
+    <div className="space-y-6 max-w-5xl mx-auto p-4">
       <ProfileHeader
-        coverPhoto={data.coverPhoto}
-        profileImage={data.profileImage}
-        name={data.name || data.companyName}
-        title={data.designation}
-        designation={data.designation}
-        location={data.location || "Not specified"}
-        rating={data.rating || 4.9}
-        bio={data.bio}
-        mobileNumber={data.mobileNumber}
+        originalData={data}
+        coverPhoto={data.clientProfile?.bannerUrl}
+        profileImage={data.clientProfile?.profileImageUrl}
+        // Accessing username via userDto as per your backend JSON structure
+        name={data.userDto?.username || data.client?.companyName}
+        designation={data.client?.designation || "Client"}
+        location={data.clientProfile?.location }
+        rating={data.clientProfile?.rating || 0}
+        bio={data.client?.bio}
+        mobileNumber={data.client?.phone}
         isEditing={isHeaderEditing}
         onEditToggle={() => setIsHeaderEditing(!isHeaderEditing)}
         isViewOnly={isViewOnly}
@@ -103,25 +124,36 @@ export default function ClientProfile() {
         onSave={handleHeaderSave}
       />
 
-      {/* Social Links Section */}
-      <SocialLinksSection data={data} onSave={handleSocialLinksSave} />
+      <SocialLinksSection 
+  freelancerProfile={data.clientProfile} // Reusing the prop name, but passing client data
+  portfolioUrl={data.client?.companyUrl} // Clients use companyUrl
+  onSave={handleSocialLinksSave} 
+/>
 
-      {/* Active Projects */}
-      <div className="p-4 border rounded-lg shadow-sm bg-white">
-        <h2 className="text-lg font-semibold mb-3">Active Projects</h2>
-        {activeProjects.length > 0 ? (
-          <ul className="space-y-2">
-            {activeProjects.map((project, index) => (
-              <li key={index} className="p-3 border rounded-md">
-                <h3 className="font-medium">{project.title}</h3>
-                <p className="text-sm text-gray-600">{project.description}</p>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-gray-500">No active projects found.</p>
-        )}
-      </div>
+      {/* Updated Active Projects Section */}
+<div className="p-6 border border-gray-800 rounded-xl shadow-sm bg-[#0f172a]"> 
+  <h2 className="text-xl font-bold mb-4 text-white">Active Projects</h2>
+  
+  {activeProjects && activeProjects.length > 0 ? (
+    <ul className="grid gap-4">
+      {activeProjects.map((project) => (
+        <li key={project.id} className="p-4 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors bg-[#1e293b]">
+          <h3 className="font-semibold text-lg text-white">{project.title}</h3>
+          <p className="text-sm text-gray-400 mt-1">{project.description}</p>
+          {project.budget && (
+            <span className="text-xs font-bold text-green-400 mt-2 block">
+              Budget: ${project.budget}
+            </span>
+          )}
+        </li>
+      ))}
+    </ul>
+  ) : (
+    <div className="text-center py-6 bg-[#1e293b] rounded-lg">
+      <p className="text-sm text-gray-400">No active projects found.</p>
     </div>
-  )
+  )}
+</div>
+    </div>
+  );
 }

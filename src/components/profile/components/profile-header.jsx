@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useState,useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -44,22 +44,30 @@ export default function ProfileHeader({
   const [tempDesignation, setTempDesignation] = useState(designation || title);
   const [tempBio, setTempBio] = useState(bio);
   const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
+  const [tempLocation, setTempLocation] = useState(location || "");
 
-    // Sync coverPhoto prop on refresh
-useEffect(() => {
-  if (coverPhoto && !coverPhotoFile) {
-    setTempCoverPhoto(coverPhoto);   // show backend URL after refresh
-  }
-}, [coverPhoto, coverPhotoFile]);
-
-  
+  // Sync coverPhoto prop on refresh
   useEffect(() => {
-  if (originalData?.user?.imageData) {
-    const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
-    setTempProfileImage(imgUrl);
-  }
-}, [originalData]);
+    if (coverPhoto && !coverPhotoFile) {
+      setTempCoverPhoto(coverPhoto); // show backend URL after refresh
+    }
+  }, [coverPhoto, coverPhotoFile]);
 
+  useEffect(() => {
+  // If we have a location from the backend, sync it.
+  // If the backend sends null, we keep whatever is in tempLocation or default to empty string.
+  if (location !== undefined && location !== null) {
+    setTempLocation(location);
+  }
+}, [location]);
+ 
+
+  useEffect(() => {
+    if (originalData?.user?.imageData) {
+      const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
+      setTempProfileImage(imgUrl);
+    }
+  }, [originalData]);
 
   const handleCoverPhotoUpload = (e) => {
     const file = e.target.files?.[0];
@@ -90,45 +98,57 @@ useEffect(() => {
     }
   };
 
-  const handleSave = () => {
-    console.log("handleSave called", {
-      tempName,
-      tempDesignation,
-      tempBio,
-      tempMobileNumber,
-      tempCoverPhoto,
-      tempProfileImage,
-      coverPhotoFile,
-      profileImageFile,
-    }); // <-- Add this
+  // Inside ProfileHeader.jsx
+const handleSave = () => {
+    const isClientRole = !!originalData.client;
+    const userKey = originalData.userDto ? "userDto" : "user";
 
-    // const coverPhoto = tempCoverPhoto;
-    // const profileImage = tempProfileImage;
-    // Pass the actual File object if it was uploaded, otherwise pass null/undefined
-    const coverPhotoToSave = coverPhotoFile;
-    const profileImageToSave = profileImageFile; // Assuming you do the same for profileImage
+    // 1. Update User Info
+    const updatedUser = {
+      ...(originalData[userKey] || {}),
+      username: tempName,
+    };
 
-    originalData.user.username = tempName;
-    originalData.freelancer.designation = tempDesignation;
-    originalData.freelancer.bio = tempBio;
-    originalData.freelancer.phone = tempMobileNumber;
+    // 2. Prepare Profile Objects - CRITICAL: We MUST preserve existing fields (ID, Banner, etc.)
+    // Otherwise, the Backend creates a NEW record instead of updating the existing one.
+    let updatedFreelancer = { ...originalData.freelancer };
+    let updatedFreelancerProfile = { ...(originalData.freelancerProfile || {}) };
+    let updatedClient = { ...originalData.client };
+    let updatedClientProfile = { ...(originalData.clientProfile || {}) };
 
+    if (isClientRole) {
+      updatedClient = {
+        ...updatedClient,
+        companyName: tempName,
+        bio: tempBio,
+        phone: tempMobileNumber,
+      };
+      // Explicitly update location for Client
+      updatedClientProfile.location = tempLocation;
+    } else {
+      updatedFreelancer = {
+        ...updatedFreelancer,
+        designation: tempDesignation,
+        bio: tempBio,
+        phone: tempMobileNumber,
+      };
+      // Explicitly update location for Freelancer
+      updatedFreelancerProfile.location = tempLocation;
+    }
+
+    // 3. Construct DTO
     const profileDto = {
       id: originalData.id,
-      user: originalData.user,
-      client: originalData.client,
-      freelancer: originalData.freelancer,
+      [userKey]: updatedUser,
+      client: updatedClient,
+      freelancer: updatedFreelancer,
+      freelancerProfile: updatedFreelancerProfile, // Now contains location + existing data
+      clientProfile: updatedClientProfile,         // Now contains location + existing data
     };
-    console.log("profile DTO:", profileDto);
 
-    onSave?.(profileDto, profileImageToSave, coverPhotoToSave);
-
-    // Reset file state after successful save attempt
-    // setCoverPhotoFile(null);
-    // setProfileImageFile(null);
+    onSave?.(profileDto, profileImageFile, coverPhotoFile);
     onEditToggle();
   };
-
   return (
     <div className="bg-card rounded-lg overflow-hidden shadow-md border border-border mb-4">
       {/* Cover Photo Section */}
@@ -161,26 +181,27 @@ useEffect(() => {
             </Button>
           )}
           {isEditing && (
-          <div>
-  <input
-    type="file"
-    accept="image/*"
-    id="coverUploadInput"
-    onChange={handleCoverPhotoUpload}
-    className="hidden"
-  />
+            <div>
+              <input
+                type="file"
+                accept="image/*"
+                id="coverUploadInput"
+                onChange={handleCoverPhotoUpload}
+                className="hidden"
+              />
 
-  <Button
-    variant="secondary"
-    size="sm"
-    onClick={() => document.getElementById("coverUploadInput").click()}
-    className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
-  >
-    <Upload className="h-4 w-4" />
-    Change Cover
-  </Button>
-</div>
-
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  document.getElementById("coverUploadInput").click()
+                }
+                className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
+              >
+                <Upload className="h-4 w-4" />
+                Change Cover
+              </Button>
+            </div>
           )}
         </div>
       </div>
@@ -192,14 +213,14 @@ useEffect(() => {
           <div className="relative flex-shrink-0">
             <Avatar className="h-28 w-28 border-4 border-card shadow-md bg-card -mt-20">
               <AvatarImage
-  src={
-    tempProfileImage ||   // 1. Show the locally uploaded preview first
-    profileImage ||       // 2. Show the backend URL passed from parent
-    (originalData?.user?.imageData
-      ? `data:image/jpeg;base64,${originalData.user.imageData}` // 3. Base64 fallback
-      : "/placeholder.svg") // 4. Final placeholder
-  }
-/>
+                src={
+                  tempProfileImage || // 1. Show the locally uploaded preview first
+                  profileImage || // 2. Show the backend URL passed from parent
+                  (originalData?.user?.imageData
+                    ? `data:image/jpeg;base64,${originalData.user.imageData}` // 3. Base64 fallback
+                    : "/placeholder.svg") // 4. Final placeholder
+                }
+              />
 
               <AvatarFallback className="text-lg">
                 {name && typeof name === "string" && name.length > 0
@@ -227,71 +248,89 @@ useEffect(() => {
                   onChange={handleProfileImageUpload}
                   className="hidden"
                 />
-                
+
                 <Button
                   size="sm"
                   className="rounded-full h-8 w-8 p-0"
-                  onClick={() => document.getElementById("profileUploadInput").click()}
+                  onClick={() =>
+                    document.getElementById("profileUploadInput").click()
+                  }
                 >
                   <Upload className="h-3 w-3" />
                 </Button>
               </div>
-
             )}
           </div>
 
+       
           {/* Name, Title, and Action Buttons */}
           <div className="flex-1 flex flex-col justify-between">
             {isEditing ? (
               <div className="space-y-2 flex-1">
-                <Input
-                  value={tempName}
-                  onChange={(e) => setTempName(e.target.value)}
-                  placeholder="Your name"
-                  className="font-bold text-lg h-8"
-                />
+                {/* Inside Editing Mode */}
+<Input
+  value={tempName}
+  onChange={(e) => setTempName(e.target.value)}
+  placeholder={originalData.client ? "Company Name" : "Your Name"}
+  className="font-bold text-lg h-8"
+/>
                 <Input
                   value={tempDesignation}
                   onChange={(e) => setTempDesignation(e.target.value)}
                   placeholder="Designation/Title"
                   className="text-sm h-8"
                 />
+                {/* ✅ New Location Text Box for Editing */}
+                <div className="relative">
+                  <MapPin className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    value={tempLocation}
+                    onChange={(e) => setTempLocation(e.target.value)}
+                    placeholder="Add location (e.g. New York, USA)"
+                    className="text-sm h-8 pl-7 focus-visible:ring-primary"
+                  />
+                </div>
               </div>
             ) : (
               <div>
-                <h1 className="text-2xl font-bold text-foreground">{name}</h1>
-                <p className="text-base font-medium text-primary">
-                  {designation || title}
-                </p>
+                {/* Inside View Mode */}
+<h1 className="text-2xl font-bold text-foreground">
+  {tempName || name} 
+</h1>
+<p className="text-base font-medium text-primary">
+  {originalData.client ? "Client / Employer" : (designation || title)}
+</p>
+
+                {/* ✅ Location and Rating Display (View Mode) */}
+                <div className="flex items-center gap-4 mt-2 text-sm">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {/* Shows saved location or placeholder if it's the first time */}
+                    {  location || tempLocation || (
+                      <span className="italic opacity-60">No location set</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    <div className="flex gap-0.5">
+                      {[...Array(5)].map((_, i) => (
+                        <Star
+                          key={i}
+                          className={`h-3.5 w-3.5 ${
+                            i < Math.floor(rating)
+                              ? "fill-accent text-accent"
+                              : "text-muted"
+                          }`}
+                        />
+                      ))}
+                    </div>
+                    <span className="font-medium text-foreground">
+                      {rating?.toFixed(1)}
+                    </span>
+                  </div>
+                </div>
               </div>
             )}
-
-            {/* Rating and Location */}
-            <div className="flex items-center gap-4 text-sm">
-              {location && (
-                <div className="flex items-center gap-1 text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {location}
-                </div>
-              )}
-              <div className="flex items-center gap-1.5">
-                <div className="flex gap-0.5">
-                  {[...Array(5)].map((_, i) => (
-                    <Star
-                      key={i}
-                      className={`h-3.5 w-3.5 ${
-                        i < Math.floor(rating)
-                          ? "fill-accent text-accent"
-                          : "text-muted"
-                      }`}
-                    />
-                  ))}
-                </div>
-                <span className="font-medium text-foreground">
-                  {rating?.toFixed(1)}
-                </span>
-              </div>
-            </div>
           </div>
 
           {/* Edit/Save Button */}

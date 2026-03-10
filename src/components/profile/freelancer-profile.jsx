@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import axios from "axios";
 import { useAuth } from "@/context/AuthContext";
 import ProfileHeader from "./components/profile-header";
 import SocialLinksSection from "./components/social-links-section";
@@ -8,10 +7,10 @@ import PortfolioSection from "./components/portfolio-section";
 import CertificationsSection from "./components/certifications-section";
 import BankDetailsSection from "./components/bank-details-section";
 import { apiClient } from "@/api/AxiosServiceApi";
+import { toast } from "sonner";
 
 export default function FreelancerProfile() {
-
-  const {userId} = useAuth()
+  const { userId } = useAuth();
   const [coverPhoto, setCoverPhoto] = useState(null);
   const [profilePhoto, setProfilePhoto] = useState(null);
   const [data, setData] = useState(null);
@@ -19,219 +18,206 @@ export default function FreelancerProfile() {
   const [isHeaderEditing, setIsHeaderEditing] = useState(false);
   const [isViewOnly, setIsViewOnly] = useState(false);
 
-  // ✅ 1. ADD HELPER HERE
+  const [isSaving, setIsSaving] = useState(false);
+
   const getFullUrl = (path) => {
     if (!path) return null;
-    if (path.startsWith("http")) return path; // Supabase link
-    return `https://freelancegobackend.onrender.com/${path}`; // Local fallback
+    if (path.startsWith("http")) return path;
+    return `https://freelancegobackend.onrender.com/${path}`;
   };
 
-  // ✅ Fetch freelancer profile on mount (runtime)
   useEffect(() => {
     const fetchProfile = async () => {
-      if (!userId) {
-      console.warn("❌ No userId found. Cannot fetch profile.");
-      return;
-    }
+      if (!userId) return;
       try {
-        console.log("Logged in userId:",userId);
-        console.log("User Id",userId, typeof userId);
-        // Use token-based or session-based authentication — no hardcoded userId
         const response = await apiClient.get(`/api/get-profile/${userId}`, {
- 
-          withCredentials: true, // ensures cookies (if Spring Security uses JWT/session)
+          withCredentials: true,
         });
         setData(response.data);
         const profile = response.data.freelancerProfile;
-      if (profile) {
-        // ✅ Use the helper here
-        if (profile.bannerUrl) setCoverPhoto(getFullUrl(profile.bannerUrl));
-        // Note: profilePhoto (imageData) is still handled via Base64 in your child component
-      }
+        if (profile?.bannerUrl) setCoverPhoto(getFullUrl(profile.bannerUrl));
       } catch (error) {
         console.error("Error fetching freelancer profile:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchProfile();
   }, [userId]);
 
-// ✅ Update profile header (Section 1)
-// Update profile header (Section 1)
-const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
-  console.log("handleHeaderSave called:", { profileDto, profileImageFile, coverPhotoFile });
+  const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
+    try {
+      const formData = new FormData();
+      formData.append("profile", new Blob([JSON.stringify(profileDto)], { type: "application/json" }));
+      if (profileImageFile) formData.append("profileImage", profileImageFile);
+      if (coverPhotoFile) formData.append("coverPhoto", coverPhotoFile);
 
-  try {
-    const formData = new FormData();
-
-    // Append JSON as Blob
-    formData.append("profile", new Blob([JSON.stringify(profileDto)], { type: "application/json" }));
-
-    // Append files if uploaded
-    if (profileImageFile) formData.append("profileImage", profileImageFile);
-    if (coverPhotoFile) formData.append("coverPhoto", coverPhotoFile);
-
-    // Debug: log FormData entries
-    for (const pair of formData.entries()) {
-      console.log("FormData:", pair[0], pair[1]);
-    }
-
-    const response = await apiClient.post(
-      "/api/profile/update-freelancer-profile",
-      formData,
-      {
+      const response = await apiClient.post("/api/profile/update-freelancer-profile", formData, {
         headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true,
-      }
-    );
+      });
 
-    console.log("Header updated successfully:", response.data);
-// ⭐ UPDATE LOCAL UI STATE WITH BACKEND URLs
-const updated = response.data.freelancerProfile;
+      const updated = response.data.freelancerProfile;
+      if (updated?.bannerUrl) setCoverPhoto(getFullUrl(updated.bannerUrl));
+      setData((prev) => ({ ...prev, ...response.data }));
+      toast.success("Header updated!");
+    } catch (error) {
+      console.error("Error updating header:", error);
+      toast.error("Header update failed");
+    }
+  };
 
-if (updated?.bannerUrl) {
-      // ✅ Critical fix: Don't just prepend Render URL
-      setCoverPhoto(getFullUrl(updated.bannerUrl));
+  const handleSocialLinksSave = async (updatedSocialFields) => {
+    try {
+      const payload = {
+        ...data,
+        freelancerProfile: {
+          ...data?.freelancerProfile,
+          linkedinUrl: updatedSocialFields.linkedinUrl,
+          githubUrl: updatedSocialFields.githubUrl,
+        },
+        freelancer: {
+          ...data?.freelancer,
+          portfolioUrl: updatedSocialFields.portfolioUrl,
+        }
+      };
+      const response = await apiClient.post("/api/profile/update-freelancer-social-links", payload, { withCredentials: true });
+      setData(response.data);
+      toast.success("Links updated!");
+    } catch (error) {
+      toast.error("Failed to update links.");
+    }
+  };
+
+ // --- PORTFOLIO HANDLERS ---
+const handlePortfolioSave = async (item) => {
+  if (isSaving) return;
+  try {
+    setIsSaving(true);
+    const formData = new FormData();
+    
+    // Construct DTO - if ID contains 'temp', it's a new item, so send null
+    const portfolioDto = {
+      id: item.id?.toString().includes('temp') ? null : item.id,
+      title: item.title,
+      description: item.description,
+      portfolioUrl: item.portfolioUrl,
+    };
+
+    formData.append("portfolio", new Blob([JSON.stringify(portfolioDto)], { type: "application/json" }));
+
+    // Only upload the image if it's a new local file (Data URL)
+    if (item.image && item.image.startsWith('data:')) {
+      const res = await fetch(item.image);
+      const blob = await res.blob();
+      formData.append("portfolio-image", blob, `project_${Date.now()}.png`);
     }
 
-    setData((prev) => ({ ...prev, ...response.data }));
+    // Determine URL based on presence of real ID
+    const url = portfolioDto.id 
+      ? "/api/profile/update-freelancer-portfolio" 
+      : "/api/profile/create-freelancer-portfolio";
 
+    const response = await apiClient.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true,
+    });
+
+    setData(response.data); // Refresh profile with server data
+    toast.success(portfolioDto.id ? "Project updated!" : "Project created!");
   } catch (error) {
-    console.error("Error updating header section:", error);
+    toast.error("Error saving portfolio item");
+  } finally {
+    setIsSaving(false);
   }
 };
 
+const handlePortfolioDelete = async (id) => {
+  if (id?.toString().includes('temp')) return; // Just a local UI item
+  try {
+    await apiClient.delete(`/api/profile/delete-freelancer-portfolio/${id}`, { withCredentials: true });
+    // Manually filter out from state for immediate UI feedback
+    setData(prev => ({
+      ...prev,
+      freelancerPortfolioDetails: prev.freelancerPortfolioDetails.filter(p => p.id !== id)
+    }));
+    toast.success("Project deleted");
+  } catch (error) {
+    toast.error("Failed to delete project");
+  }
+};
 
-  // ✅ Update social links (Section 2)
-  const handleSocialLinksSave = async (socialData) => {
-    if (!data || !data.user || !data.user.id) {
-      console.error("❌ User ID not found in profile data.");
-      return;
+// --- CERTIFICATION HANDLERS ---
+const handleCertificationsSave = async (cert) => {
+  try {
+    const formData = new FormData();
+    const certDto = {
+      id: cert.id?.toString().includes('temp') ? null : cert.id,
+      certificateName: cert.certificateName,
+      provider: cert.provider
+    };
+
+    formData.append("certificate", new Blob([JSON.stringify(certDto)], { type: "application/json" }));
+    
+    // --- ADDED/UPDATED LOGIC HERE ---
+    if (cert.file) {
+        // If it's a raw File object from the input
+        formData.append("certification-image", cert.file);
+    } else if (cert.certificateImage && cert.certificateImage.startsWith('data:')) {
+        // If it's a base64 string from the preview (crucial for rendering)
+        const res = await fetch(cert.certificateImage);
+        const blob = await res.blob();
+        formData.append("certification-image", blob, `cert_${Date.now()}.png`);
     }
+    // --------------------------------
 
-    try {
-      const payload = {
-        user: { id: data.user.id }, // ✅ dynamically fetched from runtime data
-        socialLinks: socialData, // ✅ your social links array
-      };
+    const url = certDto.id 
+      ? "/api/profile/update-freelancer-certification" 
+      : "/api/profile/create-freelancer-certification";
 
-      console.log("🔹 Sending social links payload:", payload);
+    const response = await apiClient.post(url, formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true,
+    });
+    
+    setData(response.data);
+    toast.success("Certification saved!");
+  } catch (error) {
+    console.error("Cert save error:", error);
+    toast.error("Failed to save certification");
+  }
+};
 
-      const response = await apiClient.post(
-        "/api/profile/update-freelancer-social-links",
-        payload,
-        { withCredentials: true }
-      );
-
-      console.log("✅ Social links updated successfully:", response.data);
-
-      setData((prev) => ({ ...prev, ...response.data }));
-    } catch (error) {
-      console.error("❌ Error updating social links:", error);
-    }
-  };
-
-  // // ✅ Update portfolio (Section 3)
-  // const handlePortfolioSave = async (portfolioData, imageFile, portfolioFile) => {
-  //   try {
-  //     const formData = new FormData()
-  //     formData.append("profile", new Blob([JSON.stringify(portfolioData)], { type: "application/json" }))
-  //     if (imageFile) formData.append("portfolio-section", imageFile)
-  //     if (portfolioFile) formData.append("portfolio-section", portfolioFile)
-
-  //     const response = await apiClient.post("/api/profile/update-freelancer-portfolio", formData, {
-  //       headers: { "Content-Type": "multipart/form-data" },
-  //       withCredentials: true,
-  //     })
-
-  //     setData((prev) => ({ ...prev, ...response.data }))
-  //   } catch (error) {
-  //     console.error("Error updating portfolio section:", error)
-  //   }
-  // }
-
-  const handlePortfolioSave = async (portfolioItems) => {
-    console.log("Saving portfolio:", portfolioItems);
-
-    try {
-      const res = await apiClient.post(
-        "https://freelancegobackend.onrender.com/api/profile/update-freelancer-portfolio",
-        { portfolioItems },
-        { withCredentials: true }
-      );
-
-      console.log("Portfolio updated:", res.data);
-      toast.success("Portfolio updated successfully!");
-    } catch (err) {
-      console.error("Error updating portfolio:", err);
-      toast.error("Failed to update portfolio!");
-    }
-  };
-
-  // certification section
-  const handleCertificationsSave = async (certData) => {
-    try {
-      for (const cert of certData.certifications) {
-        const formData = new FormData();
-
-        // Add main profile JSON for this certification
-        formData.append(
-          "profile",
-          new Blob([JSON.stringify(certData)], { type: "application/json" })
-        );
-
-        // ✅ Add certificate file if uploaded
-        if (cert.file) {
-          formData.append("certification-section", cert.file);
-        }
-
-        // Call backend once per certification
-        const response = await apiClient.post(
-          "/api/profile/update-freelancer-certification",
-          formData,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-            withCredentials: true,
-          }
-        );
-
-        console.log("Uploaded certification:", response.data);
-        setData((prev) => ({ ...prev, ...response.data }));
-      }
-    } catch (error) {
-      console.error("Error updating certifications section:", error);
-    }
-  };
-
-  // ✅ Update bank details (Optional extra section)
+const handleCertificationDelete = async (id) => {
+  if (id?.toString().includes('temp')) return;
+  try {
+    await apiClient.delete(`/api/profile/delete-freelancer-certification/${id}`, { withCredentials: true });
+    setData(prev => ({
+      ...prev,
+      freelancerCertificationDetails: prev.freelancerCertificationDetails.filter(c => c.id !== id)
+    }));
+    toast.success("Certification deleted");
+  } catch (error) {
+    toast.error("Failed to delete certification");
+  }
+};
   const handleBankDetailsSave = (bankData) => {
     setData((prev) => ({ ...prev, ...bankData }));
   };
 
-  if (loading) return <p>Loading profile...</p>;
-  if (!data) return <p>No profile data found.</p>;
-
-  // Before the return statement, define the nested data source:
-  const profileDetails = data.freelancerProfile || {};
+  if (loading) return <div className="p-8 text-center">Loading profile...</div>;
+  if (!data) return <div className="p-8 text-center">No profile data found.</div>;
 
   return (
-    <div className="space-y-4">
-      {/* ProfileHeader */}
+    <div className="space-y-4 max-w-5xl mx-auto p-4">
       <ProfileHeader
         originalData={data}
         coverPhoto={coverPhoto}
         profileImage={profilePhoto}
-        // coverPhoto={profileDetails.bannerUrl}
-        // profileImage={data.user?.imageData}
-        //profileImage={data.profileImage}
-        //profileImage = {data.user.imageData}
         name={data.user.username}
-        //title={data.designation}
         designation={data.freelancer?.designation}
-        location={profileDetails.location || "Unknown"}
-        rating={profileDetails.rating || 0}
+        location={data.freelancerProfile?.location || ""}
+        rating={data.freelancerProfile?.rating || 0}
         bio={data.freelancer?.bio}
         mobileNumber={data.freelancer?.phone}
         isEditing={isHeaderEditing}
@@ -241,27 +227,26 @@ if (updated?.bannerUrl) {
         onSave={handleHeaderSave}
       />
 
-      {/* Social Links */}
       <SocialLinksSection
-        socialLinks={data.socialLinks || []}
+        freelancerProfile={data.freelancerProfile}
+        portfolioUrl={data?.freelancer?.portfolioUrl}
         onSave={handleSocialLinksSave}
       />
 
-      {/* Portfolio Section */}
-      <PortfolioSection
-        // isFreelancer={true}
-        // portfolio={data.portfolio || []}
-        portfolioItems={data.portfolioItems || []}
-        onSave={handlePortfolioSave}
-      />
+<PortfolioSection
+  portfolioItems={data.freelancerPortfolioDetails || []} 
+  onSave={handlePortfolioSave}
+  onDelete={handlePortfolioDelete}
+  isSaving={isSaving}
+/>
 
-      <CertificationsSection
-        certifications={data.freelancerCertificationDetails || []}
-        userId={data.user.id} // ✅ Pass it here
-        onSave={handleCertificationsSave}
-      />
+<CertificationsSection
+  certifications={data.freelancerCertificationDetails || []}
+  onSave={handleCertificationsSave}
+  onDelete={handleCertificationDelete}
+  userId={data.user.id}
+/>
 
-      {/* Bank Details Section */}
       <BankDetailsSection
         accountNumber={data.accountNumber}
         ifscCode={data.ifscCode}
