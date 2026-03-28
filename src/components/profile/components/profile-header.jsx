@@ -54,6 +54,7 @@ export default function ProfileHeader({
   }, [coverPhoto, coverPhotoFile]);
 
   useEffect(() => {
+<<<<<<< Updated upstream
   // If we have a location from the backend, sync it.
   // If the backend sends null, we keep whatever is in tempLocation or default to empty string.
   if (location !== undefined && location !== null) {
@@ -63,6 +64,8 @@ export default function ProfileHeader({
  
 
   useEffect(() => {
+=======
+>>>>>>> Stashed changes
     if (originalData?.user?.imageData) {
       const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
       setTempProfileImage(imgUrl);

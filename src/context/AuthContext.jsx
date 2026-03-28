@@ -1,7 +1,6 @@
 import { apiClient } from "@/api/AxiosServiceApi";
 import { jwtDecode } from "jwt-decode";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
-import { string } from "yup";
 
 const AuthContext = createContext(undefined);
 
@@ -58,7 +57,7 @@ export default function AuthContextProvider({ children }) {
           logoutUser();
           return;
         }
-        // ❌ Role missing
+
         if (!decoded?.role) {
           logoutUser();
           return;
