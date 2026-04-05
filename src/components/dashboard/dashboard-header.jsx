@@ -14,7 +14,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuth } from "@/context/AuthContext";
 import { userRoles } from "@/utils/constants";
 import {
-  Bell,
   CirclePower,
   HelpCircle,
   LogOut,
@@ -39,28 +38,8 @@ import {
 } from "../ui/dialog";
 import DashboardSidebarContent from "./dashboard-sidebar-content";
 
-const notifications = [
-  {
-    title: "New message from Sarah",
-    description: "2 minutes ago",
-    type: "message",
-  },
-  {
-    title: "New project assigned",
-    description: "1 hour ago",
-    type: "project",
-  },
-  {
-    title: "Your payment has been processed",
-    description: "2 hours ago",
-    type: "payment",
-  },
-  {
-    title: "New comment on your post",
-    description: "3 hours ago",
-    type: "comment",
-  },
-];
+// 1. IMPORT THE NEW COMPONENT
+import NotificationDropdown from "./NotificationDropdown"; 
 
 export default function DashboardHeader(props) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -82,7 +61,7 @@ export default function DashboardHeader(props) {
       setUserId(data?.id);
       if (status === 200) {
         setUserData(data);
-        toast.success("Profile details fetched successfully");
+        // toast.success("Profile details fetched successfully"); // Optional: removed to reduce noise
       }
     } catch (error) {
       console.log(error);
@@ -92,7 +71,6 @@ export default function DashboardHeader(props) {
   };
 
   const fetchExistingProfiles = async () => {
-    setLoading(false);
     try {
       const response = await apiClient.get("/api/check-role");
       const { status, data } = response;
@@ -101,8 +79,6 @@ export default function DashboardHeader(props) {
       }
     } catch (error) {
       console.log(error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -125,9 +101,7 @@ export default function DashboardHeader(props) {
       setTheme(storedTheme);
       document.body.classList.toggle("dark", storedTheme === "dark");
     } else {
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)",
-      ).matches;
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
       if (prefersDark) {
         setTheme("dark");
         document.body.classList.add("dark");
@@ -204,48 +178,12 @@ export default function DashboardHeader(props) {
               onClick={toggleTheme}
               className="h-9 w-9 md:h-10 md:w-10"
             >
-              {theme === "dark" ? (
-                <Sun className="h-5 w-5" />
-              ) : (
-                <Moon className="h-5 w-5" />
-              )}
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               <span className="sr-only">Toggle theme</span>
             </Button>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="relative h-9 w-9 md:h-10 md:w-10"
-                >
-                  <Bell className="h-4 w-4 md:h-5 md:w-5" />
-                  <span className="absolute -top-1 -right-1 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center text-white">
-                    3
-                  </span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-[300px]">
-                <DropdownMenuLabel className="text-lg">
-                  Notification Center
-                </DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                {notifications.map((notification, idx) => (
-                  <DropdownMenuItem key={idx}>
-                    <div className="flex gap-2">
-                      <div className="flex flex-col space-y-1 leading-none">
-                        <p className="text-sm font-medium leading-tight">
-                          {notification.title}
-                        </p>
-                        <p className="text-xs leading-snug text-muted-foreground">
-                          {notification.description}
-                        </p>
-                      </div>
-                    </div>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+            {/* 2. REPLACED HARDCODED DROPDOWN WITH THE DYNAMIC COMPONENT */}
+            <NotificationDropdown />
 
             <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
               <DropdownMenuTrigger asChild>
@@ -254,12 +192,13 @@ export default function DashboardHeader(props) {
                   className="relative h-9 w-9 md:h-10 md:w-10 rounded-full"
                 >
                   <Avatar className="h-9 w-9 md:h-10 md:w-10">
-                    <AvatarImage
-                      src={`data:image/png;base64,${userData?.imageData}`}
-                      alt="Profile"
-                    />
-                    <AvatarFallback>JD</AvatarFallback>
-                  </Avatar>
+  <AvatarImage
+    // Add a check to prevent the "undefined" string
+    src={userData?.imageData ? `data:image/png;base64,${userData.imageData}` : ""} 
+    alt="Profile"
+  />
+  <AvatarFallback>{userData?.username?.charAt(0) || "U"}</AvatarFallback>
+</Avatar>
                 </Button>
               </DropdownMenuTrigger>
 
@@ -269,26 +208,16 @@ export default function DashboardHeader(props) {
                     <div className="grid gap-1">
                       <div
                         className={`flex justify-center rounded-sm text-sm font-semibold ${
-                          userRole === userRoles.FREELANCER
-                            ? "text-primary"
-                            : "text-green-500"
+                          userRole === userRoles.FREELANCER ? "text-primary" : "text-green-500"
                         }`}
                       >
-                        <span>
-                          {userRole === userRoles.FREELANCER
-                            ? "Freelancer"
-                            : "Client"}
-                        </span>
+                        <span>{userRole === userRoles.FREELANCER ? "Freelancer" : "Client"}</span>
                       </div>
 
                       <DropdownMenuSeparator />
                       <section className="space-y-1">
-                        <p className="text-sm font-medium leading-none">
-                          {userData?.username}
-                        </p>
-                        <p className="text-xs leading-none text-muted-foreground">
-                          {userData?.email}
-                        </p>
+                        <p className="text-sm font-medium leading-none">{userData?.username}</p>
+                        <p className="text-xs leading-none text-muted-foreground">{userData?.email}</p>
                       </section>
                     </div>
                   </div>
@@ -301,19 +230,11 @@ export default function DashboardHeader(props) {
                   </Link>
                 </DropdownMenuItem>
 
-                {/* ✅ Conditionally show Switch Role item */}
-                {(userRole === userRoles.FREELANCER &&
-                  userExistingProfiles?.client) ||
-                (userRole === userRoles.CLIENT &&
-                  userExistingProfiles?.freelancer) ? (
+                {(userRole === userRoles.FREELANCER && userExistingProfiles?.client) ||
+                (userRole === userRoles.CLIENT && userExistingProfiles?.freelancer) ? (
                   <DropdownMenuItem onClick={handleRoleSwitch}>
                     <CirclePower className="mr-2 h-4 w-4" />
-                    <span>
-                      Switch to{" "}
-                      {userRole === userRoles.FREELANCER
-                        ? "Client"
-                        : "Freelancer"}
-                    </span>
+                    <span>Switch to {userRole === userRoles.FREELANCER ? "Client" : "Freelancer"}</span>
                   </DropdownMenuItem>
                 ) : null}
 
@@ -346,17 +267,13 @@ export default function DashboardHeader(props) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Are you sure?</DialogTitle>
-            <DialogDescription>
-              This action will log you out of your account.
-            </DialogDescription>
+            <DialogDescription>This action will log you out of your account.</DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button onClick={handleLogout} variant="destructive">
-              Continue
-            </Button>
+            <Button onClick={handleLogout} variant="destructive">Continue</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
