@@ -54,18 +54,14 @@ export default function ProfileHeader({
   }, [coverPhoto, coverPhotoFile]);
 
   useEffect(() => {
-<<<<<<< Updated upstream
-  // If we have a location from the backend, sync it.
-  // If the backend sends null, we keep whatever is in tempLocation or default to empty string.
-  if (location !== undefined && location !== null) {
-    setTempLocation(location);
-  }
-}, [location]);
- 
+    // If we have a location from the backend, sync it.
+    // If the backend sends null, we keep whatever is in tempLocation or default to empty string.
+    if (location !== undefined && location !== null) {
+      setTempLocation(location);
+    }
+  }, [location]);
 
   useEffect(() => {
-=======
->>>>>>> Stashed changes
     if (originalData?.user?.imageData) {
       const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
       setTempProfileImage(imgUrl);
@@ -102,7 +98,7 @@ export default function ProfileHeader({
   };
 
   // Inside ProfileHeader.jsx
-const handleSave = () => {
+  const handleSave = () => {
     const isClientRole = !!originalData.client;
     const userKey = originalData.userDto ? "userDto" : "user";
 
@@ -115,7 +111,9 @@ const handleSave = () => {
     // 2. Prepare Profile Objects - CRITICAL: We MUST preserve existing fields (ID, Banner, etc.)
     // Otherwise, the Backend creates a NEW record instead of updating the existing one.
     let updatedFreelancer = { ...originalData.freelancer };
-    let updatedFreelancerProfile = { ...(originalData.freelancerProfile || {}) };
+    let updatedFreelancerProfile = {
+      ...(originalData.freelancerProfile || {}),
+    };
     let updatedClient = { ...originalData.client };
     let updatedClientProfile = { ...(originalData.clientProfile || {}) };
 
@@ -146,7 +144,7 @@ const handleSave = () => {
       client: updatedClient,
       freelancer: updatedFreelancer,
       freelancerProfile: updatedFreelancerProfile, // Now contains location + existing data
-      clientProfile: updatedClientProfile,         // Now contains location + existing data
+      clientProfile: updatedClientProfile, // Now contains location + existing data
     };
 
     onSave?.(profileDto, profileImageFile, coverPhotoFile);
@@ -265,18 +263,19 @@ const handleSave = () => {
             )}
           </div>
 
-       
           {/* Name, Title, and Action Buttons */}
           <div className="flex-1 flex flex-col justify-between">
             {isEditing ? (
               <div className="space-y-2 flex-1">
                 {/* Inside Editing Mode */}
-<Input
-  value={tempName}
-  onChange={(e) => setTempName(e.target.value)}
-  placeholder={originalData.client ? "Company Name" : "Your Name"}
-  className="font-bold text-lg h-8"
-/>
+                <Input
+                  value={tempName}
+                  onChange={(e) => setTempName(e.target.value)}
+                  placeholder={
+                    originalData.client ? "Company Name" : "Your Name"
+                  }
+                  className="font-bold text-lg h-8"
+                />
                 <Input
                   value={tempDesignation}
                   onChange={(e) => setTempDesignation(e.target.value)}
@@ -297,19 +296,21 @@ const handleSave = () => {
             ) : (
               <div>
                 {/* Inside View Mode */}
-<h1 className="text-2xl font-bold text-foreground">
-  {tempName || name} 
-</h1>
-<p className="text-base font-medium text-primary">
-  {originalData.client ? "Client / Employer" : (designation || title)}
-</p>
+                <h1 className="text-2xl font-bold text-foreground">
+                  {tempName || name}
+                </h1>
+                <p className="text-base font-medium text-primary">
+                  {originalData.client
+                    ? "Client / Employer"
+                    : designation || title}
+                </p>
 
                 {/* ✅ Location and Rating Display (View Mode) */}
                 <div className="flex items-center gap-4 mt-2 text-sm">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
                     {/* Shows saved location or placeholder if it's the first time */}
-                    {  location || tempLocation || (
+                    {location || tempLocation || (
                       <span className="italic opacity-60">No location set</span>
                     )}
                   </div>
