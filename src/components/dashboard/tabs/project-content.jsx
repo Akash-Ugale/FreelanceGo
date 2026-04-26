@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   Card,
   CardContent,
@@ -42,6 +42,7 @@ import {
   Clock,
   AlertCircle,
   Edit,
+  Lock,
 } from "lucide-react";
 import { apiClient } from "@/api/AxiosServiceApi";
 import { userRoles } from "@/utils/constants";
@@ -49,8 +50,31 @@ import { useAuth } from "@/context/AuthContext.jsx";
 import { format, differenceInDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
 
+// ---------------------------------------------------------------------------
+// Razorpay loader helper – loads the SDK script once on demand
+// ---------------------------------------------------------------------------
+function loadRazorpayScript() {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = "https://checkout.razorpay.com/v1/checkout.js";
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
 export default function ProjectsContent() {
   const { userRole } = useAuth();
+  const navigate = useNavigate();
+
+  // ── projects ──────────────────────────────────────────────────────────────
   const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -59,9 +83,11 @@ export default function ProjectsContent() {
   const [showMobileDetails, setShowMobileDetails] = useState(false);
   const [isProjectsPaneCollapsed, setIsProjectsPaneCollapsed] = useState(false);
 
-  // Milestone management state
+  // ── milestones ────────────────────────────────────────────────────────────
   const [milestones, setMilestones] = useState([]);
   const [loadingMilestones, setLoadingMilestones] = useState(false);
+
+  // ── add milestone dialog ──────────────────────────────────────────────────
   const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
   const [newMilestone, setNewMilestone] = useState({
     name: "",
@@ -69,15 +95,42 @@ export default function ProjectsContent() {
     daysRequired: "",
     amount: "",
   });
+
+  // ── submission ────────────────────────────────────────────────────────────
   const [uploadingMilestoneId, setUploadingMilestoneId] = useState(null);
-  const [submissionType, setSubmissionType] = useState("file"); // 'file' or 'url'
-  const [submissionUrl, setSubmissionUrl] = useState("");
+  // Per-milestone submission type so toggling one doesn't affect others
+  const [submissionTypes, setSubmissionTypes] = useState({}); // { [milestoneId]: 'file' | 'url' }
+  const [submissionUrls, setSubmissionUrls] = useState({}); // { [milestoneId]: string }
+
+  // ── payment dialog ────────────────────────────────────────────────────────
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [selectedMilestoneForPayment, setSelectedMilestoneForPayment] =
     useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-  const navigate = useNavigate();
+  // ── reject feedback dialog ────────────────────────────────────────────────
+  const [isRejectMilestoneOpen, setIsRejectMilestoneOpen] = useState(false);
+  const [rejectingMilestoneId, setRejectingMilestoneId] = useState(null);
+  const [milestoneFeedback, setMilestoneFeedback] = useState("");
 
+  const [isRejectSubmissionOpen, setIsRejectSubmissionOpen] = useState(false);
+  const [rejectingSubmissionMilestoneId, setRejectingSubmissionMilestoneId] =
+    useState(null);
+  const [submissionRemark, setSubmissionRemark] = useState("");
+
+  // ── update milestone dialog ───────────────────────────────────────────────
+  const [isUpdateMilestoneOpen, setIsUpdateMilestoneOpen] = useState(false);
+  const [updatingMilestone, setUpdatingMilestone] = useState(null);
+  const [updateMilestoneData, setUpdateMilestoneData] = useState({
+    name: "",
+    description: "",
+    daysRequired: "",
+    amount: "",
+  });
+
+  // =========================================================================
+  // Fetch projects
+  // =========================================================================
   useEffect(() => {
     const fetchProjects = async () => {
       try {
@@ -131,7 +184,7 @@ export default function ProjectsContent() {
           },
           budget: p.job?.budget ?? 0,
           status: p.phase ?? p.status ?? "IN_PROGRESS",
-          progress: typeof p.progress === "number" ? p.progress : 50,
+          progress: typeof p.progress === "number" ? p.progress : 0,
           startDate: new Date(p.job?.projectStartTime),
           deadline: new Date(p.job?.projectEndTime),
           files: p.job?.file ? [p.job.file] : [],
@@ -139,7 +192,6 @@ export default function ProjectsContent() {
           clientAttachment: p.job?.file ?? p.clientAttachment ?? null,
         }));
         setProjects(formatted);
-        console.log(formatted);
         setSelectedProject((prev) => prev ?? formatted[0] ?? null);
       } catch (err) {
         console.error(err);
@@ -151,169 +203,214 @@ export default function ProjectsContent() {
     fetchProjects();
   }, [userRole]);
 
-  // Fetch milestones when project is selected
-  useEffect(() => {
-    if (selectedProject?.contractId) {
-      fetchMilestones(selectedProject.contractId);
-    }
-  }, [selectedProject]);
-
-  const fetchMilestones = async (contractId) => {
+  // =========================================================================
+  // Fetch milestones whenever a project is selected
+  // =========================================================================
+  const fetchMilestones = useCallback(async (contractId) => {
+    if (!contractId) return;
     try {
       setLoadingMilestones(true);
       const res = await apiClient.get(`/api/get-milestone/${contractId}`);
-      setMilestones(res.data || []);
+      // Sort by milestoneNumber so ordering is consistent
+      const sorted = (res.data || []).sort(
+        (a, b) => (a.milestoneNumber ?? 0) - (b.milestoneNumber ?? 0),
+      );
+      setMilestones(sorted);
     } catch (err) {
       console.error("Error fetching milestones:", err);
       setMilestones([]);
     } finally {
       setLoadingMilestones(false);
     }
-  };
+  }, []);
 
-  const calculateProgress = () => {
-    if (!milestones || milestones.length === 0) {
-      return 0;
+  useEffect(() => {
+    if (selectedProject?.contractId) {
+      fetchMilestones(selectedProject.contractId);
     }
-    const completedMilestones = milestones.filter(
+  }, [selectedProject, fetchMilestones]);
+
+  // =========================================================================
+  // Helpers
+  // =========================================================================
+  const calculateProgress = () => {
+    if (!milestones?.length) return 0;
+    const done = milestones.filter(
       (m) =>
+        m.verificationStatus === "VERIFIED" ||
         m.status === "COMPLETED" ||
-        m.status === "APPROVED" ||
-        m.verificationStatus === "VERIFIED",
+        m.status === "APPROVED",
     ).length;
-    return Math.round((completedMilestones / milestones.length) * 100);
+    return Math.round((done / milestones.length) * 100);
   };
 
+  const getRemainingDays = () => {
+    if (!selectedProject) return 0;
+    return differenceInDays(new Date(selectedProject.deadline), new Date());
+  };
+
+  /**
+   * Days already committed by non-completed milestones
+   */
+  const getUsedDays = (excludeId = null) => {
+    if (!milestones) return 0;
+    return milestones
+      .filter(
+        (m) =>
+          m.id !== excludeId &&
+          m.verificationStatus !== "VERIFIED" &&
+          m.status !== "COMPLETED",
+      )
+      .reduce((total, m) => total + (parseInt(m.daysRequired) || 0), 0);
+  };
+
+  /**
+   * Total amount committed by existing milestones (excluding a given id)
+   */
+  const getUsedAmount = (excludeId = null) => {
+    if (!milestones) return 0;
+    return milestones
+      .filter((m) => m.id !== excludeId)
+      .reduce((total, m) => total + (parseFloat(m.amount) || 0), 0);
+  };
+
+  const canAddMoreMilestones = () => milestones.length < 3;
+
+  /**
+   * Returns the index of the first milestone that is not yet verified/completed.
+   * Only that milestone (and earlier verified ones) should be actionable.
+   */
+  const getActiveMilestoneIndex = () => {
+    for (let i = 0; i < milestones.length; i++) {
+      const m = milestones[i];
+      if (m.verificationStatus !== "VERIFIED" && m.status !== "COMPLETED") {
+        return i;
+      }
+    }
+    return milestones.length; // all done
+  };
+
+  // ── badge helpers ──────────────────────────────────────────────────────────
   const getMilestoneStatusColor = (milestone) => {
     if (!milestone) return "outline";
-
-    // Check verification status first
     if (milestone.verificationStatus === "VERIFIED") return "default";
     if (milestone.verificationStatus === "REJECTED") return "destructive";
-
-    // Then check milestone status
-    const status = milestone.status;
-    if (status === "COMPLETED" || status === "APPROVED") return "default";
-    if (status === "IN_PROGRESS" || status === "SUBMITTED") return "secondary";
-    if (status === "REVISION_REQUESTED") return "destructive";
-    if (status === "PENDING") return "outline";
-
+    if (milestone.status === "COMPLETED" || milestone.status === "APPROVED")
+      return "default";
+    if (milestone.status === "IN_PROGRESS" || milestone.status === "SUBMITTED")
+      return "secondary";
+    if (milestone.status === "REVISION_REQUESTED") return "destructive";
     return "outline";
   };
 
+  const getMilestoneStatusText = (milestone) => {
+    if (!milestone) return "PENDING";
+    if (milestone.verificationStatus === "VERIFIED") return "COMPLETED";
+    if (milestone.verificationStatus === "REJECTED") return "REJECTED";
+    if (milestone.verificationStatus === "CHANGES_REQUESTED")
+      return "CHANGES REQUESTED";
+    if (milestone.status === "APPROVED" && milestone.paymentStatus === "PAID")
+      return "PAID – IN PROGRESS";
+    if (milestone.status === "APPROVED" && milestone.paymentStatus !== "PAID")
+      return "APPROVED – AWAITING PAYMENT";
+    if (milestone.submission?.status === "PENDING_REVIEW")
+      return "WORK SUBMITTED";
+    if (milestone.submission?.status === "APPROVED") return "WORK ACCEPTED";
+    if (milestone.submission?.status === "REJECTED") return "WORK REJECTED";
+    return milestone.status || "PENDING";
+  };
+
+  // =========================================================================
+  // Submission type helpers
+  // =========================================================================
+  const getSubmissionType = (milestoneId) =>
+    submissionTypes[milestoneId] ?? "file";
+  const setSubmissionType = (milestoneId, type) =>
+    setSubmissionTypes((prev) => ({ ...prev, [milestoneId]: type }));
+
+  const getSubmissionUrl = (milestoneId) => submissionUrls[milestoneId] ?? "";
+  const setSubmissionUrl = (milestoneId, url) =>
+    setSubmissionUrls((prev) => ({ ...prev, [milestoneId]: url }));
+
+  // =========================================================================
+  // Chat
+  // =========================================================================
   const handleChatInitiation = async () => {
     try {
       const response = await apiClient.post(
         `/api/chat-history/create/${selectedProject.client.id}/${selectedProject.freelancer.id}`,
         {},
       );
-      if (response.status === 200) {
-        navigate("/dashboard/messages");
-      }
+      if (response.status === 200) navigate("/dashboard/messages");
     } catch (error) {
       console.error("Error initiating chat:", error);
     }
   };
 
-  const getMilestoneStatusText = (milestone) => {
-    if (!milestone) return "PENDING";
-
-    // Priority order for status display
-    if (milestone.verificationStatus === "VERIFIED") return "COMPLETED";
-    if (milestone.verificationStatus === "REJECTED") return "REJECTED";
-    if (milestone.status === "APPROVED") return "APPROVED - PENDING PAYMENT";
-    if (milestone.paymentStatus === "PAID") return "PAYMENT COMPLETED";
-
-    return milestone.status || "PENDING";
-  };
-
-  const canAddMoreMilestones = () => {
-    return milestones.length < 3;
-  };
-
-  const getRemainingDays = () => {
-    if (!selectedProject) return 0;
-    const today = new Date();
-    const deadline = new Date(selectedProject.deadline);
-    return differenceInDays(deadline, today);
-  };
-
-  const getUsedDays = () => {
-    if (!milestones) return 0;
-    return milestones
-      .filter(
-        (m) =>
-          m.status !== "COMPLETED" &&
-          m.status !== "APPROVED" &&
-          m.verificationStatus !== "VERIFIED",
-      )
-      .reduce((total, m) => {
-        const daysRequired = m.daysRequired || 0;
-        return (
-          total +
-          (typeof daysRequired === "number"
-            ? daysRequired
-            : parseInt(daysRequired) || 0)
-        );
-      }, 0);
-  };
-
+  // =========================================================================
+  // ADD MILESTONE (Freelancer)
+  // =========================================================================
   const handleAddMilestone = async () => {
-    if (
-      !newMilestone.name ||
-      !newMilestone.description ||
-      !newMilestone.daysRequired ||
-      !newMilestone.amount
-    ) {
+    const { name, description, daysRequired, amount } = newMilestone;
+    if (!name || !description || !daysRequired || !amount) {
       alert("Please fill in all fields");
       return;
     }
 
-    const daysRequired = parseInt(newMilestone.daysRequired);
-    const amount = parseFloat(newMilestone.amount);
+    const days = parseInt(daysRequired);
+    const amt = parseFloat(amount);
     const remainingDays = getRemainingDays();
     const usedDays = getUsedDays();
     const availableDays = remainingDays - usedDays;
 
-    if (daysRequired > availableDays) {
+    if (days <= 0) {
+      alert("Days required must be greater than 0");
+      return;
+    }
+    if (days > availableDays) {
       alert(
         `Cannot add milestone. Only ${availableDays} days available before deadline.`,
       );
       return;
     }
+    if (amt <= 0) {
+      alert("Amount must be greater than 0");
+      return;
+    }
 
-    if (amount <= 0) {
-      alert("Please enter a valid amount greater than 0");
+    const usedAmount = getUsedAmount();
+    const remainingBudget = (selectedProject?.budget ?? 0) - usedAmount;
+    if (amt > remainingBudget) {
+      alert(
+        `Amount exceeds remaining budget. You can allocate up to $${remainingBudget.toFixed(2)} more.`,
+      );
       return;
     }
 
     try {
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + daysRequired);
+      dueDate.setDate(dueDate.getDate() + days);
 
       const milestoneData = {
-        title: newMilestone.name,
-        description: newMilestone.description,
-        amount: amount,
+        title: name,
+        description,
+        amount: amt,
         dueDate: dueDate.toISOString(),
         status: "PENDING",
         paymentStatus: "NOT_PAID",
         verificationStatus: "PENDING_REVIEW",
         milestoneNumber: (milestones?.length || 0) + 1,
-        daysRequired: daysRequired,
+        daysRequired: days,
         createdAt: new Date().toISOString(),
-        contract: {
-          id: selectedProject.contractId,
-        },
+        contract: { id: selectedProject.contractId },
       };
 
-      const response = await apiClient.post(
+      await apiClient.post(
         `/api/create-milestone?clientId=${selectedProject.client.id}&freelancerId=${selectedProject.freelancer.id}`,
         milestoneData,
       );
 
       await fetchMilestones(selectedProject.contractId);
-
       setNewMilestone({
         name: "",
         description: "",
@@ -328,98 +425,77 @@ export default function ProjectsContent() {
     }
   };
 
-  const handleMilestoneApproval = async (milestoneId, approve) => {
-    try {
-      if (approve) {
-        // Open payment dialog instead of direct approval
-        const milestone = milestones.find((m) => m.id === milestoneId);
-        setSelectedMilestoneForPayment(milestone);
-        setIsPaymentDialogOpen(true);
-      } else {
-        const feedback = prompt(
-          "Please provide feedback for the freelancer on why this milestone was rejected:",
-        );
-
-        if (!feedback) {
-          return;
-        }
-
-        const milestoneData = {
-          id: milestoneId,
-          clientFeedback: feedback,
-          verificationStatus: "REJECTED",
-        };
-
-        await apiClient.post(
-          `/api/client-feedback?clientId=${selectedProject.client.id}`,
-          milestoneData,
-        );
-
-        await fetchMilestones(selectedProject.contractId);
-        alert("Milestone rejected. Freelancer can update and resubmit.");
-      }
-    } catch (err) {
-      console.error("Error processing milestone approval:", err);
-      alert(err.response?.data?.message || "Failed to process milestone");
-    }
+  // =========================================================================
+  // UPDATE MILESTONE (Freelancer – after client CHANGES_REQUESTED)
+  // =========================================================================
+  const openUpdateMilestone = (milestone) => {
+    setUpdatingMilestone(milestone);
+    setUpdateMilestoneData({
+      name: milestone.title ?? "",
+      description: milestone.description ?? "",
+      daysRequired: milestone.daysRequired?.toString() ?? "",
+      amount: milestone.amount?.toString() ?? "",
+    });
+    setIsUpdateMilestoneOpen(true);
   };
 
-  const handleMilestonePayment = async () => {
-    if (!selectedMilestoneForPayment) return;
+  const handleUpdateMilestone = async () => {
+    if (!updatingMilestone) return;
+    const { name, description, daysRequired, amount } = updateMilestoneData;
+    if (!name || !description || !daysRequired || !amount) {
+      alert("Please fill in all fields");
+      return;
+    }
 
-    try {
-      // Call milestone approval endpoint which should handle payment
-      await apiClient.post(
-        `/api/milestone-approval?milestoneId=${selectedMilestoneForPayment.id}&clientId=${selectedProject.client.id}`,
-      );
+    const days = parseInt(daysRequired);
+    const amt = parseFloat(amount);
+    const remainingDays = getRemainingDays();
+    const usedDays = getUsedDays(updatingMilestone.id);
+    const availableDays = remainingDays - usedDays;
 
-      await fetchMilestones(selectedProject.contractId);
-      setIsPaymentDialogOpen(false);
-      setSelectedMilestoneForPayment(null);
+    if (days <= 0) {
+      alert("Days required must be greater than 0");
+      return;
+    }
+    if (days > availableDays) {
+      alert(`Only ${availableDays} days available.`);
+      return;
+    }
+    if (amt <= 0) {
+      alert("Amount must be greater than 0");
+      return;
+    }
+
+    const usedAmount = getUsedAmount(updatingMilestone.id);
+    const remainingBudget = (selectedProject?.budget ?? 0) - usedAmount;
+    if (amt > remainingBudget) {
       alert(
-        "Milestone approved and payment processed! Freelancer can now start work.",
+        `Amount exceeds remaining budget of $${remainingBudget.toFixed(2)}.`,
       );
-    } catch (err) {
-      console.error("Error processing payment:", err);
-      alert(err.response?.data?.message || "Failed to process payment");
+      return;
     }
-  };
-
-  const handleUpdateMilestone = async (milestoneId) => {
-    const milestone = milestones.find((m) => m.id === milestoneId);
-    if (!milestone) return;
-
-    const newTitle = prompt("Update milestone title:", milestone.title);
-    if (!newTitle) return;
-
-    const newDescription = prompt(
-      "Update milestone description:",
-      milestone.description,
-    );
-    if (!newDescription) return;
-
-    const newAmount = prompt("Update milestone amount:", milestone.amount);
-    if (!newAmount) return;
-
-    const newDays = prompt(
-      "Update days required:",
-      milestone.daysRequired || "",
-    );
-    if (!newDays) return;
 
     try {
       const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + parseInt(newDays));
+      dueDate.setDate(dueDate.getDate() + days);
 
+      // Backend updateMilestone() reads: milestoneDto.getId(), milestoneDto.getContract().id(),
+      // milestoneDto.getTitle(), milestoneDto.getDescription(), milestoneDto.getAmount(),
+      // milestoneDto.getDueDate().  It also verifies contract.getFreelancer() == authenticated user,
+      // so `contract` with the correct id is REQUIRED – without it the service throws NPE.
       const milestoneData = {
-        id: milestoneId,
-        title: newTitle,
-        description: newDescription,
-        amount: parseFloat(newAmount),
-        daysRequired: parseInt(newDays),
+        id: updatingMilestone.id,
+        milestoneNumber: updatingMilestone.milestoneNumber,
+        title: name,
+        description,
+        amount: amt,
+        daysRequired: days,
         dueDate: dueDate.toISOString(),
         status: "PENDING",
+        paymentStatus: updatingMilestone.paymentStatus ?? "NOT_PAID",
         verificationStatus: "PENDING_REVIEW",
+        // ← backend fetches contract via milestoneDto.getContract().id()
+        contract: { id: selectedProject.contractId },
       };
 
       await apiClient.post(
@@ -428,6 +504,8 @@ export default function ProjectsContent() {
       );
 
       await fetchMilestones(selectedProject.contractId);
+      setIsUpdateMilestoneOpen(false);
+      setUpdatingMilestone(null);
       alert("Milestone updated successfully! Awaiting client re-approval.");
     } catch (err) {
       console.error("Error updating milestone:", err);
@@ -435,19 +513,130 @@ export default function ProjectsContent() {
     }
   };
 
-  const handleFileUpload = async (milestoneId, file) => {
-    if (!file) return;
+  // =========================================================================
+  // CLIENT: APPROVE MILESTONE → open payment dialog
+  // =========================================================================
+  const handleApproveAndPay = (milestone) => {
+    setSelectedMilestoneForPayment(milestone);
+    setIsPaymentDialogOpen(true);
+  };
 
-    setUploadingMilestoneId(milestoneId);
+  // =========================================================================
+  // CLIENT: REJECT MILESTONE
+  // =========================================================================
+  const openRejectMilestone = (milestoneId) => {
+    setRejectingMilestoneId(milestoneId);
+    setMilestoneFeedback("");
+    setIsRejectMilestoneOpen(true);
+  };
+
+  const handleRejectMilestone = async () => {
+    if (!milestoneFeedback.trim()) {
+      alert("Please provide feedback before rejecting.");
+      return;
+    }
+    try {
+      const milestoneData = {
+        id: rejectingMilestoneId,
+        clientFeedback: milestoneFeedback,
+        verificationStatus: "CHANGES_REQUESTED",
+      };
+      await apiClient.post(
+        `/api/client-feedback?clientId=${selectedProject.client.id}`,
+        milestoneData,
+      );
+      await fetchMilestones(selectedProject.contractId);
+      setIsRejectMilestoneOpen(false);
+      setRejectingMilestoneId(null);
+      setMilestoneFeedback("");
+      alert("Milestone rejected. Freelancer can update and resubmit.");
+    } catch (err) {
+      console.error("Error rejecting milestone:", err);
+      alert(err.response?.data?.message || "Failed to reject milestone");
+    }
+  };
+
+  // =========================================================================
+  // CLIENT: PROCESS PAYMENT via Razorpay
+  // =========================================================================
+  const handleMilestonePayment = async () => {
+    if (!selectedMilestoneForPayment) return;
+    setPaymentLoading(true);
 
     try {
-      const formData = new FormData();
+      // 1) Call backend to create the Razorpay order
+      const res = await apiClient.post(
+        `/api/milestone-approval?milestoneId=${selectedMilestoneForPayment.id}&clientId=${selectedProject.client.id}`,
+      );
+      const paymentData = res.data; // MilestonePaymentResponse
 
+      // 2) Load Razorpay SDK
+      const loaded = await loadRazorpayScript();
+      if (!loaded) {
+        alert("Failed to load Razorpay SDK. Please try again.");
+        setPaymentLoading(false);
+        return;
+      }
+
+      // 3) Open Razorpay checkout
+      const options = {
+        key: paymentData.razorpayKey,
+        amount: paymentData.amount * 100, // Razorpay expects paise
+        currency: paymentData.currency || "INR",
+        order_id: paymentData.orderId,
+        name: "FreelanceGo",
+        description: `Payment for: ${selectedMilestoneForPayment.title}`,
+        handler: async function (response) {
+          // 4) Payment successful – verify with backend (optional step)
+          // The backend typically validates via webhook; here we just refresh.
+          alert(
+            "Payment successful! Freelancer has been notified and can now start work.",
+          );
+          setIsPaymentDialogOpen(false);
+          setSelectedMilestoneForPayment(null);
+          await fetchMilestones(selectedProject.contractId);
+        },
+        modal: {
+          ondismiss: function () {
+            // User closed the Razorpay modal without paying
+            setPaymentLoading(false);
+          },
+        },
+        prefill: {
+          name: selectedProject?.client?.name ?? "",
+          email: selectedProject?.client?.email ?? "",
+        },
+        theme: { color: "#6366f1" },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response) {
+        alert(
+          `Payment failed: ${response.error.description}. Please try again.`,
+        );
+        setPaymentLoading(false);
+      });
+      rzp.open();
+    } catch (err) {
+      console.error("Error processing payment:", err);
+      alert(err.response?.data?.message || "Failed to initiate payment");
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  // =========================================================================
+  // FREELANCER: Submit work (file)
+  // =========================================================================
+  const handleFileUpload = async (milestoneId, file) => {
+    if (!file) return;
+    setUploadingMilestoneId(milestoneId);
+    try {
+      const formData = new FormData();
       const submissionData = {
         notes: "Document submission for milestone review",
         status: "PENDING_REVIEW",
       };
-
       formData.append(
         "submission",
         new Blob([JSON.stringify(submissionData)], {
@@ -462,46 +651,43 @@ export default function ProjectsContent() {
         : `/api/create-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`;
 
       await apiClient.post(endpoint, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
       await fetchMilestones(selectedProject.contractId);
-      alert("Document submitted successfully! Awaiting client review.");
+      alert("Work submitted successfully! Awaiting client review.");
     } catch (err) {
       console.error("Error uploading file:", err);
-      alert(err.response?.data?.message || "Failed to upload document");
+      alert(err.response?.data?.message || "Failed to upload work");
     } finally {
       setUploadingMilestoneId(null);
     }
   };
 
+  // =========================================================================
+  // FREELANCER: Submit work (URL)
+  // =========================================================================
   const handleUrlSubmission = async (milestoneId) => {
-    if (!submissionUrl.trim()) {
+    const url = getSubmissionUrl(milestoneId);
+    if (!url.trim()) {
       alert("Please enter a valid URL");
       return;
     }
-
     setUploadingMilestoneId(milestoneId);
-
     try {
       const submissionData = {
-        fileUrl: submissionUrl,
+        fileUrl: url,
         notes: "URL submission for milestone review",
         status: "PENDING_REVIEW",
       };
-
       const milestone = milestones.find((m) => m.id === milestoneId);
       const endpoint = milestone?.submission?.id
         ? `/api/update-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`
         : `/api/create-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`;
 
       await apiClient.post(endpoint, submissionData);
-
       await fetchMilestones(selectedProject.contractId);
-      setSubmissionUrl("");
-      alert("URL submitted successfully! Awaiting client review.");
+      setSubmissionUrl(milestoneId, "");
+      alert("Work submitted successfully! Awaiting client review.");
     } catch (err) {
       console.error("Error submitting URL:", err);
       alert(err.response?.data?.message || "Failed to submit URL");
@@ -510,51 +696,89 @@ export default function ProjectsContent() {
     }
   };
 
-  const handleSubmissionReview = async (milestoneId, accept) => {
+  // =========================================================================
+  // CLIENT: Accept submission
+  // =========================================================================
+  const handleAcceptSubmission = async (milestoneId) => {
     try {
       const milestone = milestones.find((m) => m.id === milestoneId);
-
       if (!milestone?.submission?.id) {
         alert("No submission found for this milestone");
         return;
       }
-
-      if (accept) {
-        await apiClient.post(
-          `/api/submission-approval?submissionId=${milestone.submission.id}&clientId=${selectedProject.client.id}`,
-        );
-
-        await fetchMilestones(selectedProject.contractId);
-        alert("Submission accepted! Milestone completed successfully.");
-      } else {
-        const clientRemark = prompt(
-          "Please provide feedback for the freelancer:",
-        );
-
-        if (!clientRemark) {
-          return;
-        }
-
-        const submissionData = {
-          id: milestone.submission.id,
-          clientRemark: clientRemark,
-          status: "REJECTED",
-        };
-
-        await apiClient.post(
-          `/api/client-remark?clientId=${selectedProject.client.id}`,
-          submissionData,
-        );
-
-        await fetchMilestones(selectedProject.contractId);
-        alert("Submission rejected. Freelancer can resubmit their work.");
-      }
+      await apiClient.post(
+        `/api/submission-approval?submissionId=${milestone.submission.id}&clientId=${selectedProject.client.id}`,
+      );
+      await fetchMilestones(selectedProject.contractId);
+      alert("Submission accepted! Milestone marked as completed.");
     } catch (err) {
-      console.error("Error reviewing submission:", err);
-      alert(err.response?.data?.message || "Failed to review submission");
+      console.error("Error accepting submission:", err);
+      alert(err.response?.data?.message || "Failed to accept submission");
     }
   };
 
+  // =========================================================================
+  // CLIENT: Reject submission (open dialog)
+  // =========================================================================
+  const openRejectSubmission = (milestoneId) => {
+    setRejectingSubmissionMilestoneId(milestoneId);
+    setSubmissionRemark("");
+    setIsRejectSubmissionOpen(true);
+  };
+
+  const handleRejectSubmission = async () => {
+    if (!submissionRemark.trim()) {
+      alert("Please provide feedback before rejecting.");
+      return;
+    }
+    try {
+      const milestone = milestones.find(
+        (m) => m.id === rejectingSubmissionMilestoneId,
+      );
+      if (!milestone?.submission?.id) {
+        alert("No submission found");
+        return;
+      }
+      const submissionData = {
+        id: milestone.submission.id,
+        clientRemark: submissionRemark,
+        status: "REJECTED",
+      };
+      await apiClient.post(
+        `/api/client-remark?clientId=${selectedProject.client.id}`,
+        submissionData,
+      );
+      await fetchMilestones(selectedProject.contractId);
+      setIsRejectSubmissionOpen(false);
+      setRejectingSubmissionMilestoneId(null);
+      setSubmissionRemark("");
+      alert("Submission rejected. Freelancer can resubmit their work.");
+    } catch (err) {
+      console.error("Error rejecting submission:", err);
+      alert(err.response?.data?.message || "Failed to reject submission");
+    }
+  };
+
+  // =========================================================================
+  // Navigation helpers
+  // =========================================================================
+  const handleSelectProject = (project) => {
+    setSelectedProject(project);
+    setShowFullDesc(false);
+    setShowMobileDetails(true);
+  };
+
+  const handleBackToList = () => setShowMobileDetails(false);
+
+  // =========================================================================
+  // Derived values
+  // =========================================================================
+  const currentProgress = calculateProgress();
+  const activeMilestoneIndex = getActiveMilestoneIndex();
+
+  // =========================================================================
+  // Loading / error / empty states
+  // =========================================================================
   if (loading)
     return <p className="p-6 text-muted-foreground">Loading projects...</p>;
   if (error) return <p className="p-6 text-red-500">{error}</p>;
@@ -563,20 +787,440 @@ export default function ProjectsContent() {
       <p className="p-6 text-muted-foreground">No active projects found.</p>
     );
 
-  const handleSelectProject = (project) => {
-    setSelectedProject(project);
-    setShowFullDesc(false);
-    setShowMobileDetails(true);
+  // =========================================================================
+  // Milestone Card renderer
+  // =========================================================================
+  const renderMilestoneCard = (milestone, idx) => {
+    const isMilestoneVerified =
+      milestone.verificationStatus === "VERIFIED" ||
+      milestone.status === "COMPLETED";
+    const isActiveMilestone = idx === activeMilestoneIndex;
+    const isPastMilestone = idx < activeMilestoneIndex;
+    const isFutureMilestone = idx > activeMilestoneIndex;
+
+    // ── Freelancer can submit work when: milestone is APPROVED + PAID + no submission yet, or resubmit after rejection
+    const milestoneApprovedAndPaid =
+      milestone.status === "APPROVED" && milestone.paymentStatus === "PAID";
+    const canSubmitWork =
+      userRole === userRoles.FREELANCER &&
+      isActiveMilestone &&
+      milestoneApprovedAndPaid &&
+      (!milestone.submission || milestone.submission.status === "REJECTED");
+
+    const hasSubmission = !!milestone.submission;
+    const submissionPendingReview =
+      hasSubmission && milestone.submission.status === "PENDING_REVIEW";
+    const submissionAccepted =
+      hasSubmission && milestone.submission.status === "APPROVED";
+    const submissionRejected =
+      hasSubmission && milestone.submission.status === "REJECTED";
+
+    // ── Client can review milestone proposal when: PENDING_REVIEW + is active milestone
+    const canClientReviewProposal =
+      userRole === userRoles.CLIENT &&
+      isActiveMilestone &&
+      milestone.verificationStatus === "PENDING_REVIEW" &&
+      milestone.status !== "APPROVED" &&
+      milestone.status !== "IN_PROGRESS";
+
+    // ── Client can review submission when: submission exists + PENDING_REVIEW + active milestone
+    const canClientReviewSubmission =
+      userRole === userRoles.CLIENT &&
+      isActiveMilestone &&
+      submissionPendingReview;
+
+    return (
+      <div
+        key={milestone.id || idx}
+        className={`p-4 border rounded-lg space-y-3 transition-opacity ${
+          isFutureMilestone ? "opacity-50" : "bg-muted/30"
+        }`}
+      >
+        {/* ── Header ──────────────────────────────────────────────────────── */}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
+              <span className="text-xs font-semibold text-muted-foreground">
+                #{idx + 1}
+              </span>
+              <h4 className="font-medium">
+                {milestone.title || `Milestone ${idx + 1}`}
+              </h4>
+              <Badge variant={getMilestoneStatusColor(milestone)}>
+                {getMilestoneStatusText(milestone)}
+              </Badge>
+              {milestone.paymentStatus === "PAID" && (
+                <Badge variant="default" className="bg-green-600">
+                  <DollarSign className="h-3 w-3 mr-1" />
+                  Paid
+                </Badge>
+              )}
+              {isFutureMilestone && (
+                <Badge variant="outline" className="text-muted-foreground">
+                  <Lock className="h-3 w-3 mr-1" />
+                  Locked
+                </Badge>
+              )}
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {milestone.description}
+            </p>
+            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
+              <span className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3" />$
+                {milestone.amount?.toFixed(2) || "0.00"}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {milestone.daysRequired || 0} days
+              </span>
+              {milestone.dueDate && (
+                <span>Due: {format(new Date(milestone.dueDate), "PP")}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* ── Client feedback (CHANGES_REQUESTED) ─────────────────────────── */}
+        {milestone.clientFeedback &&
+          milestone.verificationStatus === "CHANGES_REQUESTED" && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-sm">
+              <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                Changes Requested:
+              </p>
+              <p className="text-amber-800 dark:text-amber-200">
+                {milestone.clientFeedback}
+              </p>
+            </div>
+          )}
+
+        {/* ── FREELANCER ACTIONS ───────────────────────────────────────────── */}
+        {userRole === userRoles.FREELANCER && isActiveMilestone && (
+          <div className="space-y-2">
+            {/* Update if client requested changes */}
+            {milestone.verificationStatus === "CHANGES_REQUESTED" && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => openUpdateMilestone(milestone)}
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Update Milestone
+              </Button>
+            )}
+
+            {/* Milestone PENDING – awaiting client approval */}
+            {milestone.verificationStatus === "PENDING_REVIEW" &&
+              milestone.status === "PENDING" && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    Awaiting client review and approval.
+                  </p>
+                </div>
+              )}
+
+            {/* Milestone approved + paid – submit work */}
+            {canSubmitWork && (
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-green-600 dark:text-green-400">
+                  ✓ Milestone approved and payment confirmed. Submit your work
+                  below.
+                </p>
+                {submissionRejected && (
+                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded">
+                    <p className="font-medium text-red-900 dark:text-red-100 text-sm mb-1">
+                      Previous submission rejected – Client's feedback:
+                    </p>
+                    <p className="text-red-800 dark:text-red-200 text-sm">
+                      {milestone.submission?.clientRemark}
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={
+                      getSubmissionType(milestone.id) === "file"
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => setSubmissionType(milestone.id, "file")}
+                  >
+                    File Upload
+                  </Button>
+                  <Button
+                    variant={
+                      getSubmissionType(milestone.id) === "url"
+                        ? "default"
+                        : "outline"
+                    }
+                    size="sm"
+                    onClick={() => setSubmissionType(milestone.id, "url")}
+                  >
+                    URL Submission
+                  </Button>
+                </div>
+
+                {getSubmissionType(milestone.id) === "file" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="file"
+                      id={`file-${milestone.id}`}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) handleFileUpload(milestone.id, file);
+                      }}
+                      className="hidden"
+                    />
+                    <Label
+                      htmlFor={`file-${milestone.id}`}
+                      className="cursor-pointer flex-1"
+                    >
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        asChild
+                        className="w-full"
+                        disabled={uploadingMilestoneId === milestone.id}
+                      >
+                        <span>
+                          <Upload className="h-4 w-4 mr-2" />
+                          {uploadingMilestoneId === milestone.id
+                            ? "Uploading..."
+                            : submissionRejected
+                              ? "Resubmit File"
+                              : "Choose File"}
+                        </span>
+                      </Button>
+                    </Label>
+                  </div>
+                )}
+
+                {getSubmissionType(milestone.id) === "url" && (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="url"
+                      placeholder="https://..."
+                      value={getSubmissionUrl(milestone.id)}
+                      onChange={(e) =>
+                        setSubmissionUrl(milestone.id, e.target.value)
+                      }
+                    />
+                    <Button
+                      size="sm"
+                      onClick={() => handleUrlSubmission(milestone.id)}
+                      disabled={uploadingMilestoneId === milestone.id}
+                    >
+                      {uploadingMilestoneId === milestone.id
+                        ? "Submitting..."
+                        : submissionRejected
+                          ? "Resubmit"
+                          : "Submit"}
+                    </Button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Show submission pending info */}
+            {submissionPendingReview && (
+              <div className="p-3 bg-background border rounded">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">
+                    Work submitted – Awaiting client review
+                  </p>
+                  <Clock className="h-4 w-4 text-muted-foreground ml-auto" />
+                </div>
+                {milestone.submission.fileUrl && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {milestone.submission.fileUrl.startsWith("http")
+                      ? milestone.submission.fileUrl
+                      : "File uploaded successfully"}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Submission accepted */}
+            {submissionAccepted && !isMilestoneVerified && (
+              <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-100">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>
+                    Work accepted by client. Awaiting final payment release.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Milestone fully verified */}
+            {isMilestoneVerified && (
+              <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-100">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">
+                    Milestone completed and payment released!
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Milestone approved but NOT paid yet */}
+            {milestone.status === "APPROVED" &&
+              milestone.paymentStatus !== "PAID" && (
+                <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
+                  <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                    Milestone approved! Waiting for client to process payment.
+                  </p>
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* ── Future milestone indicator for freelancer ─────────────────────── */}
+        {userRole === userRoles.FREELANCER && isFutureMilestone && (
+          <div className="p-2 border border-dashed rounded text-center">
+            <p className="text-xs text-muted-foreground">
+              This milestone will be unlocked after the previous one is
+              completed.
+            </p>
+          </div>
+        )}
+
+        {/* ── CLIENT ACTIONS ───────────────────────────────────────────────── */}
+        {userRole === userRoles.CLIENT && (
+          <div className="space-y-3">
+            {/* Review milestone proposal */}
+            {canClientReviewProposal && (
+              <div className="flex justify-end gap-2">
+                <Button
+                  size="sm"
+                  variant="default"
+                  onClick={() => handleApproveAndPay(milestone)}
+                >
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Approve & Pay
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => openRejectMilestone(milestone.id)}
+                >
+                  <XCircle className="h-4 w-4 mr-2" />
+                  Request Changes
+                </Button>
+              </div>
+            )}
+
+            {/* Awaiting freelancer work after payment */}
+            {isActiveMilestone &&
+              milestone.status === "APPROVED" &&
+              milestone.paymentStatus === "PAID" &&
+              !hasSubmission && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    Payment confirmed. Waiting for freelancer to submit work.
+                  </p>
+                </div>
+              )}
+
+            {/* Review submission */}
+            {canClientReviewSubmission && (
+              <div className="space-y-3">
+                <div className="p-3 bg-background border rounded">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-primary" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium">
+                        Work Submitted – Awaiting Your Review
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {milestone.submission.notes ||
+                          "Review the submitted work"}
+                      </p>
+                    </div>
+                    {milestone.submission.fileUrl && (
+                      <Button size="sm" variant="outline" asChild>
+                        <a
+                          href={milestone.submission.fileUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          <Download className="h-4 w-4 mr-2" />
+                          View Work
+                        </a>
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="default"
+                    className="flex-1"
+                    onClick={() => handleAcceptSubmission(milestone.id)}
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Accept & Complete
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="flex-1"
+                    onClick={() => openRejectSubmission(milestone.id)}
+                  >
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Request Revision
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Milestone fully completed */}
+            {isMilestoneVerified && (
+              <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
+                <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-100">
+                  <CheckCircle className="h-4 w-4" />
+                  <span className="font-medium">
+                    Milestone completed and payment released.
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Future milestones – locked for client too */}
+            {isFutureMilestone && (
+              <div className="p-2 border border-dashed rounded text-center">
+                <p className="text-xs text-muted-foreground">
+                  Available after the previous milestone is completed.
+                </p>
+              </div>
+            )}
+
+            {/* Pending changes from client side info */}
+            {isActiveMilestone &&
+              milestone.verificationStatus === "CHANGES_REQUESTED" && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded">
+                  <p className="text-sm text-amber-900 dark:text-amber-100">
+                    You requested changes. Waiting for the freelancer to update
+                    the milestone.
+                  </p>
+                </div>
+              )}
+          </div>
+        )}
+      </div>
+    );
   };
 
-  const handleBackToList = () => {
-    setShowMobileDetails(false);
-  };
-
-  const currentProgress = calculateProgress();
-
+  // =========================================================================
+  // JSX
+  // =========================================================================
   return (
     <div className="space-y-6">
+      {/* Page header */}
       <div>
         <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
           Active Projects
@@ -589,6 +1233,7 @@ export default function ProjectsContent() {
       </div>
 
       <div className="flex gap-6 lg:flex-row flex-col">
+        {/* ── Projects list pane ─────────────────────────────────────────── */}
         {isProjectsPaneCollapsed ? (
           <div className="hidden lg:flex items-start pt-6">
             <Button
@@ -623,53 +1268,50 @@ export default function ProjectsContent() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {projects.map((project) => {
-                return (
-                  <div
-                    key={project.id}
-                    role="button"
-                    tabIndex={0}
-                    onClick={() => handleSelectProject(project)}
-                    onKeyDown={(e) =>
-                      e.key === "Enter" && handleSelectProject(project)
-                    }
-                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
-                      selectedProject?.id === project.id
-                        ? "bg-accent"
-                        : "hover:bg-accent/50"
-                    }`}
-                  >
-                    <h4 className="font-medium text-sm mb-1">
-                      {project.title}
-                    </h4>
-                    <p className="text-xs text-muted-foreground mb-2 truncate">
-                      {userRole === userRoles.FREELANCER
-                        ? project.client.name
-                        : project.freelancer.name}
-                    </p>
-                    <div className="flex items-center justify-between text-xs mb-2">
-                      <Badge
-                        variant={
-                          project.status?.toLowerCase?.() === "completed"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className="text-xs"
-                      >
-                        {project.status}
-                      </Badge>
-                      <span className="text-muted-foreground font-medium">
-                        {currentProgress}%
-                      </span>
-                    </div>
-                    <Progress value={currentProgress} className="h-1.5" />
+              {projects.map((project) => (
+                <div
+                  key={project.id}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => handleSelectProject(project)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" && handleSelectProject(project)
+                  }
+                  className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                    selectedProject?.id === project.id
+                      ? "bg-accent"
+                      : "hover:bg-accent/50"
+                  }`}
+                >
+                  <h4 className="font-medium text-sm mb-1">{project.title}</h4>
+                  <p className="text-xs text-muted-foreground mb-2 truncate">
+                    {userRole === userRoles.FREELANCER
+                      ? project.client.name
+                      : project.freelancer.name}
+                  </p>
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <Badge
+                      variant={
+                        project.status?.toLowerCase?.() === "completed"
+                          ? "default"
+                          : "secondary"
+                      }
+                      className="text-xs"
+                    >
+                      {project.status}
+                    </Badge>
+                    <span className="text-muted-foreground font-medium">
+                      {currentProgress}%
+                    </span>
                   </div>
-                );
-              })}
+                  <Progress value={currentProgress} className="h-1.5" />
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}
 
+        {/* ── Project detail pane ────────────────────────────────────────── */}
         <Card
           className={`flex-1 ${!showMobileDetails ? "hidden lg:block" : ""}`}
         >
@@ -695,32 +1337,30 @@ export default function ProjectsContent() {
                         ? "default"
                         : "secondary"
                     }
-                    className={"self-start"}
+                    className="self-start"
                   >
                     {selectedProject?.status}
                   </Badge>
                 </CardTitle>
-
                 <div className="mt-1">
                   <p
                     className={`text-sm text-muted-foreground ${showFullDesc ? "" : "line-clamp-3"}`}
                   >
                     {selectedProject?.description}
                   </p>
-
                   {selectedProject?.description &&
                     selectedProject.description.length > 200 && (
                       <Button
                         aria-expanded={showFullDesc}
                         onClick={() => setShowFullDesc((s) => !s)}
-                        variant={"link"}
-                        className={"p-0 text-sm h-auto"}
+                        variant="link"
+                        className="p-0 text-sm h-auto"
                       >
                         {showFullDesc ? "Show less" : "Show more"}
                         {showFullDesc ? (
-                          <ChevronUp className={"w-4 h-4 ml-1"} />
+                          <ChevronUp className="w-4 h-4 ml-1" />
                         ) : (
-                          <ChevronDown className={"w-4 h-4 ml-1"} />
+                          <ChevronDown className="w-4 h-4 ml-1" />
                         )}
                       </Button>
                     )}
@@ -747,7 +1387,9 @@ export default function ProjectsContent() {
                 <TabsTrigger value="escrow">Escrow</TabsTrigger>
               </TabsList>
 
+              {/* ── OVERVIEW TAB ─────────────────────────────────────────── */}
               <TabsContent value="overview" className="space-y-6 mt-6">
+                {/* Progress card */}
                 <div className="p-4 border rounded-lg bg-gradient-to-br from-primary/5 to-primary/10">
                   <div className="flex items-center justify-between mb-3">
                     <div>
@@ -763,9 +1405,8 @@ export default function ProjectsContent() {
                       <p className="text-2xl font-bold">
                         {milestones?.filter(
                           (m) =>
-                            m.status === "COMPLETED" ||
-                            m.status === "APPROVED" ||
-                            m.verificationStatus === "VERIFIED",
+                            m.verificationStatus === "VERIFIED" ||
+                            m.status === "COMPLETED",
                         ).length || 0}
                         <span className="text-lg text-muted-foreground">
                           /{milestones?.length || 0}
@@ -781,6 +1422,7 @@ export default function ProjectsContent() {
                   </p>
                 </div>
 
+                {/* Stats grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                   <div className="bg-muted/30 border p-3 rounded-md space-y-1">
                     <div className="text-sm font-medium">Budget</div>
@@ -788,21 +1430,18 @@ export default function ProjectsContent() {
                       ${selectedProject?.budget?.toLocaleString()}
                     </div>
                   </div>
-
                   <div className="bg-muted/30 border p-3 rounded-md space-y-1">
                     <div className="text-sm font-medium">Start Date</div>
                     <div className="text-lg font-bold">
                       {format(selectedProject?.startDate, "PP")}
                     </div>
                   </div>
-
                   <div className="bg-muted/30 border p-3 rounded-md space-y-1">
                     <div className="text-sm font-medium">Deadline</div>
                     <div className="text-lg font-bold">
                       {format(selectedProject?.deadline, "PP")}
                     </div>
                   </div>
-
                   <div className="bg-muted/30 border p-3 rounded-md space-y-1">
                     <div className="text-sm font-medium">Days Remaining</div>
                     <div className="text-lg font-bold flex items-center gap-1">
@@ -812,6 +1451,7 @@ export default function ProjectsContent() {
                   </div>
                 </div>
 
+                {/* Attachments */}
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Project Attachments</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -839,7 +1479,6 @@ export default function ProjectsContent() {
                           </div>
                         </div>
                       )}
-
                     {userRole === userRoles.CLIENT &&
                       selectedProject?.bidAttachment && (
                         <div className="p-4 border rounded-lg bg-muted/30">
@@ -869,6 +1508,7 @@ export default function ProjectsContent() {
                   </div>
                 </div>
 
+                {/* Person details */}
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">
@@ -877,7 +1517,7 @@ export default function ProjectsContent() {
                         : "Freelancer"}{" "}
                       Details
                     </h3>
-                    <Button size={"sm"} onClick={handleChatInitiation}>
+                    <Button size="sm" onClick={handleChatInitiation}>
                       <MessageCircle className="mr-2 h-4 w-4" />
                       Start Chat
                     </Button>
@@ -896,7 +1536,6 @@ export default function ProjectsContent() {
                           </AvatarFallback>
                         )}
                       </Avatar>
-
                       <div className="flex-1">
                         <div className="font-medium">
                           {selectedProject?.client?.companyName ||
@@ -927,7 +1566,6 @@ export default function ProjectsContent() {
                           </AvatarFallback>
                         )}
                       </Avatar>
-
                       <div className="flex-1">
                         <div className="font-medium">
                           {selectedProject?.freelancer?.name}
@@ -963,16 +1601,12 @@ export default function ProjectsContent() {
                     </div>
                   )}
                 </div>
-
-                <div className="flex flex-wrap gap-2">
-                  <Button size="sm" variant="outline">
-                    <Target className="mr-2 h-4 w-4" /> Add Note
-                  </Button>
-                </div>
               </TabsContent>
 
+              {/* ── MILESTONES TAB ───────────────────────────────────────── */}
               <TabsContent value="milestones" className="space-y-4 mt-6">
                 <div className="space-y-4">
+                  {/* Header + Add button */}
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">
                       Project Milestones
@@ -999,7 +1633,12 @@ export default function ProjectsContent() {
                                   <AlertCircle className="h-4 w-4" />
                                   <span>
                                     Available days:{" "}
-                                    {getRemainingDays() - getUsedDays()}
+                                    {getRemainingDays() - getUsedDays()}{" "}
+                                    &nbsp;|&nbsp; Remaining budget: $
+                                    {(
+                                      (selectedProject?.budget ?? 0) -
+                                      getUsedAmount()
+                                    ).toFixed(2)}
                                   </span>
                                 </div>
                               </DialogDescription>
@@ -1102,6 +1741,7 @@ export default function ProjectsContent() {
                       )}
                   </div>
 
+                  {/* Guidelines banner */}
                   {userRole === userRoles.FREELANCER && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="flex gap-2">
@@ -1112,8 +1752,8 @@ export default function ProjectsContent() {
                           </p>
                           <ul className="space-y-1 text-xs">
                             <li>
-                              • Create milestones with specific deliverables and
-                              amounts
+                              • Maximum 3 milestones – days and amounts must fit
+                              within project limits
                             </li>
                             <li>
                               • Client must approve and pay before you can start
@@ -1122,9 +1762,9 @@ export default function ProjectsContent() {
                             <li>
                               • Submit work (file or URL) once milestone is paid
                             </li>
-                            <li>• Maximum 3 milestones per project</li>
                             <li>
-                              • Client reviews submissions and releases payment
+                              • Milestones are completed sequentially – next
+                              unlocks when current is done
                             </li>
                           </ul>
                         </div>
@@ -1142,23 +1782,20 @@ export default function ProjectsContent() {
                           </p>
                           <ul className="space-y-1 text-xs">
                             <li>
-                              • Review and approve freelancer's milestone
-                              proposals
+                              • Review and approve or request changes on
+                              freelancer's milestone proposals
                             </li>
                             <li>
-                              • Pay for approved milestones to release funds
-                              from escrow
+                              • Approve &amp; Pay triggers a Razorpay payment –
+                              funds held in escrow
                             </li>
                             <li>
-                              • Freelancer submits work once payment is
-                              confirmed
+                              • Review submitted work and accept or request
+                              revision
                             </li>
                             <li>
-                              • Review submissions and approve or request
-                              revisions
-                            </li>
-                            <li>
-                              • Payment released automatically upon acceptance
+                              • Milestones are sequential – only one is active
+                              at a time
                             </li>
                           </ul>
                         </div>
@@ -1166,485 +1803,17 @@ export default function ProjectsContent() {
                     </div>
                   )}
 
+                  {/* Milestone list */}
                   {loadingMilestones ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+                      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
                       <p className="mt-2">Loading milestones...</p>
                     </div>
                   ) : milestones?.length > 0 ? (
                     <div className="space-y-3">
-                      {milestones.map((milestone, idx) => (
-                        <div
-                          key={milestone.id || idx}
-                          className="p-4 border rounded-lg bg-muted/30 space-y-3"
-                        >
-                          <div className="flex items-start justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1 flex-wrap">
-                                <h4 className="font-medium">
-                                  {milestone.title || `Milestone ${idx + 1}`}
-                                </h4>
-                                <Badge
-                                  variant={getMilestoneStatusColor(milestone)}
-                                >
-                                  {getMilestoneStatusText(milestone)}
-                                </Badge>
-                                {milestone.paymentStatus === "PAID" && (
-                                  <Badge
-                                    variant="default"
-                                    className="bg-green-600"
-                                  >
-                                    <DollarSign className="h-3 w-3 mr-1" />
-                                    Paid
-                                  </Badge>
-                                )}
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                {milestone.description}
-                              </p>
-                              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
-                                <span className="flex items-center gap-1">
-                                  <DollarSign className="h-3 w-3" />$
-                                  {milestone.amount?.toFixed(2) || "0.00"}
-                                </span>
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {milestone.daysRequired || 0} days
-                                </span>
-                                {milestone.dueDate && (
-                                  <span>
-                                    Due:{" "}
-                                    {format(new Date(milestone.dueDate), "PP")}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-
-                          {/* Client Feedback Display */}
-                          {milestone.clientFeedback && (
-                            <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-sm">
-                              <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                                Client Feedback:
-                              </p>
-                              <p className="text-amber-800 dark:text-amber-200">
-                                {milestone.clientFeedback}
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Freelancer Actions */}
-                          {userRole === userRoles.FREELANCER && (
-                            <div className="space-y-2">
-                              {/* Update milestone if rejected by client */}
-                              {milestone.verificationStatus ===
-                                "CHANGES_REQUESTED" && (
-                                <div className="flex gap-2">
-                                  <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                      handleUpdateMilestone(milestone.id)
-                                    }
-                                  >
-                                    <Edit className="h-4 w-4 mr-2" />
-                                    Update Milestone
-                                  </Button>
-                                </div>
-                              )}
-
-                              {/* Submit work if milestone is approved and paid */}
-                              {milestone.status === "IN_PROGRESS" &&
-                                milestone.paymentStatus === "NOT_PAID" &&
-                                !milestone.submission && (
-                                  <div className="space-y-2">
-                                    <p className="text-sm font-medium text-green-600 dark:text-green-400">
-                                      ✓ Milestone approved and paid. You can now
-                                      submit your work.
-                                    </p>
-                                    <div className="flex items-center gap-2">
-                                      <Button
-                                        variant={
-                                          submissionType === "file"
-                                            ? "default"
-                                            : "outline"
-                                        }
-                                        size="sm"
-                                        onClick={() =>
-                                          setSubmissionType("file")
-                                        }
-                                      >
-                                        File Upload
-                                      </Button>
-                                      <Button
-                                        variant={
-                                          submissionType === "url"
-                                            ? "default"
-                                            : "outline"
-                                        }
-                                        size="sm"
-                                        onClick={() => setSubmissionType("url")}
-                                      >
-                                        URL Submission
-                                      </Button>
-                                    </div>
-
-                                    {submissionType === "file" && (
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          type="file"
-                                          id={`file-${milestone.id}`}
-                                          onChange={(e) => {
-                                            const file = e.target.files[0];
-                                            if (file) {
-                                              handleFileUpload(
-                                                milestone.id,
-                                                file,
-                                              );
-                                            }
-                                          }}
-                                          className="hidden"
-                                        />
-                                        <Label
-                                          htmlFor={`file-${milestone.id}`}
-                                          className="cursor-pointer flex-1"
-                                        >
-                                          <Button
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                            className="w-full"
-                                            disabled={
-                                              uploadingMilestoneId ===
-                                              milestone.id
-                                            }
-                                          >
-                                            <span>
-                                              <Upload className="h-4 w-4 mr-2" />
-                                              {uploadingMilestoneId ===
-                                              milestone.id
-                                                ? "Uploading..."
-                                                : "Choose File"}
-                                            </span>
-                                          </Button>
-                                        </Label>
-                                      </div>
-                                    )}
-
-                                    {submissionType === "url" && (
-                                      <div className="flex items-center gap-2">
-                                        <Input
-                                          type="url"
-                                          placeholder="https://..."
-                                          value={submissionUrl}
-                                          onChange={(e) =>
-                                            setSubmissionUrl(e.target.value)
-                                          }
-                                        />
-                                        <Button
-                                          size="sm"
-                                          onClick={() =>
-                                            handleUrlSubmission(milestone.id)
-                                          }
-                                          disabled={
-                                            uploadingMilestoneId ===
-                                            milestone.id
-                                          }
-                                        >
-                                          {uploadingMilestoneId === milestone.id
-                                            ? "Submitting..."
-                                            : "Submit"}
-                                        </Button>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                              {/* Resubmit if submission was rejected */}
-                              {milestone.submission?.status === "REJECTED" && (
-                                <div className="space-y-2">
-                                  <div className="p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded">
-                                    <p className="font-medium text-red-900 dark:text-red-100 text-sm mb-1">
-                                      Submission Rejected - Client Feedback:
-                                    </p>
-                                    <p className="text-red-800 dark:text-red-200 text-sm">
-                                      {milestone.submission.clientRemark}
-                                    </p>
-                                  </div>
-
-                                  <div className="flex items-center gap-2">
-                                    <Button
-                                      variant={
-                                        submissionType === "file"
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      size="sm"
-                                      onClick={() => setSubmissionType("file")}
-                                    >
-                                      File Upload
-                                    </Button>
-                                    <Button
-                                      variant={
-                                        submissionType === "url"
-                                          ? "default"
-                                          : "outline"
-                                      }
-                                      size="sm"
-                                      onClick={() => setSubmissionType("url")}
-                                    >
-                                      URL Submission
-                                    </Button>
-                                  </div>
-
-                                  {submissionType === "file" && (
-                                    <div className="flex items-center gap-2">
-                                      <Input
-                                        type="file"
-                                        id={`resubmit-file-${milestone.id}`}
-                                        onChange={(e) => {
-                                          const file = e.target.files[0];
-                                          if (file) {
-                                            handleFileUpload(
-                                              milestone.id,
-                                              file,
-                                            );
-                                          }
-                                        }}
-                                        className="hidden"
-                                      />
-                                      <Label
-                                        htmlFor={`resubmit-file-${milestone.id}`}
-                                        className="cursor-pointer flex-1"
-                                      >
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          asChild
-                                          className="w-full"
-                                          disabled={
-                                            uploadingMilestoneId ===
-                                            milestone.id
-                                          }
-                                        >
-                                          <span>
-                                            <Upload className="h-4 w-4 mr-2" />
-                                            {uploadingMilestoneId ===
-                                            milestone.id
-                                              ? "Uploading..."
-                                              : "Resubmit File"}
-                                          </span>
-                                        </Button>
-                                      </Label>
-                                    </div>
-                                  )}
-
-                                  {submissionType === "url" && (
-                                    <div className="flex items-center gap-2">
-                                      <Input
-                                        type="url"
-                                        placeholder="https://..."
-                                        value={submissionUrl}
-                                        onChange={(e) =>
-                                          setSubmissionUrl(e.target.value)
-                                        }
-                                      />
-                                      <Button
-                                        size="sm"
-                                        onClick={() =>
-                                          handleUrlSubmission(milestone.id)
-                                        }
-                                        disabled={
-                                          uploadingMilestoneId === milestone.id
-                                        }
-                                      >
-                                        {uploadingMilestoneId === milestone.id
-                                          ? "Submitting..."
-                                          : "Resubmit"}
-                                      </Button>
-                                    </div>
-                                  )}
-                                </div>
-                              )}
-
-                              {/* Show submission status */}
-                              {milestone.submission &&
-                                milestone.submission.status !== "REJECTED" && (
-                                  <div className="p-3 bg-background border rounded">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="h-4 w-4 text-muted-foreground" />
-                                      <div className="flex-1">
-                                        <p className="text-sm font-medium">
-                                          Submission{" "}
-                                          {milestone.submission.status ===
-                                          "APPROVED"
-                                            ? "Accepted"
-                                            : "Pending Review"}
-                                        </p>
-                                        {milestone.submission.fileUrl && (
-                                          <p className="text-xs text-muted-foreground">
-                                            {milestone.submission.fileUrl.startsWith(
-                                              "http",
-                                            )
-                                              ? milestone.submission.fileUrl
-                                              : "File uploaded"}
-                                          </p>
-                                        )}
-                                      </div>
-                                      {milestone.submission.status ===
-                                        "APPROVED" && (
-                                        <CheckCircle className="h-5 w-5 text-green-600" />
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                            </div>
-                          )}
-
-                          {/* Client Actions */}
-                          {userRole === userRoles.CLIENT && (
-                            <div className="space-y-3">
-                              {/* Milestone Approval - Pending Review */}
-                              {milestone.verificationStatus ===
-                                "PENDING_REVIEW" &&
-                                milestone.status === "IN_PROGRESS" && ( // ! Please change "IN_PROGRESS" to "PENDING" later
-                                  <div className={"flex justify-end"}>
-                                    <div className="space-y-2">
-                                      {/*<p className="text-sm font-medium text-blue-600 dark:text-blue-400">
-                                        Review milestone proposal
-                                      </p>*/}
-                                      <div className="flex gap-2">
-                                        <Button
-                                          size="sm"
-                                          variant="default"
-                                          className="flex-1"
-                                          onClick={() =>
-                                            handleMilestoneApproval(
-                                              milestone.id,
-                                              true,
-                                            )
-                                          }
-                                        >
-                                          <CheckCircle className="h-4 w-4 mr-2" />
-                                          Approve & Pay
-                                        </Button>
-                                        <Button
-                                          size="sm"
-                                          variant="destructive"
-                                          className="flex-1"
-                                          onClick={() =>
-                                            handleMilestoneApproval(
-                                              milestone.id,
-                                              false,
-                                            )
-                                          }
-                                        >
-                                          <XCircle className="h-4 w-4 mr-2" />
-                                          Reject
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-
-                              {/* Submission Review */}
-                              {milestone.submission &&
-                                milestone.submission.status ===
-                                  "PENDING_REVIEW" && (
-                                  <div className="space-y-3">
-                                    <div className="p-3 bg-background border rounded">
-                                      <div className="flex items-center gap-3">
-                                        <FileText className="h-5 w-5 text-primary" />
-                                        <div className="flex-1">
-                                          <p className="text-sm font-medium">
-                                            Work Submitted for Review
-                                          </p>
-                                          <p className="text-xs text-muted-foreground">
-                                            {milestone.submission.notes ||
-                                              "Review the submission"}
-                                          </p>
-                                        </div>
-                                        {milestone.submission.fileUrl && (
-                                          <Button
-                                            size="sm"
-                                            variant="outline"
-                                            asChild
-                                          >
-                                            <a
-                                              href={
-                                                milestone.submission.fileUrl
-                                              }
-                                              target="_blank"
-                                              rel="noreferrer"
-                                            >
-                                              <Download className="h-4 w-4 mr-2" />
-                                              View
-                                            </a>
-                                          </Button>
-                                        )}
-                                      </div>
-                                    </div>
-
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="default"
-                                        className="flex-1"
-                                        onClick={() =>
-                                          handleSubmissionReview(
-                                            milestone.id,
-                                            true,
-                                          )
-                                        }
-                                      >
-                                        <CheckCircle className="h-4 w-4 mr-2" />
-                                        Accept & Complete
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="destructive"
-                                        className="flex-1"
-                                        onClick={() =>
-                                          handleSubmissionReview(
-                                            milestone.id,
-                                            false,
-                                          )
-                                        }
-                                      >
-                                        <XCircle className="h-4 w-4 mr-2" />
-                                        Request Revision
-                                      </Button>
-                                    </div>
-                                  </div>
-                                )}
-
-                              {/* Completed Status */}
-                              {milestone.verificationStatus === "VERIFIED" && (
-                                <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
-                                  <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-100">
-                                    <CheckCircle className="h-4 w-4" />
-                                    <span className="font-medium">
-                                      Milestone completed and payment released
-                                    </span>
-                                  </div>
-                                </div>
-                              )}
-
-                              {/* Awaiting Work */}
-                              {milestone.status === "APPROVED" &&
-                                milestone.paymentStatus === "PAID" &&
-                                !milestone.submission && (
-                                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                                    <p className="text-sm text-blue-900 dark:text-blue-100">
-                                      Payment processed. Waiting for freelancer
-                                      to submit work.
-                                    </p>
-                                  </div>
-                                )}
-                            </div>
-                          )}
-                        </div>
-                      ))}
+                      {milestones.map((milestone, idx) =>
+                        renderMilestoneCard(milestone, idx),
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12 text-muted-foreground">
@@ -1660,10 +1829,10 @@ export default function ProjectsContent() {
                 </div>
               </TabsContent>
 
+              {/* ── ESCROW TAB ───────────────────────────────────────────── */}
               <TabsContent value="escrow" className="space-y-4 mt-6">
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Escrow Management</h3>
-
                   <div className="grid gap-4">
                     <div className="p-6 border rounded-lg bg-muted/30">
                       <div className="space-y-4">
@@ -1682,7 +1851,7 @@ export default function ProjectsContent() {
                           <span className="text-xl font-bold text-green-600">
                             $
                             {(
-                              selectedProject?.budget -
+                              (selectedProject?.budget ?? 0) -
                               (milestones
                                 ?.filter((m) => m.paymentStatus === "PAID")
                                 .reduce((sum, m) => sum + (m.amount || 0), 0) ||
@@ -1704,7 +1873,7 @@ export default function ProjectsContent() {
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">
-                            Completed & Paid Out
+                            Completed &amp; Paid Out
                           </span>
                           <span className="text-xl font-bold text-purple-600">
                             $
@@ -1718,6 +1887,7 @@ export default function ProjectsContent() {
                         </div>
                       </div>
                     </div>
+
                     {milestones?.length > 0 ? (
                       <div className="space-y-2">
                         <h4 className="font-medium text-sm">
@@ -1773,14 +1943,18 @@ export default function ProjectsContent() {
         </Card>
       </div>
 
-      {/* Payment Dialog */}
+      {/* ═══════════════════════════════════════════════════════════════════
+          DIALOGS
+      ════════════════════════════════════════════════════════════════════ */}
+
+      {/* ── Payment Dialog ─────────────────────────────────────────────── */}
       <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Process Milestone Payment</DialogTitle>
             <DialogDescription>
               Approve and pay for this milestone to allow the freelancer to
-              start work.
+              start work. Payment is handled securely via Razorpay.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -1798,43 +1972,243 @@ export default function ProjectsContent() {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium">Duration:</span>
+                <span className="text-sm font-medium">Days Required:</span>
                 <span className="text-sm">
-                  {Math.ceil(
-                    Math.abs(
-                      new Date(selectedMilestoneForPayment?.createdAt) -
-                        new Date(selectedMilestoneForPayment?.dueDate),
-                    ) /
-                      (1000 * 60 * 60 * 24),
-                  )}{" "}
-                  days
+                  {selectedMilestoneForPayment?.daysRequired} days
                 </span>
               </div>
+              {selectedMilestoneForPayment?.dueDate && (
+                <div className="flex justify-between">
+                  <span className="text-sm font-medium">Due Date:</span>
+                  <span className="text-sm">
+                    {format(
+                      new Date(selectedMilestoneForPayment.dueDate),
+                      "PP",
+                    )}
+                  </span>
+                </div>
+              )}
             </div>
-
             <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
               <p className="text-sm text-blue-900 dark:text-blue-100">
-                <strong>Note:</strong> The amount will be released from escrow
-                and held until the freelancer completes and you approve the
-                work.
+                <strong>Note:</strong> Clicking "Pay Now" will open the Razorpay
+                payment gateway. Funds will be held in escrow until you approve
+                the freelancer's submitted work.
               </p>
             </div>
           </div>
-          <DialogFooter className={"gap-2"}>
+          <DialogFooter className="gap-2">
             <Button
               variant="outline"
-              size={"sm"}
+              size="sm"
               onClick={() => {
                 setIsPaymentDialogOpen(false);
                 setSelectedMilestoneForPayment(null);
               }}
+              disabled={paymentLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handleMilestonePayment} size={"sm"}>
-              <DollarSign className="h-4 w-4" />
-              Process Payment
+            <Button
+              onClick={handleMilestonePayment}
+              size="sm"
+              disabled={paymentLoading}
+            >
+              <DollarSign className="h-4 w-4 mr-1" />
+              {paymentLoading ? "Processing..." : "Pay Now"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reject Milestone Dialog ────────────────────────────────────── */}
+      <Dialog
+        open={isRejectMilestoneOpen}
+        onOpenChange={setIsRejectMilestoneOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Changes</DialogTitle>
+            <DialogDescription>
+              Provide feedback to the freelancer explaining what changes are
+              needed.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="milestone-feedback">Feedback *</Label>
+            <Textarea
+              id="milestone-feedback"
+              placeholder="Describe what changes you need..."
+              value={milestoneFeedback}
+              onChange={(e) => setMilestoneFeedback(e.target.value)}
+              rows={4}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsRejectMilestoneOpen(false);
+                setMilestoneFeedback("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleRejectMilestone}
+            >
+              Send Feedback
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Reject Submission Dialog ───────────────────────────────────── */}
+      <Dialog
+        open={isRejectSubmissionOpen}
+        onOpenChange={setIsRejectSubmissionOpen}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Request Revision</DialogTitle>
+            <DialogDescription>
+              Explain what needs to be revised in the submitted work.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="submission-remark">Feedback *</Label>
+            <Textarea
+              id="submission-remark"
+              placeholder="Describe what needs to be changed..."
+              value={submissionRemark}
+              onChange={(e) => setSubmissionRemark(e.target.value)}
+              rows={4}
+              className="mt-2"
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setIsRejectSubmissionOpen(false);
+                setSubmissionRemark("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleRejectSubmission}
+            >
+              Request Revision
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Update Milestone Dialog ────────────────────────────────────── */}
+      <Dialog
+        open={isUpdateMilestoneOpen}
+        onOpenChange={setIsUpdateMilestoneOpen}
+      >
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Update Milestone</DialogTitle>
+            <DialogDescription>
+              Update the milestone details based on client feedback.
+              <div className="mt-2 flex items-center gap-2 text-sm">
+                <AlertCircle className="h-4 w-4" />
+                <span>
+                  Available days:{" "}
+                  {getRemainingDays() - getUsedDays(updatingMilestone?.id)}{" "}
+                  &nbsp;|&nbsp; Remaining budget: $
+                  {(
+                    (selectedProject?.budget ?? 0) -
+                    getUsedAmount(updatingMilestone?.id)
+                  ).toFixed(2)}
+                </span>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Milestone Name *</Label>
+              <Input
+                placeholder="e.g., Initial Design Phase"
+                value={updateMilestoneData.name}
+                onChange={(e) =>
+                  setUpdateMilestoneData({
+                    ...updateMilestoneData,
+                    name: e.target.value,
+                  })
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Description *</Label>
+              <Textarea
+                placeholder="Describe what will be delivered"
+                value={updateMilestoneData.description}
+                onChange={(e) =>
+                  setUpdateMilestoneData({
+                    ...updateMilestoneData,
+                    description: e.target.value,
+                  })
+                }
+                rows={3}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Days Required *</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  placeholder="Days needed"
+                  value={updateMilestoneData.daysRequired}
+                  onChange={(e) =>
+                    setUpdateMilestoneData({
+                      ...updateMilestoneData,
+                      daysRequired: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Amount ($) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  value={updateMilestoneData.amount}
+                  onChange={(e) =>
+                    setUpdateMilestoneData({
+                      ...updateMilestoneData,
+                      amount: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsUpdateMilestoneOpen(false);
+                setUpdatingMilestone(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateMilestone}>Update Milestone</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
