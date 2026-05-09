@@ -45,27 +45,31 @@ export default function FreelancerProfile() {
     fetchProfile();
   }, [userId]);
 
-  const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
-    try {
-      const formData = new FormData();
-      formData.append("profile", new Blob([JSON.stringify(profileDto)], { type: "application/json" }));
-      if (profileImageFile) formData.append("profileImage", profileImageFile);
-      if (coverPhotoFile) formData.append("coverPhoto", coverPhotoFile);
+const handleHeaderSave = async (profileDto, profileImageFile, coverPhotoFile) => {
+   console.log("location being sent:", profileDto?.freelancerProfile?.location);
+   console.log("Profile dto",profileDto);
+  try {
+    const formData = new FormData();
+    formData.append("profile", new Blob([JSON.stringify(profileDto)], { type: "application/json" }));
+    if (profileImageFile) formData.append("profileImage", profileImageFile);
+    if (coverPhotoFile) formData.append("coverPhoto", coverPhotoFile);
 
-      const response = await apiClient.post("/api/profile/update-freelancer-profile", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
+    const response = await apiClient.post("/api/profile/update-freelancer-profile", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true,
+    });
 
-      const updated = response.data.freelancerProfile;
-      if (updated?.bannerUrl) setCoverPhoto(getFullUrl(updated.bannerUrl));
-      setData((prev) => ({ ...prev, ...response.data }));
-      toast.success("Header updated!");
-    } catch (error) {
-      console.error("Error updating header:", error);
-      toast.error("Header update failed");
-    }
-  };
+    const updated = response.data.freelancerProfile;
+    if (updated?.bannerUrl) setCoverPhoto(getFullUrl(updated.bannerUrl));
+    
+    // ✅ Replace data entirely with server response instead of shallow merging
+    setData(response.data);
+    toast.success("Header updated!");
+  } catch (error) {
+    console.error("Error updating header:", error);
+    toast.error("Header update failed");
+  }
+};
 
   const handleSocialLinksSave = async (updatedSocialFields) => {
     try {
@@ -216,7 +220,7 @@ const handleCertificationDelete = async (id) => {
         profileImage={profilePhoto}
         name={data.user.username}
         designation={data.freelancer?.designation}
-        location={data.freelancerProfile?.location || ""}
+        location={data.freelancerProfile?.location}
         rating={data.freelancerProfile?.rating || 0}
         bio={data.freelancer?.bio}
         mobileNumber={data.freelancer?.phone}

@@ -1,176 +1,114 @@
-"use client"
+"use client";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Progress } from "@/components/ui/progress"
-import { apiClient } from "@/api/AxiosServiceApi"
-import { userRoles } from "@/utils/constants"
+} from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
+import { apiClient } from "@/api/AxiosServiceApi";
+import { useAuth } from "@/context/AuthContext";
+import { userRoles } from "@/utils/constants";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import {
-  ArrowDownRight,
-  ArrowUpRight,
   Briefcase,
   Clock,
-  DollarSign,
+  IndianRupee,
   Download,
   Star,
   Target,
   TrendingUp,
   Users,
-} from "lucide-react"
-import { useState ,useEffect} from "react"
-import axios from "axios"
-const freelancerAnalytics = {
-  overview: {
-    totalEarnings: 45750,
-    thisMonth: 8500,
-    lastMonth: 7200,
-    activeProjects: 3,
-    completedProjects: 28,
-    avgRating: 4.8,
-    profileViews: 234,
-    proposalsSent: 45,
-    proposalsAccepted: 12,
-  },
-  earningsTrend: [
-    { month: "Aug", amount: 6200 },
-    { month: "Sep", amount: 7100 },
-    { month: "Oct", amount: 6800 },
-    { month: "Nov", amount: 7200 },
-    { month: "Dec", amount: 8100 },
-    { month: "Jan", amount: 8500 },
-  ],
-  skillsPerformance: [
-    { skill: "React", projects: 12, earnings: 18500, avgRating: 4.9 },
-    { skill: "Node.js", projects: 10, earnings: 15200, avgRating: 4.8 },
-    { skill: "Python", projects: 8, earnings: 12000, avgRating: 4.7 },
-    { skill: "UI/UX", projects: 6, earnings: 9800, avgRating: 4.9 },
-  ],
-  clientSatisfaction: {
-    excellent: 75,
-    good: 20,
-    average: 5,
-    poor: 0,
-  },
-}
+  CheckCircle,
+  Send,
+} from "lucide-react";
+import { useState, useEffect } from "react";
 
-const clientAnalytics = {
-  overview: {
-    totalSpent: 78500,
-    thisMonth: 12300,
-    lastMonth: 9800,
-    activeProjects: 5,
-    completedProjects: 18,
-    hiredFreelancers: 12,
-    avgProjectRating: 4.6,
-    totalJobPosts: 25,
-    avgTimeToHire: 3.2,
-  },
-  spendingTrend: [
-    { month: "Aug", amount: 8200 },
-    { month: "Sep", amount: 9100 },
-    { month: "Oct", amount: 8800 },
-    { month: "Nov", amount: 9800 },
-    { month: "Dec", amount: 11200 },
-    { month: "Jan", amount: 12300 },
-  ],
-  categoryBreakdown: [
-    { category: "Web Development", spent: 32500, projects: 8 },
-    { category: "Design", spent: 18200, projects: 6 },
-    { category: "Mobile Development", spent: 15800, projects: 4 },
-    { category: "Writing", spent: 12000, projects: 7 },
-  ],
-  hiringMetrics: {
-    timeToHire: 3.2,
-    proposalsPerJob: 8.5,
-    successfulHires: 85,
-    rehireRate: 65,
-  },
-}
+export default function AnalyticsContent() {
+  // ✅ useAuth() called INSIDE the component — correct
+  const { userRole, userId } = useAuth();
 
-export default function AnalyticsContent({ userRole }) {
-  const [timeRange, setTimeRange] = useState("6months");
-  const [selectedTab, setSelectedTab] = useState("overview");
   const [analytics, setAnalytics] = useState(null);
   const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // 📊 Fetch Analytics based on user role
-   useEffect(() => {
-    const fetchAnalytics = async () => {
+  const isFreelancer = userRole === userRoles.FREELANCER;
+
+  useEffect(() => {
+    if (!userRole) return;
+    // Guard: client needs userId before calling
+    if (!isFreelancer && !userId) return;
+
+    (async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("token");
-        console.log("Fetching analytics with token:", token);
-        console.log(userRole)
-        // ✅ Choose API endpoint dynamically
-        const response = await apiClient.get(
-          `/api/${
-            userRole === userRoles.FREELANCER
-              ? "freelancer-analytics"
-              : "dashboard/client-analytics"
-          }`
-        );
-
-        console.log("Analytics Response:", response.data);
-
-        // ✅ Set analytics data
-        setAnalytics(response.data);
+        setError(null);
+        // Freelancer → GET /api/freelancer-analytics
+        // Client     → GET /api/dashboard/client-analytics/{userId}
+        const endpoint = isFreelancer
+          ? "/api/freelancer-analytics"
+          : `/api/dashboard/client-analytics/${userId}`;
+        console.log(userId);
+        const res = await apiClient.get(endpoint);
+        setAnalytics(res.data);
       } catch (err) {
-        console.error("Fetch error:", err);
+        console.error("Analytics fetch error:", err?.response?.data ?? err);
         setError("Failed to load analytics data");
       } finally {
         setLoading(false);
       }
-    };
+    })();
+    console.log("userRole:", userRole);
+    console.log("userId:", userId);
+  }, [userRole, userId]);
 
-    fetchAnalytics();
-  }, [userRole]);
-
-
-  // 📈 Percentage Change Calculator
-  const getChangePercentage = (current, previous) => {
-    if (!previous || previous === 0) return { value: "0.0", isPositive: true };
-    const change = ((current - previous) / previous) * 100;
-    return {
-      value: Math.abs(change).toFixed(1),
-      isPositive: change > 0,
-    };
-  };
-
- // 🧮 Compute Earnings Change (example metric)
-const earningsChange =
-  analytics && analytics.overview
-    ? getChangePercentage(
-        analytics.overview.thisMonth || 0,
-        analytics.overview.lastMonth || 0
-      )
-    : { value: "0.0", isPositive: true }; // Use a fallback
-
-  // 🌀 Loading / Error / Empty states
   if (loading)
-    return <p className="p-6 text-muted-foreground">Loading analytics...</p>;
-  if (error) return <p className="p-6 text-red-500">{error}</p>;
+    return (
+      <div className="p-10 text-center text-muted-foreground flex justify-center">
+        <div className="animate-pulse">Loading analytics...</div>
+      </div>
+    );
+  if (error) return <p className="p-6 text-red-500 text-center">{error}</p>;
   if (!analytics)
     return (
-      <p className="p-6 text-muted-foreground">
+      <p className="p-6 text-muted-foreground text-center">
         No analytics data available.
       </p>
     );
 
+  // ── Shared ─────────────────────────────────────────────────────────────────
+  const totalMoney = isFreelancer
+    ? (analytics.totalEarnings ?? 0)
+    : (analytics.totalSpent ?? 0);
+  const activeProjectsCount = analytics.activeProjects ?? 0;
+
+  // ── Freelancer: categoryEarnings + jobsWonPerCategory ─────────────────────
+  const skillsData = Object.entries(analytics.categoryEarnings || {}).map(
+    ([skill, earnings]) => ({
+      skill,
+      earnings,
+      projects: analytics.jobsWonPerCategory?.[skill] ?? 0,
+    }),
+  );
+  const maxSkillEarnings =
+    skillsData.length > 0
+      ? Math.max(...skillsData.map((s) => s.earnings || 0))
+      : 1;
+
+  // ── Client: categorySpending ──────────────────────────────────────────────
+  const categoryData = Object.entries(analytics.categorySpending || {}).map(
+    ([category, spent]) => ({
+      category,
+      spent,
+    }),
+  );
+  const maxCategorySpent =
+    categoryData.length > 0
+      ? Math.max(...categoryData.map((c) => c.spent || 0))
+      : 1;
 
   return (
     <div className="space-y-6">
@@ -181,66 +119,40 @@ const earningsChange =
             Analytics
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
-            {userRole === userRoles.FREELANCER
+            {isFreelancer
               ? "Track your freelance performance and growth"
               : "Monitor your hiring metrics and project outcomes"}
           </p>
         </div>
-        <div className="flex items-center space-x-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="1month">Last Month</SelectItem>
-              <SelectItem value="3months">Last 3 Months</SelectItem>
-              <SelectItem value="6months">Last 6 Months</SelectItem>
-              <SelectItem value="1year">Last Year</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="sm" className="bg-transparent">
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" className="bg-transparent">
+          <Download className="mr-2 h-4 w-4" />
+          Export
+        </Button>
       </div>
 
-      {/* Key Metrics */}
+      {/* ── Stat Cards ── */}
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        {/* 1. Total Earnings / Total Spent → totalEarnings / totalSpent */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === userRoles.FREELANCER ? "Total Earnings" : "Total Spent"}
+              {isFreelancer ? "Total Earnings" : "Total Spent"}
             </CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              $
-              {(userRole === userRoles.FREELANCER
-                ? analytics.overview?.totalEarnings ?? 0 // Safely access overview and use 0 as a fallback
-                : analytics.overview?.totalSpent ?? 0      // Safely access overview and use 0 as a fallback
-              ).toLocaleString()}
-            </div> 
-
-            <p className="text-xs text-muted-foreground flex items-center">
-              {earningsChange.isPositive ? (
-                <ArrowUpRight className="h-3 w-3 text-green-500 mr-1" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
-              )}
-              <span
-                className={
-                  earningsChange.isPositive ? "text-green-500" : "text-red-500"
-                }
-              >
-                {earningsChange.value}%
-              </span>
-              <span className="ml-1">from last month</span>
+              ₹{totalMoney.toLocaleString()}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {isFreelancer
+                ? "From completed contracts"
+                : "Across all contracts"}
             </p>
           </CardContent>
         </Card>
 
+        {/* 2. Active Projects → activeProjects */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -249,19 +161,20 @@ const earningsChange =
             <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {analytics.overview?.activeProjects??0}
-            </div>
-            <p className="text-xs text-muted-foreground">Currently running</p>
+            <div className="text-2xl font-bold">{activeProjectsCount}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Currently running
+            </p>
           </CardContent>
         </Card>
 
+        {/* 3. winRatePercent / hiredFreelancers */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === userRoles.FREELANCER ? "Avg Rating" : "Hired Freelancers"}
+              {isFreelancer ? "Win Rate" : "Hired Freelancers"}
             </CardTitle>
-            {userRole === userRoles.FREELANCER ? (
+            {isFreelancer ? (
               <Star className="h-4 w-4 text-yellow-600" />
             ) : (
               <Users className="h-4 w-4 text-purple-600" />
@@ -269,243 +182,310 @@ const earningsChange =
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userRole === userRoles.FREELANCER
-                ? analytics?.overview?.avgRating ?? 'N/A'
-                : analytics?.overview?.hiredFreelancers?? 0}
+              {isFreelancer
+                ? `${(analytics.winRatePercent ?? 0).toFixed(1)}%`
+                : (analytics.hiredFreelancers ?? 0)}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {userRole === userRoles.FREELANCER
-                ? "Client satisfaction"
-                : "Total hired"}
+            <p className="text-xs text-muted-foreground mt-1">
+              {isFreelancer ? "Proposals accepted" : "Distinct freelancers"}
             </p>
           </CardContent>
         </Card>
 
+        {/* 4. avgTimeToCompleteDays / avgTimeToHire */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
-              {userRole === userRoles.FREELANCER ? "Success Rate" : "Avg Time to Hire"}
+              {isFreelancer ? "Avg Completion" : "Avg Time to Hire"}
             </CardTitle>
             <Target className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {userRole === userRoles.FREELANCER
-                ? `${(
-                    (analytics?.overview?.proposalsAccepted ??0 /
-                      analytics?.overview?.proposalsSent ?? 1) *
-                    100
-                  ).toFixed(1)}%`
-                : `${analytics.overview?.avgTimeToHire??'N/A'} days`}
+              {isFreelancer
+                ? `${(analytics.avgTimeToCompleteDays ?? 0).toFixed(0)} days`
+                : `${(analytics.avgTimeToHire ?? 0).toFixed(0)} days`}
             </div>
-            <p className="text-xs text-muted-foreground">
-              {userRole === userRoles.FREELANCER
-                ? "Proposal acceptance"
-                : "Average hiring time"}
+            <p className="text-xs text-muted-foreground mt-1">
+              {isFreelancer ? "Per project" : "Job post to hire"}
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Analytics */}
+      {/* ── Middle Row ── */}
       <div className="grid gap-6 lg:grid-cols-3">
+        {/* Left: Overview */}
         <div className="lg:col-span-2">
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === userRoles.FREELANCER
-                  ? "Earnings Trend"
-                  : "Spending Trend"}
+                {isFreelancer ? "Performance Overview" : "Hiring Overview"}
               </CardTitle>
               <CardDescription>
-                {userRole === userRoles.FREELANCER
-                  ? "Track your income over time"
-                  : "Monitor your project spending patterns"}
+                {isFreelancer
+                  ? "Key metrics across your contracts and bids"
+                  : "Recruitment and spend breakdown"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {(userRole === userRoles.FREELANCER
-                  ? analytics.earningsTrend??[]
-                  : analytics.spendingTrend??[]
-                ).map((item, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center justify-between"
-                  >
-                    <span className="text-sm font-medium">{item.month}</span>
-                    <div className="flex items-center space-x-2">
-                      <div className="w-32 bg-muted rounded-full h-2">
-                        <div
-                          className="bg-primary h-2 rounded-full"
-                          style={{
-                            width: `${
-                              (item.amount /
-                                Math.max(
-                                  ...(userRole === userRoles.FREELANCER
-                                    ? analytics.earningsTrend ?? []
-                                    : analytics.spendingTrend ?? []
-                                  ).map((d) => d.amount)
-                                )) *
-                              100
-                            }%`,
-                          }}
-                        />
-                      </div>
-                      <span className="text-sm font-bold w-16 text-right">
-                        ${item.amount.toLocaleString()}
+              {isFreelancer ? (
+                <div className="space-y-5">
+                  {/* proposalsSubmitted */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <Send className="h-4 w-4" /> Proposals Submitted
+                    </span>
+                    <span className="text-lg font-bold">
+                      {analytics.proposalsSubmitted ?? 0}
+                    </span>
+                  </div>
+
+                  {/* completedProjects */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground flex items-center gap-2">
+                      <CheckCircle className="h-4 w-4 text-green-600" />{" "}
+                      Completed Projects
+                    </span>
+                    <span className="text-lg font-bold">
+                      {analytics.completedProjects ?? 0}
+                    </span>
+                  </div>
+
+                  {/* avgBidAmount */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Avg Bid Amount
+                    </span>
+                    <span className="text-lg font-bold flex items-center gap-1">
+                      <IndianRupee className="h-4 w-4" />
+                      {(analytics.avgBidAmount ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+
+                  {/* winRatePercent */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Win Rate</span>
+                      <span className="font-bold">
+                        {(analytics.winRatePercent ?? 0).toFixed(1)}%
                       </span>
                     </div>
+                    <Progress
+                      value={analytics.winRatePercent ?? 0}
+                      className="h-2"
+                    />
                   </div>
-                ))}
-              </div>
+
+                  {/* rehireRatePercent */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Client Rehire Rate
+                      </span>
+                      <span className="font-bold">
+                        {(analytics.rehireRatePercent ?? 0).toFixed(1)}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={analytics.rehireRatePercent ?? 0}
+                      className="h-2"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {/* avgProposalsPerJob */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Avg Proposals Per Job
+                    </span>
+                    <span className="text-lg font-bold">
+                      {(analytics.avgProposalsPerJob ?? 0).toFixed(1)}
+                    </span>
+                  </div>
+
+                  {/* successfulHireRate */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">
+                        Successful Hire Rate
+                      </span>
+                      <span className="font-bold">
+                        {(analytics.successfulHireRate ?? 0).toFixed(1)}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={analytics.successfulHireRate ?? 0}
+                      className="h-2"
+                    />
+                  </div>
+
+                  {/* rehireRate — COUNT not % */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Freelancers Rehired
+                    </span>
+                    <span className="text-lg font-bold">
+                      {analytics.rehireRate ?? 0}
+                    </span>
+                  </div>
+
+                  {/* avgTimeToHire */}
+                  <div className="flex justify-between items-center pb-3 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Avg Time to Hire
+                    </span>
+                    <span className="text-lg font-bold">
+                      {(analytics.avgTimeToHire ?? 0).toFixed(0)} days
+                    </span>
+                  </div>
+
+                  {/* totalSpent */}
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">
+                      Total Spent
+                    </span>
+                    <span className="text-lg font-bold flex items-center gap-1">
+                      <IndianRupee className="h-4 w-4" />
+                      {(analytics.totalSpent ?? 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
 
+        {/* Right: Category chart */}
         <div>
-          <Card>
+          <Card className="h-full">
             <CardHeader>
               <CardTitle className="text-xl">
-                {userRole === userRoles.FREELANCER
-                  ? "Top Skills"
-                  : "Category Breakdown"}
+                {isFreelancer ? "Earnings by Category" : "Spending by Category"}
               </CardTitle>
               <CardDescription>
-                {userRole === userRoles.FREELANCER
-                  ? "Your most profitable skills"
-                  : "Spending by project category"}
+                {isFreelancer
+                  ? "Income across job categories"
+                  : "Budget by category"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {userRole === userRoles.FREELANCER
-                  ? (analytics.skillsPerformance??[]).map((skill, index) => (
-                      <div key={index} className="space-y-2">
+              <div className="space-y-5">
+                {isFreelancer ? (
+                  skillsData.length === 0 ? (
+                    <p className="text-sm text-muted-foreground text-center">
+                      No category data available.
+                    </p>
+                  ) : (
+                    skillsData.map((item, i) => (
+                      <div key={i} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-medium">
-                            {skill.skill}
+                            {item.skill}
                           </span>
                           <Badge variant="secondary" className="text-xs">
-                            ${skill.earnings.toLocaleString()}
+                            ₹{(item.earnings || 0).toLocaleString()}
                           </Badge>
                         </div>
-                        <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                          <span>{skill.projects} projects</span>
-                          <span>•</span>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                            <span>{skill.avgRating}</span>
-                          </div>
+                        <div className="text-xs text-muted-foreground">
+                          {item.projects} job{item.projects !== 1 ? "s" : ""}{" "}
+                          won
                         </div>
                         <Progress
                           value={
-                            (skill.earnings /
-                              Math.max(
-                                ...(analytics.skillsPerformance??[]).map((s) => s.earnings)
-                              )) *
-                            100
+                            ((item.earnings || 0) / maxSkillEarnings) * 100
                           }
                           className="h-2"
                         />
                       </div>
                     ))
-                  : (analytics.categoryBreakdown??[]).map((category, index) => (
-                      <div key={index} className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">
-                            {category.category}
-                          </span>
-                          <Badge variant="secondary" className="text-xs">
-                            ${category.spent.toLocaleString()}
-                          </Badge>
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {category.projects} projects
-                        </div>
-                        <Progress
-                          value={
-                            (category.spent /
-                              Math.max(
-                                ...(analytics.categoryBreakdown??[]).map((c) => c.spent)
-                              )) *
-                            100
-                          }
-                          className="h-2"
-                        />
+                  )
+                ) : categoryData.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center">
+                    No category data available.
+                  </p>
+                ) : (
+                  categoryData.map((cat, i) => (
+                    <div key={i} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium truncate pr-2">
+                          {cat.category}
+                        </span>
+                        <Badge variant="secondary" className="text-xs shrink-0">
+                          ₹{(cat.spent || 0).toLocaleString()}
+                        </Badge>
                       </div>
-                    ))}
+                      <Progress
+                        value={((cat.spent || 0) / maxCategorySpent) * 100}
+                        className="h-2"
+                      />
+                    </div>
+                  ))
+                )}
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
 
-      {/* Additional Insights */}
+      {/* ── Bottom Row ── */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {userRole === userRoles.FREELANCER ? (
+        {isFreelancer ? (
           <>
+            {/* Performance Summary */}
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Client Satisfaction</CardTitle>
+                <CardTitle className="text-xl">Performance Summary</CardTitle>
                 <CardDescription>
-                  Breakdown of client feedback ratings
+                  All metrics from your analytics
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Excellent (5 stars)</span>
-                      <span className="text-sm font-medium">
-                        {analytics.clientSatisfaction?.excellent??'0'}%
-                      </span>
+                  {[
+                    {
+                      label: "Win Rate",
+                      value: `${(analytics.winRatePercent ?? 0).toFixed(1)}%`,
+                      progress: analytics.winRatePercent ?? 0,
+                    },
+                    {
+                      label: "Rehire Rate",
+                      value: `${(analytics.rehireRatePercent ?? 0).toFixed(1)}%`,
+                      progress: analytics.rehireRatePercent ?? 0,
+                    },
+                    {
+                      label: "Completed Projects",
+                      value: `${analytics.completedProjects ?? 0}`,
+                      progress: Math.min(
+                        (analytics.completedProjects ?? 0) * 10,
+                        100,
+                      ),
+                    },
+                    {
+                      label: "Proposals Submitted",
+                      value: `${analytics.proposalsSubmitted ?? 0}`,
+                      progress: Math.min(
+                        (analytics.proposalsSubmitted ?? 0) * 5,
+                        100,
+                      ),
+                    },
+                  ].map((stat, i) => (
+                    <div key={i} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">
+                          {stat.label}
+                        </span>
+                        <span className="font-medium">{stat.value}</span>
+                      </div>
+                      <Progress value={stat.progress} className="h-2" />
                     </div>
-                    <Progress
-                      value={analytics.clientSatisfaction?.excellent??'0'}
-                      className="h-2"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Good (4 stars)</span>
-                      <span className="text-sm font-medium">
-                        {analytics.clientSatisfaction?.good??'0'}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={analytics.clientSatisfaction?.good??'0'}
-                      className="h-2"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Average (3 stars)</span>
-                      <span className="text-sm font-medium">
-                        {analytics.clientSatisfaction?.average??'0'}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={analytics.clientSatisfaction?.average??'0'}
-                      className="h-2"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span className="text-sm">Poor (1-2 stars)</span>
-                      <span className="text-sm font-medium">
-                        {analytics.clientSatisfaction?.poor??'0'}%
-                      </span>
-                    </div>
-                    <Progress
-                      value={analytics.clientSatisfaction?.poor??'0'}
-                      className="h-2"
-                    />
-                  </div>
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Freelancer Tips */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Performance Insights</CardTitle>
@@ -516,29 +496,33 @@ const earningsChange =
               <CardContent>
                 <div className="space-y-4">
                   <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                    <TrendingUp className="h-5 w-5 text-green-600 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Strong Performance</p>
+                      <p className="text-sm font-medium">Earnings</p>
                       <p className="text-xs text-muted-foreground">
-                        Your React skills are in high demand
+                        Total ₹{(analytics.totalEarnings ?? 0).toLocaleString()}{" "}
+                        earned across all completed contracts.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                    <Target className="h-5 w-5 text-blue-600" />
+                    <Target className="h-5 w-5 text-blue-600 shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Opportunity</p>
                       <p className="text-xs text-muted-foreground">
-                        Consider raising your hourly rate by 15%
+                        {(analytics.winRatePercent ?? 0) >= 50
+                          ? "Great win rate! Keep applying to relevant projects."
+                          : "Tailor proposals more closely to each job requirement."}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-yellow-600" />
+                    <Clock className="h-5 w-5 text-yellow-600 shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Tip</p>
                       <p className="text-xs text-muted-foreground">
-                        Respond to proposals within 2 hours for better success
+                        Respond to new proposals within 2 hours for better
+                        success rates.
                       </p>
                     </div>
                   </div>
@@ -548,6 +532,7 @@ const earningsChange =
           </>
         ) : (
           <>
+            {/* Client: Hiring Metrics */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Hiring Metrics</CardTitle>
@@ -557,34 +542,43 @@ const earningsChange =
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Average Time to Hire</span>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Avg Time to Hire
+                    </span>
                     <span className="text-lg font-bold">
-                      {analytics.hiringMetrics?.timeToHire??'N/A'} days
+                      {(analytics.avgTimeToHire ?? 0).toFixed(0)} days
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Proposals per Job
+                    </span>
+                    <span className="text-lg font-bold">
+                      {(analytics.avgProposalsPerJob ?? 0).toFixed(1)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pb-2 border-b">
+                    <span className="text-sm text-muted-foreground">
+                      Successful Hire Rate
+                    </span>
+                    <span className="text-lg font-bold">
+                      {(analytics.successfulHireRate ?? 0).toFixed(1)}%
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-sm">Proposals per Job</span>
-                    <span className="text-lg font-bold">
-                      {analytics.hiringMetrics?.proposalsPerJob??'N/A'}
+                    <span className="text-sm text-muted-foreground">
+                      Freelancers Rehired
                     </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Successful Hires</span>
                     <span className="text-lg font-bold">
-                      {analytics.hiringMetrics?.successfulHires??'N/A'}%
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm">Rehire Rate</span>
-                    <span className="text-lg font-bold">
-                      {analytics.hiringMetrics?.rehireRate??'N/A'}%
+                      {analytics.rehireRate ?? 0}
                     </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
+            {/* Client Tips */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-xl">Hiring Insights</CardTitle>
@@ -594,30 +588,33 @@ const earningsChange =
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center space-x-3 p-3 border bg-muted/50 rounded-lg">
+                    <TrendingUp className="h-5 w-5 text-green-600 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">Great Hiring Rate</p>
+                      <p className="text-sm font-medium">Solid Hiring Rate</p>
                       <p className="text-xs text-muted-foreground">
-                        85% of your job posts result in successful hires
+                        Your job posts consistently attract quality talent.
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
-                    <Users className="h-5 w-5 text-blue-600" />
+                  <div className="flex items-center space-x-3 p-3 border bg-muted/50 rounded-lg">
+                    <Users className="h-5 w-5 text-blue-600 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium">High Rehire Rate</p>
+                      <p className="text-sm font-medium">Talent Retention</p>
                       <p className="text-xs text-muted-foreground">
-                        65% of freelancers work with you again
+                        {(analytics.rehireRate ?? 0) > 0
+                          ? `${analytics.rehireRate} freelancer(s) have worked with you more than once.`
+                          : "Build long-term relationships by rehiring trusted freelancers."}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 border bg-muted rounded-lg">
-                    <Clock className="h-5 w-5 text-yellow-600" />
+                  <div className="flex items-center space-x-3 p-3 border bg-muted/50 rounded-lg">
+                    <Clock className="h-5 w-5 text-yellow-600 shrink-0" />
                     <div>
                       <p className="text-sm font-medium">Tip</p>
                       <p className="text-xs text-muted-foreground">
-                        Detailed job descriptions get 40% more quality proposals
+                        Detailed job descriptions can reduce Time-to-Hire by up
+                        to 30%.
                       </p>
                     </div>
                   </div>
@@ -628,5 +625,5 @@ const earningsChange =
         )}
       </div>
     </div>
-  )
+  );
 }

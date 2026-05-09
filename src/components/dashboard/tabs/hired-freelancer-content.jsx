@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { apiClient } from "@/api/AxiosServiceApi";
+import InlineLoader from "@/components/InlineLoader";
 import {
   Card,
   CardContent,
@@ -26,7 +28,7 @@ import {
   Filter,
   Star,
   MessageSquare,
-  DollarSign,
+  IndianRupee,
   Briefcase,
   TrendingUp,
   Users,
@@ -42,122 +44,41 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
-const hiredFreelancers = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    avatar: "/placeholder.svg?height=60&width=60",
-    title: "Full-Stack Developer",
-    rating: 4.9,
-    completedJobs: 47,
-    totalEarned: 28500,
-    currentProjects: 2,
-    skills: ["React", "Node.js", "PostgreSQL", "AWS"],
-    hiredDate: "2023-08-15",
-    lastActive: "2024-01-25",
-    status: "Active",
-    projects: [
-      {
-        name: "E-commerce Platform",
-        status: "In Progress",
-        progress: 75,
-        budget: 5000,
-        deadline: "2024-02-15",
-      },
-      {
-        name: "API Integration",
-        status: "Completed",
-        progress: 100,
-        budget: 2500,
-        deadline: "2024-01-20",
-      },
-    ],
-    performance: {
-      onTimeDelivery: 95,
-      qualityScore: 4.8,
-      communicationRating: 4.9,
-      rehireRate: 85,
-    },
-  },
-  {
-    id: 2,
-    name: "Mike Chen",
-    avatar: "/placeholder.svg?height=60&width=60",
-    title: "UI/UX Designer",
-    rating: 4.8,
-    completedJobs: 32,
-    totalEarned: 18200,
-    currentProjects: 1,
-    skills: ["Figma", "Adobe XD", "Prototyping", "User Research"],
-    hiredDate: "2023-11-20",
-    lastActive: "2024-01-24",
-    status: "Active",
-    projects: [
-      {
-        name: "Mobile App Design",
-        status: "In Progress",
-        progress: 60,
-        budget: 3000,
-        deadline: "2024-02-28",
-      },
-      {
-        name: "Brand Identity",
-        status: "Completed",
-        progress: 100,
-        budget: 2200,
-        deadline: "2024-01-10",
-      },
-    ],
-    performance: {
-      onTimeDelivery: 90,
-      qualityScore: 4.7,
-      communicationRating: 4.8,
-      rehireRate: 75,
-    },
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    avatar: "/placeholder.svg?height=60&width=60",
-    title: "Mobile Developer",
-    rating: 5.0,
-    completedJobs: 28,
-    totalEarned: 22800,
-    currentProjects: 0,
-    skills: ["React Native", "iOS", "Android", "Firebase"],
-    hiredDate: "2023-09-10",
-    lastActive: "2024-01-20",
-    status: "Available",
-    projects: [
-      {
-        name: "Fitness App",
-        status: "Completed",
-        progress: 100,
-        budget: 4500,
-        deadline: "2024-01-15",
-      },
-      {
-        name: "Social Media App",
-        status: "Completed",
-        progress: 100,
-        budget: 3800,
-        deadline: "2023-12-20",
-      },
-    ],
-    performance: {
-      onTimeDelivery: 100,
-      qualityScore: 5.0,
-      communicationRating: 4.9,
-      rehireRate: 90,
-    },
-  },
-];
+import { format } from "date-fns";
 
 export default function HiredFreelancersContent({ userRole }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedFreelancer, setSelectedFreelancer] = useState(null);
+  const [selectedContractId, setSelectedContractId] = useState(null);
+  const [contracts, setContracts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const size = 5;
+
+  useEffect(() => {
+    if (userRole === "freelancer") return;
+    (async function fetchHiredFreelancers() {
+      try {
+        setLoading(true);
+        const res = await apiClient.get("/api/dashboard/hired-freelancers", {
+          params: { page, size },
+        });
+        const data = res.data;
+
+        setContracts(data.content || []);
+        setTotalPages(data.totalPages || 1);
+
+        if (data.content?.length > 0) {
+          setSelectedContractId(data.content[0].id);
+        }
+      } catch (error) {
+        console.error("Error fetching hired freelancers:", error);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [page, userRole]);
 
   if (userRole === "freelancer") {
     return (
@@ -182,49 +103,111 @@ export default function HiredFreelancersContent({ userRole }) {
     );
   }
 
+  // ── helpers ────────────────────────────────────────────────────────────────
+
+    const normalizeStatus = (status) =>
+    status?.replace(/_/g, " ").toLowerCase();
+
+
   const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "active":
-        return "default";
-      case "available":
-        return "secondary";
-      case "busy":
-        return "outline";
-      default:
-        return "outline";
+    switch (status?.toLowerCase()) {
+      case "active":   return "default";
+      case "completed": return "secondary";
+      case "cancelled": return "outline";
+      default:         return "outline";
     }
   };
 
-  const filteredFreelancers = hiredFreelancers.filter((freelancer) => {
+  // Derive a display-friendly name from FreelancerDto
+  const getFreelancerName = (freelancer) =>
+    freelancer?.userDto?.username || "Unknown";
+
+  const getFreelancerAvatar = (freelancer) =>
+    freelancer?.userDto?.imageData
+      ? `data:image/png;base64,${freelancer.userDto.imageData}`
+      : null;
+
+  const getFreelancerInitials = (freelancer) => {
+    const name = getFreelancerName(freelancer);
+    return name
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
+  };
+
+  const getProjectDuration = (job) => {
+    if (!job?.projectStartTime || !job?.projectEndTime) return "N/A";
+    const start = new Date(job.projectStartTime);
+    const end   = new Date(job.projectEndTime);
+    const days  = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+    return `${days} days`;
+  };
+
+ const getProjectProgress = (status) => {
+  const normalizedStatus = status
+    ?.replace(/_/g, " ")
+    .toLowerCase();
+
+  switch (normalizedStatus) {
+    case "completed":
+      return 100;
+
+    case "in progress":
+      return 60;
+
+    case "active":
+      return 40;
+
+    default:
+      return 0;
+  }
+};
+
+  const formatHiredDate = (dateStr) => {
+    if (!dateStr) return "N/A";
+    try { return format(new Date(dateStr), "PP"); }
+    catch { return dateStr; }
+  };
+
+  // ── filtering ──────────────────────────────────────────────────────────────
+
+  const filteredContracts = contracts.filter((contract) => {
+    const freelancer = contract.freelancer;
+    const name       = getFreelancerName(freelancer).toLowerCase();
+    const title      = freelancer?.designation?.toLowerCase() || "";
+    const status     = contract.status?.toLowerCase() || "";
+
     const matchesSearch =
-      freelancer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      freelancer.title.toLowerCase().includes(searchTerm.toLowerCase());
+      name.includes(searchTerm.toLowerCase()) ||
+      title.includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" ||
-      freelancer.status.toLowerCase() === statusFilter;
+      statusFilter === "all" || status === statusFilter.toLowerCase();
+
     return matchesSearch && matchesStatus;
   });
 
-  const getOverallStats = () => {
-    const totalFreelancers = hiredFreelancers.length;
-    const activeProjects = hiredFreelancers.reduce(
-      (sum, f) => sum + f.currentProjects,
-      0
-    );
-    const totalSpent = hiredFreelancers.reduce(
-      (sum, f) => sum + f.totalEarned,
-      0
-    );
-    const avgRating =
-      hiredFreelancers.reduce((sum, f) => sum + f.rating, 0) / totalFreelancers;
-    return { totalFreelancers, activeProjects, totalSpent, avgRating };
-  };
+  // ── stats (computed from ALL loaded contracts, not just filtered) ──────────
 
-  const stats = getOverallStats();
+  const totalFreelancers = contracts.length;
+  const activeProjects = contracts.filter((c) =>
+  ["active", "in progress", "in_progress"].includes(
+    normalizeStatus(c.status)
+  )
+).length;
+  const totalSpent = contracts.reduce(
+    (sum, c) => sum + (c.job?.budget ?? 0), 0
+  );
+  // No rating field in DTO — show N/A gracefully
+  const avgRating = null;
 
-  const selectedFreelancerData = selectedFreelancer
-    ? hiredFreelancers.find((f) => f.id === selectedFreelancer)
+  // ── selected contract ──────────────────────────────────────────────────────
+
+  const selectedContract = selectedContractId
+    ? contracts.find((c) => c.id === selectedContractId)
     : null;
+
+  // ── render ─────────────────────────────────────────────────────────────────
 
   return (
     <div className="space-y-6">
@@ -254,26 +237,22 @@ export default function HiredFreelancersContent({ userRole }) {
       <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Freelancers
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Freelancers</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.totalFreelancers}</div>
+            <div className="text-2xl font-bold">{totalFreelancers}</div>
             <p className="text-xs text-muted-foreground">Hired to date</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Active Projects
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
             <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.activeProjects}</div>
+            <div className="text-2xl font-bold">{activeProjects}</div>
             <p className="text-xs text-muted-foreground">Currently running</p>
           </CardContent>
         </Card>
@@ -281,11 +260,11 @@ export default function HiredFreelancersContent({ userRole }) {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Spent</CardTitle>
-            <DollarSign className="h-4 w-4 text-green-600" />
+            <IndianRupee className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              ${stats.totalSpent.toLocaleString()}
+              ₹{totalSpent.toLocaleString()}
             </div>
             <p className="text-xs text-muted-foreground">All time spending</p>
           </CardContent>
@@ -297,9 +276,7 @@ export default function HiredFreelancersContent({ userRole }) {
             <Star className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.avgRating.toFixed(1)}
-            </div>
+            <div className="text-2xl font-bold">N/A</div>
             <p className="text-xs text-muted-foreground">Team performance</p>
           </CardContent>
         </Card>
@@ -323,359 +300,436 @@ export default function HiredFreelancersContent({ userRole }) {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="available">Available</SelectItem>
-            <SelectItem value="busy">Busy</SelectItem>
+            <SelectItem value="completed">Completed</SelectItem>
+            <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Freelancers List */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Your Freelancers</CardTitle>
-              <CardDescription>
-                Manage your hired talent and track their work
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {filteredFreelancers.map((freelancer) => (
-                  <div
-                    key={freelancer.id}
-                    className={`border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
-                      selectedFreelancer === freelancer.id
-                        ? "ring-2 ring-primary"
-                        : ""
-                    }`}
-                    onClick={() => setSelectedFreelancer(freelancer.id)}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <InlineLoader />
+        </div>
+      ) : (
+        <>
+          <div className="grid gap-6 lg:grid-cols-3">
+            {/* Freelancers List */}
+            <div className="lg:col-span-2">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl">Your Freelancers</CardTitle>
+                  <CardDescription>
+                    Manage your hired talent and track their work
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {filteredContracts.length === 0 ? (
+                      <div className="text-center py-12">
+                        <Users className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">No freelancers found</h3>
+                        <p className="text-muted-foreground mb-4">
+                          Try adjusting your search or filters.
+                        </p>
+                        <Button
+                          variant="outline"
+                          onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}
+                        >
+                          Clear Filters
+                        </Button>
+                      </div>
+                    ) : (
+                      filteredContracts.map((contract) => {
+                        const freelancer = contract.freelancer;
+                        const job        = contract.job;
+
+                        return (
+                          <div
+                            key={contract.id}
+                            className={`border rounded-lg p-4 cursor-pointer hover:shadow-md transition-shadow ${
+                              selectedContractId === contract.id
+                                ? "ring-2 ring-primary"
+                                : ""
+                            }`}
+                            onClick={() => setSelectedContractId(contract.id)}
+                          >
+                            <div className="flex items-start space-x-4">
+                              <Avatar className="h-12 w-12">
+                                {getFreelancerAvatar(freelancer) ? (
+                                  <AvatarImage
+                                    src={getFreelancerAvatar(freelancer)}
+                                    alt={getFreelancerName(freelancer)}
+                                  />
+                                ) : null}
+                                <AvatarFallback>
+                                  {getFreelancerInitials(freelancer)}
+                                </AvatarFallback>
+                              </Avatar>
+
+                              <div className="flex-1 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="font-semibold text-lg">
+                                      {getFreelancerName(freelancer)}
+                                    </h3>
+                                    <p className="text-muted-foreground text-sm">
+                                      {freelancer?.designation || "Freelancer"}
+                                    </p>
+                                  </div>
+                                  <Badge variant={getStatusColor(contract.status)}>
+                                    {contract.status}
+                                  </Badge>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                                  <div className="flex items-center space-x-1">
+                                    <Briefcase className="h-4 w-4" />
+                                    <span className="capitalize">
+                                      {freelancer?.experienceLevel?.toLowerCase() || "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-1">
+                                    <IndianRupee className="h-4 w-4" />
+                                    <span>
+                                      {job?.budget != null
+                                      ? job.budget.toLocaleString()
+                                      : "N/A"}
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center space-x-1">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{getProjectDuration(job)}</span>
+                                  </div>
+                                </div>
+
+                                {/* Skills */}
+                                <div className="flex flex-wrap gap-1">
+                                  {(freelancer?.skills || []).slice(0, 4).map((skill) => (
+                                    <Badge key={skill} variant="secondary" className="text-xs">
+                                      {skill}
+                                    </Badge>
+                                  ))}
+                                  {(freelancer?.skills || []).length > 4 && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      +{freelancer.skills.length - 4}
+                                    </Badge>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between">
+                                  <span className="text-xs text-muted-foreground">
+                                    Hired: {formatHiredDate(contract.createdAt)}
+                                  </span>
+                                  <div className="flex items-center space-x-2">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      className="bg-transparent"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MessageSquare className="mr-2 h-4 w-4" />
+                                      Message
+                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          className="bg-transparent"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuItem>
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View Profile
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem>
+                                          <Briefcase className="mr-2 h-4 w-4" />
+                                          Assign Project
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem>
+                                          <TrendingUp className="mr-2 h-4 w-4" />
+                                          Performance Report
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-4 pt-6">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page === 0}
+                    onClick={() => setPage((p) => Math.max(p - 1, 0))}
                   >
-                    <div className="flex items-start space-x-4">
+                    Previous
+                  </Button>
+                  <span className="text-sm">
+                    Page {page + 1} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page + 1 >= totalPages}
+                    onClick={() => setPage((p) => p + 1)}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {/* Freelancer Detail Panel */}
+            <div>
+              {selectedContract ? (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center space-x-3">
                       <Avatar className="h-12 w-12">
-                        <AvatarImage
-                          src={freelancer.avatar || "/placeholder.svg"}
-                          alt={freelancer.name}
-                        />
+                        {getFreelancerAvatar(selectedContract.freelancer) ? (
+                          <AvatarImage
+                            src={getFreelancerAvatar(selectedContract.freelancer)}
+                            alt={getFreelancerName(selectedContract.freelancer)}
+                          />
+                        ) : null}
                         <AvatarFallback>
-                          {freelancer.name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
+                          {getFreelancerInitials(selectedContract.freelancer)}
                         </AvatarFallback>
                       </Avatar>
+                      <div>
+                        <CardTitle className="text-lg">
+                          {getFreelancerName(selectedContract.freelancer)}
+                        </CardTitle>
+                        <CardDescription>
+                          {selectedContract.freelancer?.designation || "Freelancer"}
+                        </CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Tabs defaultValue="overview" className="w-full">
+                      <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="overview">Overview</TabsTrigger>
+                        <TabsTrigger value="projects">Project</TabsTrigger>
+                        <TabsTrigger value="bid">Bid</TabsTrigger>
+                      </TabsList>
 
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold text-lg">
-                              {freelancer.name}
-                            </h3>
-                            <p className="text-muted-foreground text-sm">
-                              {freelancer.title}
-                            </p>
-                          </div>
-                          <Badge variant={getStatusColor(freelancer.status)}>
-                            {freelancer.status}
-                          </Badge>
-                        </div>
-
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{freelancer.rating}</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Briefcase className="h-4 w-4" />
-                            <span>{freelancer.completedJobs} jobs</span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <DollarSign className="h-4 w-4" />
-                            <span>
-                              ${freelancer.totalEarned.toLocaleString()}
+                      {/* Overview Tab */}
+                      <TabsContent value="overview" className="space-y-4 mt-4">
+                        <div className="space-y-3">
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Experience</span>
+                            <span className="font-medium capitalize">
+                              {selectedContract.freelancer?.experienceLevel?.toLowerCase() || "N/A"}
                             </span>
                           </div>
-                          <div className="flex items-center space-x-1">
-                            <Clock className="h-4 w-4" />
-                            <span>{freelancer.currentProjects} active</span>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Contract Status</span>
+                            <Badge variant={getStatusColor(selectedContract.status)}>
+                              {selectedContract.status}
+                            </Badge>
                           </div>
-                        </div>
-
-                        <div className="flex flex-wrap gap-1">
-                          {freelancer.skills.slice(0, 4).map((skill) => (
-                            <Badge
-                              key={skill}
-                              variant="secondary"
-                              className="text-xs"
-                            >
-                              {skill}
-                            </Badge>
-                          ))}
-                          {freelancer.skills.length > 4 && (
-                            <Badge variant="secondary" className="text-xs">
-                              +{freelancer.skills.length - 4}
-                            </Badge>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Phone</span>
+                            <span className="font-medium">
+                              {selectedContract.freelancer?.phone || "N/A"}
+                            </span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Hired On</span>
+                            <span className="font-medium">
+                              {formatHiredDate(selectedContract.createdAt)}
+                            </span>
+                          </div>
+                          {selectedContract.freelancer?.portfolioUrl && (
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Portfolio</span>
+                              <a
+                                href={selectedContract.freelancer.portfolioUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-primary text-sm underline"
+                              >
+                                View
+                              </a>
+                            </div>
                           )}
                         </div>
 
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-muted-foreground">
-                            Hired: {freelancer.hiredDate}
-                          </span>
-                          <div className="flex items-center space-x-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="bg-transparent"
-                            >
-                              <MessageSquare className="mr-2 h-4 w-4" />
-                              Message
-                            </Button>
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="bg-transparent"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuItem>
-                                  <Eye className="mr-2 h-4 w-4" />
-                                  View Profile
-                                </DropdownMenuItem>
-                                <DropdownMenuItem>
-                                  <Briefcase className="mr-2 h-4 w-4" />
-                                  Assign Project
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem>
-                                  <TrendingUp className="mr-2 h-4 w-4" />
-                                  Performance Report
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
+                        {selectedContract.freelancer?.bio && (
+                          <div>
+                            <h4 className="font-medium mb-1">Bio</h4>
+                            <p className="text-sm text-muted-foreground leading-relaxed">
+                              {selectedContract.freelancer.bio}
+                            </p>
+                          </div>
+                        )}
+
+                        <div>
+                          <h4 className="font-medium mb-2">Skills</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {(selectedContract.freelancer?.skills || []).map((skill) => (
+                              <Badge key={skill} variant="secondary" className="text-xs">
+                                {skill}
+                              </Badge>
+                            ))}
                           </div>
                         </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                      </TabsContent>
 
-        {/* Freelancer Details */}
-        <div>
-          {selectedFreelancerData ? (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center space-x-3">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage
-                      src={selectedFreelancerData.avatar || "/placeholder.svg"}
-                      alt={selectedFreelancerData.name}
-                    />
-                    <AvatarFallback>
-                      {selectedFreelancerData.name
-                        .split(" ")
-                        .map((n) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <CardTitle className="text-lg">
-                      {selectedFreelancerData.name}
-                    </CardTitle>
-                    <CardDescription>
-                      {selectedFreelancerData.title}
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Tabs defaultValue="overview" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="overview">Overview</TabsTrigger>
-                    <TabsTrigger value="projects">Projects</TabsTrigger>
-                    <TabsTrigger value="performance">Performance</TabsTrigger>
-                  </TabsList>
+                      {/* Project Tab */}
+                      <TabsContent value="projects" className="space-y-4 mt-4">
+                        {selectedContract.job ? (
+                          <div className="border rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-medium text-sm">
+                                {selectedContract.job.jobTitle}
+                              </h4>
+                              <Badge
+                                variant={
+                                  selectedContract.job.phase === "COMPLETED"
+                                    ? "default"
+                                    : "secondary"
+                                }
+                                className="text-xs"
+                              >
+                                {selectedContract.job.phase || selectedContract.job.status}
+                              </Badge>
+                            </div>
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>Progress</span>
+                                <span>{getProjectProgress(selectedContract.job.phase || selectedContract.job.status)}%</span>
+                              </div>
+                              <Progress
+                                value={getProjectProgress(selectedContract.job.phase || selectedContract.job.status)}
+                                className="h-2"
+                              />
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <IndianRupee className="h-3 w-3" />
+                                  {selectedContract.job?.budget?.toLocaleString()}
+                                </span>
+                                <span>
+                                  Due:{" "}
+                                  {selectedContract.job.projectEndTime
+                                    ? format(new Date(selectedContract.job.projectEndTime), "PP")
+                                    : "N/A"}
+                                </span>
+                              </div>
+                            </div>
 
-                  <TabsContent value="overview" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Rating
-                        </span>
-                        <div className="flex items-center space-x-1">
-                          <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                          <span className="font-medium">
-                            {selectedFreelancerData.rating}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Completed Jobs
-                        </span>
-                        <span className="font-medium">
-                          {selectedFreelancerData.completedJobs}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Total Earned
-                        </span>
-                        <span className="font-medium">
-                          ${selectedFreelancerData.totalEarned.toLocaleString()}
-                        </span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-sm text-muted-foreground">
-                          Last Active
-                        </span>
-                        <span className="font-medium">
-                          {selectedFreelancerData.lastActive}
-                        </span>
-                      </div>
-                    </div>
+                            <div className="mt-3 space-y-1 text-xs text-muted-foreground">
+                              <div className="flex justify-between">
+                                <span>Start</span>
+                                <span>
+                                  {selectedContract.job.projectStartTime
+                                    ? format(new Date(selectedContract.job.projectStartTime), "PP")
+                                    : "N/A"}
+                                </span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Experience Required</span>
+                                <span className="capitalize">
+                                  {selectedContract.job.experienceLevel?.toLowerCase() || "N/A"}
+                                </span>
+                              </div>
+                            </div>
 
-                    <div>
-                      <h4 className="font-medium mb-2">Skills</h4>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedFreelancerData.skills.map((skill) => (
-                          <Badge
-                            key={skill}
-                            variant="secondary"
-                            className="text-xs"
-                          >
-                            {skill}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  </TabsContent>
-
-                  <TabsContent value="projects" className="space-y-4 mt-4">
-                    {selectedFreelancerData.projects.map((project, index) => (
-                      <div key={index} className="border rounded-lg p-3">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-sm">
-                            {project.name}
-                          </h4>
-                          <Badge
-                            variant={
-                              project.status === "Completed"
-                                ? "default"
-                                : "secondary"
-                            }
-                            className="text-xs"
-                          >
-                            {project.status}
-                          </Badge>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>Progress</span>
-                            <span>{project.progress}%</span>
+                            {/* Required Skills */}
+                            {selectedContract.job.requiredSkills?.length > 0 && (
+                              <div className="mt-3">
+                                <p className="text-xs text-muted-foreground mb-1">Required Skills</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {selectedContract.job.requiredSkills.map((s) => (
+                                    <Badge key={s} variant="outline" className="text-xs">
+                                      {s}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          <Progress value={project.progress} className="h-2" />
-                          <div className="flex justify-between text-xs text-muted-foreground">
-                            <span>${project.budget.toLocaleString()}</span>
-                            <span>Due: {project.deadline}</span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </TabsContent>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No project data available.</p>
+                        )}
+                      </TabsContent>
 
-                  <TabsContent value="performance" className="space-y-4 mt-4">
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>On-Time Delivery</span>
-                          <span>
-                            {selectedFreelancerData.performance.onTimeDelivery}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            selectedFreelancerData.performance.onTimeDelivery
-                          }
-                          className="h-2"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Quality Score</span>
-                          <span>
-                            {selectedFreelancerData.performance.qualityScore}/5
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            (selectedFreelancerData.performance.qualityScore /
-                              5) *
-                            100
-                          }
-                          className="h-2"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Communication</span>
-                          <span>
-                            {
-                              selectedFreelancerData.performance
-                                .communicationRating
-                            }
-                            /5
-                          </span>
-                        </div>
-                        <Progress
-                          value={
-                            (selectedFreelancerData.performance
-                              .communicationRating /
-                              5) *
-                            100
-                          }
-                          className="h-2"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Rehire Rate</span>
-                          <span>
-                            {selectedFreelancerData.performance.rehireRate}%
-                          </span>
-                        </div>
-                        <Progress
-                          value={selectedFreelancerData.performance.rehireRate}
-                          className="h-2"
-                        />
-                      </div>
+                      {/* Bid Tab */}
+                      <TabsContent value="bid" className="space-y-4 mt-4">
+                        {selectedContract.acceptedBid ? (
+                          <div className="space-y-3">
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Bid Amount</span>
+                              <span className="font-medium flex items-center gap-1">
+                                <IndianRupee className="h-4 w-4" />
+                                {selectedContract.acceptedBid.amount != null
+                                  ? selectedContract.acceptedBid.amount.toLocaleString()
+                                  : "N/A"}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-sm text-muted-foreground">Bid Status</span>
+                              <Badge variant="default" className="text-xs">
+                                {selectedContract.acceptedBid.status || "ACCEPTED"}
+                              </Badge>
+                            </div>
+                            {selectedContract.acceptedBid.coverLetter && (
+                              <div>
+                                <h4 className="font-medium mb-1 text-sm">Proposal</h4>
+                                <p className="text-sm text-muted-foreground leading-relaxed line-clamp-5">
+                                  {selectedContract.acceptedBid.coverLetter}
+                                </p>
+                              </div>
+                            )}
+                            {selectedContract.acceptedBid.timeRequired && (
+                              <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Delivery Days</span>
+                                <span className="font-medium">
+                                  {selectedContract.acceptedBid.timeRequired}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">No bid data available.</p>
+                        )}
+                      </TabsContent>
+                    </Tabs>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card>
+                  <CardContent className="flex items-center justify-center h-64">
+                    <div className="text-center">
+                      <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <p className="text-muted-foreground">
+                        Select a freelancer to view details
+                      </p>
                     </div>
-                  </TabsContent>
-                </Tabs>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card>
-              <CardContent className="flex items-center justify-center h-64">
-                <div className="text-center">
-                  <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">
-                    Select a freelancer to view details
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

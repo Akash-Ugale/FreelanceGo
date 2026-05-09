@@ -111,7 +111,8 @@ export default function ClientProfile() {
         coverPhoto={data.clientProfile?.bannerUrl}
         profileImage={data.clientProfile?.profileImageUrl}
         // Accessing username via userDto as per your backend JSON structure
-        name={data.userDto?.username || data.client?.companyName}
+        //name={data.userDto?.username || data.client?.companyName}
+        name={data.userDto?.username}
         designation={data.client?.designation || "Client"}
         location={data.clientProfile?.location }
         rating={data.clientProfile?.rating || 0}

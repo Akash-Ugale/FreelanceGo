@@ -16,6 +16,8 @@ import {
   Eye,
   EyeOff,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import { userRoles } from "@/utils/constants";
 
 export default function ProfileHeader({
   originalData,
@@ -44,7 +46,14 @@ export default function ProfileHeader({
   const [tempDesignation, setTempDesignation] = useState(designation || title);
   const [tempBio, setTempBio] = useState(bio);
   const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
-  const [tempLocation, setTempLocation] = useState(location || "");
+  const { userRole } = useAuth();
+  const isClient = userRole !== userRoles.FREELANCER;
+
+  const [tempLocation, setTempLocation] = useState(
+    isClient
+      ? (originalData?.clientProfile?.location ?? "")
+      : (originalData?.freelancerProfile?.location ?? ""),
+  );
 
   // Sync coverPhoto prop on refresh
   useEffect(() => {
@@ -53,13 +62,11 @@ export default function ProfileHeader({
     }
   }, [coverPhoto, coverPhotoFile]);
 
-  useEffect(() => {
-    // If we have a location from the backend, sync it.
-    // If the backend sends null, we keep whatever is in tempLocation or default to empty string.
-    if (location !== undefined && location !== null) {
-      setTempLocation(location);
-    }
-  }, [location]);
+  //   useEffect(() => {
+  //   if (location !== undefined) {
+  //     setTempLocation(location ?? "");
+  //   }
+  // }, [location]);
 
   useEffect(() => {
     if (originalData?.user?.imageData) {
@@ -99,7 +106,7 @@ export default function ProfileHeader({
 
   // Inside ProfileHeader.jsx
   const handleSave = () => {
-    const isClientRole = !!originalData.client;
+    const isClientRole = isClient;
     const userKey = originalData.userDto ? "userDto" : "user";
 
     // 1. Update User Info
@@ -134,6 +141,7 @@ export default function ProfileHeader({
         phone: tempMobileNumber,
       };
       // Explicitly update location for Freelancer
+      console.log(tempLocation);
       updatedFreelancerProfile.location = tempLocation;
     }
 
@@ -230,17 +238,7 @@ export default function ProfileHeader({
               </AvatarFallback>
             </Avatar>
             {isEditing && (
-              // <label className="absolute bottom-0 right-0 cursor-pointer">
-              //   <Button size="sm" className="rounded-full h-8 w-8 p-0">
-              //     <Upload className="h-3 w-3" />
-              //   </Button>
-              //   <input
-              //     type="file"
-              //     accept="image/*"
-              //     onChange={handleProfileImageUpload}
-              //     className="hidden"
-              //   />
-              // </label>
+           
               <div className="absolute bottom-0 right-0">
                 <input
                   type="file"
@@ -300,7 +298,7 @@ export default function ProfileHeader({
                   {tempName || name}
                 </h1>
                 <p className="text-base font-medium text-primary">
-                  {originalData.client
+                  {originalData.isClient
                     ? "Client / Employer"
                     : designation || title}
                 </p>
