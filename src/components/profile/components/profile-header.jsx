@@ -38,54 +38,72 @@ export default function ProfileHeader({
   onProfileImageChange,
   onSave,
 }) {
+  const { userRole } = useAuth();
+  const isClient = userRole !== userRoles.FREELANCER;
+
   const [tempCoverPhoto, setTempCoverPhoto] = useState(coverPhoto);
   const [coverPhotoFile, setCoverPhotoFile] = useState(null);
   const [profileImageFile, setProfileImageFile] = useState(null);
   const [tempProfileImage, setTempProfileImage] = useState(profileImage);
-  const [tempName, setTempName] = useState(name);
-  const [tempDesignation, setTempDesignation] = useState(designation || title);
-  const [tempBio, setTempBio] = useState(bio);
-  const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber);
-  const { userRole } = useAuth();
-  const isClient = userRole !== userRoles.FREELANCER;
+
+  // FIX: For clients, initialize from companyName. For freelancers, from username.
+  const [tempName, setTempName] = useState(
+    isClient
+      ? (originalData?.client?.companyName || name || "")
+      : (name || "")
+  );
+
+  const [tempDesignation, setTempDesignation] = useState(designation || title || "");
+  const [tempBio, setTempBio] = useState(bio || "");
+  const [tempMobileNumber, setTempMobileNumber] = useState(mobileNumber || "");
 
   const [tempLocation, setTempLocation] = useState(
     isClient
       ? (originalData?.clientProfile?.location ?? "")
-      : (originalData?.freelancerProfile?.location ?? ""),
+      : (originalData?.freelancerProfile?.location ?? "")
   );
 
-  // Sync coverPhoto prop on refresh
+  // FIX: Sync ALL fields when originalData changes (after save/refresh)
+  useEffect(() => {
+    if (!originalData) return;
+
+    if (isClient) {
+      setTempName(originalData.client?.companyName || "");
+      setTempBio(originalData.client?.bio || "");
+      setTempMobileNumber(originalData.client?.phone || "");
+      setTempLocation(originalData.clientProfile?.location || "");
+      setTempDesignation(originalData.client?.designation || "Client");
+    } else {
+      setTempName(originalData.user?.username || originalData.userDto?.username || "");
+      setTempBio(originalData.freelancer?.bio || "");
+      setTempMobileNumber(originalData.freelancer?.phone || "");
+      setTempLocation(originalData.freelancerProfile?.location || "");
+      setTempDesignation(originalData.freelancer?.designation || "");
+    }
+  }, [originalData, isClient]);
+
+  // Sync coverPhoto on refresh
   useEffect(() => {
     if (coverPhoto && !coverPhotoFile) {
-      setTempCoverPhoto(coverPhoto); // show backend URL after refresh
+      setTempCoverPhoto(coverPhoto);
     }
   }, [coverPhoto, coverPhotoFile]);
 
-  //   useEffect(() => {
-  //   if (location !== undefined) {
-  //     setTempLocation(location ?? "");
-  //   }
-  // }, [location]);
-
+  // FIX: Handle both user and userDto for profile image (client vs freelancer response shape)
   useEffect(() => {
-    if (originalData?.user?.imageData) {
-      const imgUrl = `data:image/jpeg;base64,${originalData.user.imageData}`;
-      setTempProfileImage(imgUrl);
+    const imageData =
+      originalData?.user?.imageData || originalData?.userDto?.imageData;
+    if (imageData) {
+      setTempProfileImage(`data:image/jpeg;base64,${imageData}`);
     }
   }, [originalData]);
 
   const handleCoverPhotoUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      // onCoverPhotoChange?.(file);
-      // 1. save the actual file object to be sent to the backend
       setCoverPhotoFile(file);
-
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setTempCoverPhoto(reader.result);
-      };
+      reader.onloadend = () => setTempCoverPhoto(reader.result);
       reader.readAsDataURL(file);
     }
   };
@@ -93,45 +111,37 @@ export default function ProfileHeader({
   const handleProfileImageUpload = (e) => {
     const file = e.target.files?.[0];
     if (file) {
-      //onProfileImageChange?.(file);
-      // Save the actual file object
       setProfileImageFile(file);
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setTempProfileImage(reader.result);
-      };
+      reader.onloadend = () => setTempProfileImage(reader.result);
       reader.readAsDataURL(file);
     }
   };
 
-  // Inside ProfileHeader.jsx
   const handleSave = () => {
-    const isClientRole = isClient;
+    // FIX: use userDto key for clients, user key for freelancers
     const userKey = originalData.userDto ? "userDto" : "user";
 
-    // 1. Update User Info
     const updatedUser = {
       ...(originalData[userKey] || {}),
-      username: tempName,
+      // FIX: for clients, don't overwrite username with companyName
+      username: isClient
+        ? (originalData[userKey]?.username ?? null)
+        : tempName,
     };
 
-    // 2. Prepare Profile Objects - CRITICAL: We MUST preserve existing fields (ID, Banner, etc.)
-    // Otherwise, the Backend creates a NEW record instead of updating the existing one.
     let updatedFreelancer = { ...originalData.freelancer };
-    let updatedFreelancerProfile = {
-      ...(originalData.freelancerProfile || {}),
-    };
+    let updatedFreelancerProfile = { ...(originalData.freelancerProfile || {}) };
     let updatedClient = { ...originalData.client };
     let updatedClientProfile = { ...(originalData.clientProfile || {}) };
 
-    if (isClientRole) {
+    if (isClient) {
       updatedClient = {
         ...updatedClient,
-        companyName: tempName,
+        companyName: tempName,       // FIX: save to companyName, not username
         bio: tempBio,
         phone: tempMobileNumber,
       };
-      // Explicitly update location for Client
       updatedClientProfile.location = tempLocation;
     } else {
       updatedFreelancer = {
@@ -140,34 +150,42 @@ export default function ProfileHeader({
         bio: tempBio,
         phone: tempMobileNumber,
       };
-      // Explicitly update location for Freelancer
-      console.log(tempLocation);
       updatedFreelancerProfile.location = tempLocation;
     }
 
-    // 3. Construct DTO
     const profileDto = {
       id: originalData.id,
       [userKey]: updatedUser,
       client: updatedClient,
       freelancer: updatedFreelancer,
-      freelancerProfile: updatedFreelancerProfile, // Now contains location + existing data
-      clientProfile: updatedClientProfile, // Now contains location + existing data
+      freelancerProfile: updatedFreelancerProfile,
+      clientProfile: updatedClientProfile,
     };
 
     onSave?.(profileDto, profileImageFile, coverPhotoFile);
     onEditToggle();
   };
+
+  // FIX: resolve image data for both client (userDto) and freelancer (user)
+  const profileImageSrc = (() => {
+    const imageData =
+      originalData?.user?.imageData || originalData?.userDto?.imageData;
+    return (
+      tempProfileImage ||
+      profileImage ||
+      (imageData ? `data:image/jpeg;base64,${imageData}` : "/placeholder.svg")
+    );
+  })();
+
   return (
     <div className="bg-card rounded-lg overflow-hidden shadow-md border border-border mb-4">
-      {/* Cover Photo Section */}
+      {/* Cover Photo */}
       <div className="relative h-40 bg-gradient-to-br from-primary/20 to-accent/20">
         <img
           src={tempCoverPhoto || "/placeholder.svg"}
           alt="Cover photo"
           className="w-full h-full object-cover"
         />
-
         <div className="absolute top-3 right-3 flex gap-2">
           {onToggleViewOnly && (
             <Button
@@ -177,15 +195,9 @@ export default function ProfileHeader({
               className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
             >
               {isViewOnly ? (
-                <>
-                  <Eye className="h-4 w-4" />
-                  View Only
-                </>
+                <><Eye className="h-4 w-4" /> View Only</>
               ) : (
-                <>
-                  <EyeOff className="h-4 w-4" />
-                  Editing
-                </>
+                <><EyeOff className="h-4 w-4" /> Editing</>
               )}
             </Button>
           )}
@@ -198,13 +210,10 @@ export default function ProfileHeader({
                 onChange={handleCoverPhotoUpload}
                 className="hidden"
               />
-
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() =>
-                  document.getElementById("coverUploadInput").click()
-                }
+                onClick={() => document.getElementById("coverUploadInput").click()}
                 className="gap-2 flex items-center backdrop-blur-sm bg-background/80 hover:bg-background"
               >
                 <Upload className="h-4 w-4" />
@@ -215,30 +224,20 @@ export default function ProfileHeader({
         </div>
       </div>
 
-      {/* Profile Info Section - Compact Layout */}
+      {/* Profile Info */}
       <div className="px-6 py-4">
         <div className="flex gap-4 mb-4">
-          {/* Profile Image */}
+          {/* Avatar */}
           <div className="relative flex-shrink-0">
             <Avatar className="h-28 w-28 border-4 border-card shadow-md bg-card -mt-20">
-              <AvatarImage
-                src={
-                  tempProfileImage || // 1. Show the locally uploaded preview first
-                  profileImage || // 2. Show the backend URL passed from parent
-                  (originalData?.user?.imageData
-                    ? `data:image/jpeg;base64,${originalData.user.imageData}` // 3. Base64 fallback
-                    : "/placeholder.svg") // 4. Final placeholder
-                }
-              />
-
+              {/* FIX: use resolved profileImageSrc that handles both user/userDto */}
+              <AvatarImage src={profileImageSrc} />
               <AvatarFallback className="text-lg">
-                {name && typeof name === "string" && name.length > 0
-                  ? name.charAt(0).toUpperCase()
-                  : "?"}
+                {/* FIX: use tempName (never null) instead of name prop */}
+                {tempName?.length > 0 ? tempName.charAt(0).toUpperCase() : "?"}
               </AvatarFallback>
             </Avatar>
             {isEditing && (
-           
               <div className="absolute bottom-0 right-0">
                 <input
                   type="file"
@@ -247,13 +246,10 @@ export default function ProfileHeader({
                   onChange={handleProfileImageUpload}
                   className="hidden"
                 />
-
                 <Button
                   size="sm"
                   className="rounded-full h-8 w-8 p-0"
-                  onClick={() =>
-                    document.getElementById("profileUploadInput").click()
-                  }
+                  onClick={() => document.getElementById("profileUploadInput").click()}
                 >
                   <Upload className="h-3 w-3" />
                 </Button>
@@ -261,26 +257,25 @@ export default function ProfileHeader({
             )}
           </div>
 
-          {/* Name, Title, and Action Buttons */}
+          {/* Name / Title / Location */}
           <div className="flex-1 flex flex-col justify-between">
             {isEditing ? (
               <div className="space-y-2 flex-1">
-                {/* Inside Editing Mode */}
                 <Input
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
-                  placeholder={
-                    originalData.client ? "Company Name" : "Your Name"
-                  }
+                  placeholder={isClient ? "Company Name" : "Your Name"}
                   className="font-bold text-lg h-8"
                 />
-                <Input
-                  value={tempDesignation}
-                  onChange={(e) => setTempDesignation(e.target.value)}
-                  placeholder="Designation/Title"
-                  className="text-sm h-8"
-                />
-                {/* ✅ New Location Text Box for Editing */}
+                {/* Hide designation field for clients — they don't have one */}
+                {!isClient && (
+                  <Input
+                    value={tempDesignation}
+                    onChange={(e) => setTempDesignation(e.target.value)}
+                    placeholder="Designation/Title"
+                    className="text-sm h-8"
+                  />
+                )}
                 <div className="relative">
                   <MapPin className="absolute left-2 top-2 h-3.5 w-3.5 text-muted-foreground" />
                   <Input
@@ -293,26 +288,19 @@ export default function ProfileHeader({
               </div>
             ) : (
               <div>
-                {/* Inside View Mode */}
                 <h1 className="text-2xl font-bold text-foreground">
                   {tempName || name}
                 </h1>
                 <p className="text-base font-medium text-primary">
-                  {originalData.isClient
-                    ? "Client / Employer"
-                    : designation || title}
+                  {isClient ? "Client / Employer" : (tempDesignation || designation || title)}
                 </p>
-
-                {/* ✅ Location and Rating Display (View Mode) */}
                 <div className="flex items-center gap-4 mt-2 text-sm">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-3.5 w-3.5" />
-                    {/* Shows saved location or placeholder if it's the first time */}
-                    {location || tempLocation || (
+                    {tempLocation || location || (
                       <span className="italic opacity-60">No location set</span>
                     )}
                   </div>
-
                   <div className="flex items-center gap-1.5">
                     <div className="flex gap-0.5">
                       {[...Array(5)].map((_, i) => (
@@ -335,14 +323,13 @@ export default function ProfileHeader({
             )}
           </div>
 
-          {/* Edit/Save Button */}
+          {/* Edit/Save/Cancel */}
           {!isViewOnly && (
             <div className="flex flex-col gap-1">
               {isEditing ? (
                 <>
                   <Button size="sm" onClick={handleSave} className="gap-1.5">
-                    <Save className="h-3.5 w-3.5" />
-                    Save
+                    <Save className="h-3.5 w-3.5" /> Save
                   </Button>
                   <Button
                     size="sm"
@@ -350,8 +337,7 @@ export default function ProfileHeader({
                     onClick={onEditToggle}
                     className="gap-1.5 bg-transparent"
                   >
-                    <X className="h-3.5 w-3.5" />
-                    Cancel
+                    <X className="h-3.5 w-3.5" /> Cancel
                   </Button>
                 </>
               ) : (
@@ -361,21 +347,18 @@ export default function ProfileHeader({
                   onClick={onEditToggle}
                   className="gap-1.5 bg-transparent"
                 >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit Info
+                  <Edit2 className="h-3.5 w-3.5" /> Edit Info
                 </Button>
               )}
             </div>
           )}
         </div>
 
-        {/* Bio and Mobile Number - Compact */}
+        {/* Bio and Mobile */}
         {isEditing ? (
           <div className="space-y-2 border-t border-border pt-3">
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Bio
-              </label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Bio</label>
               <Textarea
                 value={tempBio}
                 onChange={(e) => setTempBio(e.target.value)}
@@ -385,9 +368,7 @@ export default function ProfileHeader({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Mobile Number
-              </label>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">Mobile Number</label>
               <Input
                 value={tempMobileNumber}
                 onChange={(e) => setTempMobileNumber(e.target.value)}
@@ -398,10 +379,10 @@ export default function ProfileHeader({
           </div>
         ) : (
           <div className="border-t border-border pt-3 space-y-1.5 text-sm">
-            <p className="text-foreground/80 leading-snug">{bio}</p>
-            {mobileNumber && (
+            <p className="text-foreground/80 leading-snug">{tempBio || bio}</p>
+            {(tempMobileNumber || mobileNumber) && (
               <p className="text-muted-foreground">
-                <span className="font-medium">Mobile:</span> {mobileNumber}
+                <span className="font-medium">Mobile:</span> {tempMobileNumber || mobileNumber}
               </p>
             )}
           </div>

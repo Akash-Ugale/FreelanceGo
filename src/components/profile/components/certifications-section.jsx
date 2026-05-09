@@ -126,7 +126,11 @@ export default function CertificationsSection({
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => setSelectedCertImage(cert.certificateUrl || cert.imageUrl)}
+                      onClick={() => {
+                        const raw = cert.certificateUrl || cert.imageUrl;
+                        const full = raw?.startsWith("http") ? raw : `https://freelancegobackend.onrender.com/${raw}`;
+                        setSelectedCertImage(full);
+                      }}
                     >
                       <Award className="h-3 w-3 mr-1" /> View
                     </Button>
@@ -158,7 +162,7 @@ export default function CertificationsSection({
                   <Upload className="h-3 w-3" />
                   {newCert.file ? newCert.file.name : "Upload Image"}
                 </div>
-                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e)} />
+                <input type="file" className="hidden" accept="image/*" onChange={(e) => handleFileChange(e,null)} />
               </label>
               <Button size="sm" className="w-full h-8" onClick={handleCreateNew}>
                 <Plus className="h-4 w-4 mr-1" /> Add Certification
