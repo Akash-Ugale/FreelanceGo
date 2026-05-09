@@ -44,18 +44,21 @@ export default function DashboardContent() {
       try {
         setLoading(true);
         const response = await apiClient.get(
-          "/api/dashboard/get-post-in-progress",
+          "/api/dashboard/client/get-post-in-progress",
           {
             headers: {
               Authorization: "Bearer " + token,
             },
           },
         );
+        console.log(token);
         const { data } = response;
         setDashboardData(data);
         console.log(data);
       } catch (error) {
-        console.log(error);
+        console.log("STATUS:", error.response?.status);
+        console.log("DATA:", error.response?.data);
+        console.log("MESSAGE:", error.message);
       } finally {
         setLoading(false);
       }
