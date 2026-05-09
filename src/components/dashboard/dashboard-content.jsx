@@ -13,12 +13,13 @@ import { userRoles } from "@/utils/constants";
 import {
   Briefcase,
   Clock,
-  DollarSign,
+  IndianRupee,
   Plus,
   PlusCircle,
   TrendingUp,
   UserCheck,
   Users,
+  CheckCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
@@ -28,77 +29,78 @@ export default function DashboardContent() {
   const { activeItem, setActiveItem } = useOutletContext();
 
   const [dashboardData, setDashboardData] = useState({
-    activeProjects: [],
-    recentJobPosts: [],
-    completedJobs: [],
+    activeProjects: [],   // List<ContractDto>
+    recentJobPosts: [],   // List<JobDto>  (client only)
+    completedJobs: [],    // List<ContractDto>
     dashboard: {
       totalJobs: 0,
       totalActiveProjects: 0,
-      totalSpending: 0,
+      totalSpending: 0.0,
     },
   });
   const [loading, setLoading] = useState(true);
 
-  const fetchDashboardData = async (token) => {
-    if (!authLoading && token) {
+  useEffect(() => {
+    if (authLoading || !token || !userRole) return;
+
+    (async () => {
       try {
         setLoading(true);
-        const response = await apiClient.get(
-          "/api/dashboard/client/get-post-in-progress",
-          {
-            headers: {
-              Authorization: "Bearer " + token,
-            },
-          },
-        );
-        console.log(token);
-        const { data } = response;
+        // CLIENT  → GET /api/dashboard/client/get-post-in-progress
+        // Returns: { activeProjects, recentJobPosts, completedJobs, dashboard }
+        //
+        // FREELANCER → GET /api/freelancer/get-post-in-progress  (note: no /dashboard/ prefix)
+        // Returns: { activeProjects, completedJobs, dashboard }
+        const endpoint =
+          userRole === userRoles.FREELANCER
+            ? "/api/freelancer/get-post-in-progress"
+            : "/api/dashboard/client/get-post-in-progress";
+
+        const { data } = await apiClient.get(endpoint);
         setDashboardData(data);
-        console.log(data);
+        console.log("Dashboard Data:", data);
       } catch (error) {
-        console.log("STATUS:", error.response?.status);
-        console.log("DATA:", error.response?.data);
-        console.log("MESSAGE:", error.message);
+        console.error("Dashboard fetch error:", error?.response?.data ?? error);
       } finally {
         setLoading(false);
       }
-    }
-  };
+    })();
+  }, [token, authLoading, userRole]);
 
-  useEffect(() => {
-    fetchDashboardData(token);
-  }, [token, authLoading]);
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  // dashboard.totalJobs           → completed contracts count
+  // dashboard.totalActiveProjects → active contracts count
+  // dashboard.totalSpending       → sum of completed contract bid amounts
 
-  // Generate stats based on fetched data
   const getStats = () => {
     if (userRole === userRoles.FREELANCER) {
       return [
         {
           title: "Total Earnings",
-          value: "$12,450", // You'll need to add this to your API
-          change: "+12.5%",
-          changeType: "positive",
-          icon: DollarSign,
+          // ✅ totalSpending = sum of completed contract amounts for freelancer
+          value: `₹${(dashboardData.dashboard?.totalSpending ?? 0).toLocaleString()}`,
+          icon: IndianRupee,
         },
         {
           title: "Active Projects",
-          value: dashboardData.dashboard.totalActiveProjects.toString(),
-          change: "+2",
-          changeType: "positive",
+          value: (dashboardData.dashboard?.totalActiveProjects ?? 0).toString(),
           icon: Briefcase,
         },
         {
-          title: "Pending Proposals",
-          value: "15", // You'll need to add this to your API
-          change: "-3",
-          changeType: "negative",
-          icon: Clock,
+          title: "Completed Jobs",
+          // ✅ totalJobs = completed contracts count
+          value: (dashboardData.dashboard?.totalJobs ?? 0).toString(),
+          icon: CheckCircle,
         },
         {
           title: "Success Rate",
-          value: "87%", // You'll need to add this to your API
-          change: "+5%",
-          changeType: "positive",
+          // Derived: completed / (completed + active) * 100
+          value: (() => {
+            const completed = dashboardData.dashboard?.totalJobs ?? 0;
+            const active    = dashboardData.dashboard?.totalActiveProjects ?? 0;
+            const total     = completed + active;
+            return total === 0 ? "0%" : `${Math.round((completed / total) * 100)}%`;
+          })(),
           icon: TrendingUp,
         },
       ];
@@ -106,76 +108,107 @@ export default function DashboardContent() {
       return [
         {
           title: "Total Spent",
-          value: `$${dashboardData.dashboard.totalSpending.toLocaleString()}`,
-          change: "+18.2%",
-          changeType: "positive",
-          icon: DollarSign,
+          // ✅ totalSpending = sum of completed contract bid amounts
+          value: `₹${(dashboardData.dashboard?.totalSpending ?? 0).toLocaleString()}`,
+          icon: IndianRupee,
         },
         {
           title: "Active Projects",
-          value: dashboardData.dashboard.totalActiveProjects.toString(),
-          change: "+4",
-          changeType: "positive",
+          value: (dashboardData.dashboard?.totalActiveProjects ?? 0).toString(),
           icon: Briefcase,
         },
         {
-          title: "Job Posts",
-          value: dashboardData.dashboard.totalJobs.toString(),
-          change: "+1",
-          changeType: "positive",
-          icon: PlusCircle,
+          title: "Completed Jobs",
+          // ✅ totalJobs = completed contracts count
+          value: (dashboardData.dashboard?.totalJobs ?? 0).toString(),
+          icon: CheckCircle,
         },
         {
           title: "Hired Freelancers",
-          value: "23", // You'll need to add this to your API
-          change: "+7",
-          changeType: "positive",
+          // Derived: count distinct freelancers from activeProjects
+          value: (() => {
+            const ids = new Set(
+              (dashboardData.activeProjects || [])
+                .map(c => c.freelancer?.id)
+                .filter(Boolean)
+            );
+            return ids.size.toString();
+          })(),
           icon: UserCheck,
         },
       ];
     }
   };
 
-  // Transform active projects for display
+  // ── Active Projects ───────────────────────────────────────────────────────
+  // Each item is a ContractDto:
+  //   contract.id
+  //   contract.status                          → "ACTIVE" | "COMPLETED"
+  //   contract.job.jobTitle                    → project name
+  //   contract.job.budget                      → budget
+  //   contract.job.projectEndTime              → deadline
+  //   contract.job.clientDto.companyName       → client name
+  //   contract.acceptedBid.freelancerDto       → FreelancerDto
+  //     .userDto.username                      → freelancer name
+  //     .userDto.imageData                     → base64 avatar
+  //   contract.freelancer                      → FreelancerDto (also available directly)
+
   const getProjects = () => {
-    return dashboardData.activeProjects.map((project) => {
-      const job = project.job;
+    return (dashboardData.activeProjects || []).map((contract) => {
+      const job             = contract.job;
+      // freelancer available both from contract.freelancer and contract.acceptedBid.freelancerDto
+      const freelancer      = contract.freelancer ?? contract.acceptedBid?.freelancerDto;
+      const clientName      = job?.clientDto?.companyName ?? "N/A";
+      const freelancerName  = freelancer?.userDto?.username ?? "No Freelancer";
+      const freelancerImage = freelancer?.userDto?.imageData ?? null;
+
       return {
-        title: job.jobTitle,
-        client:
-          userRole === userRoles.FREELANCER
-            ? job.clientDto.companyName
-            : project.freelancer?.userDto.username || "N/A",
-        freelancer: project.freelancer?.userDto.username,
-        status: project.status,
-        budget: job.budget.toLocaleString(),
-        deadline: new Date(job.projectEndTime).toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "short",
-          day: "numeric",
-        }),
-        progress: 65, // You'll need to add progress tracking to your API
+        title:          job?.jobTitle ?? "N/A",
+        client:         clientName,
+        freelancer:     freelancerName,
+        freelancerImage,
+        status:         contract.status,
+        budget:         (job?.budget ?? 0).toLocaleString(),
+        deadline:       job?.projectEndTime
+          ? new Date(job.projectEndTime).toLocaleDateString("en-US", {
+              year: "numeric", month: "short", day: "numeric",
+            })
+          : "N/A",
       };
     });
   };
 
-  // Transform recent job posts for display
+  // ── Recent Activity ───────────────────────────────────────────────────────
+  // CLIENT: recentJobPosts → List<JobDto>
+  //   job.jobTitle, job.budget, job.proposalsCount, job.status, job.createdAt
+  //
+  // FREELANCER: no recent bids in this API — show completedJobs instead
+  //   contract.job.jobTitle, contract.acceptedBid.amount, contract.status
+
   const getRecentActivity = () => {
     if (userRole === userRoles.FREELANCER) {
-      // For freelancer, show their bids (you'll need to add this to your API)
-      return []; // Placeholder - add bid data when available
+      return (dashboardData.completedJobs || []).map((contract) => ({
+        title:    contract.job?.jobTitle ?? "N/A",
+        budget:   `₹${(contract.acceptedBid?.amount ?? 0).toLocaleString()}`,
+        status:   contract.status,
+        postedAt: contract.createdAt
+          ? new Date(contract.createdAt).toLocaleDateString("en-US", {
+              month: "short", day: "numeric", year: "numeric",
+            })
+          : "N/A",
+      }));
     } else {
-      // For client, show recent job posts
-      return dashboardData.recentJobPosts.map((job) => ({
-        title: job.jobTitle,
-        budget: `$${job.budget.toLocaleString()}`,
-        proposals: job.proposalsCount,
-        status: job.status === "INACTIVE" ? "Active" : job.status,
-        postedAt: new Date(job.createdAt).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        }),
+      // CLIENT: recentJobPosts → List<JobDto>
+      return (dashboardData.recentJobPosts || []).map((job) => ({
+        title:     job.jobTitle,
+        budget:    `₹${(job.budget ?? 0).toLocaleString()}`,
+        proposals: job.proposalsCount ?? 0,
+        status:    job.status === "INACTIVE" ? "In Progress" : (job.status ?? "N/A"),
+        postedAt:  job.createdAt
+          ? new Date(job.createdAt).toLocaleDateString("en-US", {
+              month: "short", day: "numeric", year: "numeric",
+            })
+          : "N/A",
       }));
     }
   };
@@ -184,15 +217,15 @@ export default function DashboardContent() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite]" />
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
           <p className="mt-2 text-muted-foreground">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
-  const stats = getStats();
-  const projects = getProjects();
+  const stats          = getStats();
+  const projects       = getProjects();
   const recentActivity = getRecentActivity();
 
   return (
@@ -201,8 +234,7 @@ export default function DashboardContent() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {userRole === userRoles.FREELANCER ? "Freelancer" : "Client"}{" "}
-            Dashboard
+            {userRole === userRoles.FREELANCER ? "Freelancer" : "Client"} Dashboard
           </h1>
           <p className="text-muted-foreground text-sm md:text-base">
             {userRole === userRoles.FREELANCER
@@ -211,30 +243,18 @@ export default function DashboardContent() {
           </p>
         </div>
         <Link
-          to={
-            userRole === userRoles.FREELANCER
-              ? "/dashboard/browse-jobs"
-              : "/dashboard/post-job"
-          }
+          to={userRole === userRoles.FREELANCER ? "/dashboard/browse-jobs" : "/dashboard/post-job"}
           onClick={() =>
             setActiveItem(
-              userRole === userRoles.FREELANCER
-                ? "/dashboard/browse-jobs"
-                : "/dashboard/post-job",
+              userRole === userRoles.FREELANCER ? "/dashboard/browse-jobs" : "/dashboard/post-job"
             )
           }
         >
           <Button className="w-full sm:w-auto">
             {userRole === userRoles.FREELANCER ? (
-              <>
-                <Plus className="mr-2 h-4 w-4" />
-                Browse Jobs
-              </>
+              <><Plus className="mr-2 h-4 w-4" />Browse Jobs</>
             ) : (
-              <>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Post a Job
-              </>
+              <><PlusCircle className="mr-2 h-4 w-4" />Post a Job</>
             )}
           </Button>
         </Link>
@@ -245,9 +265,7 @@ export default function DashboardContent() {
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                {stat.title}
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -259,17 +277,16 @@ export default function DashboardContent() {
 
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
-        {/* Projects */}
+
+        {/* Active Projects — from contract.job + contract.freelancer */}
         <Card className="lg:col-span-2">
           <CardHeader className="space-y-0">
             <CardTitle className="text-lg md:text-xl">
-              {userRole === userRoles.FREELANCER
-                ? "Recent Projects"
-                : "Active Projects"}
+              {userRole === userRoles.FREELANCER ? "Active Projects" : "Active Projects"}
             </CardTitle>
             <CardDescription className="text-sm">
               {userRole === userRoles.FREELANCER
-                ? "Your active and recently completed projects"
+                ? "Your currently active contracts"
                 : "Projects you're currently managing"}
             </CardDescription>
           </CardHeader>
@@ -282,44 +299,50 @@ export default function DashboardContent() {
               <div className="space-y-4">
                 {projects.map((project, index) => (
                   <div key={index} className="rounded-lg border p-4 space-y-3">
-                    <div>
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
-                        <h4 className="font-semibold text-sm md:text-base">
-                          {project.title}
-                        </h4>
-                        <Badge
-                          variant={
-                            project.status === "COMPLETED"
-                              ? "default"
-                              : "outline"
-                          }
-                          className="w-fit"
-                        >
-                          {project.status}
-                        </Badge>
-                      </div>
-                      <div className="flex gap-2 text-xs md:text-sm text-muted-foreground">
-                        <span className="flex items-center">
-                          <Users className="mr-1 h-3 w-3" />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                      <h4 className="font-semibold text-sm md:text-base">{project.title}</h4>
+                      <Badge
+                        variant={project.status === "COMPLETED" ? "default" : "outline"}
+                        className="w-fit"
+                      >
+                        {project.status}
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-3 text-xs md:text-sm text-muted-foreground">
+                      {/* freelancer.userDto.username + imageData */}
+                      <div className="flex items-center gap-2">
+                        <Users className="h-3 w-3" />
+                        {project.freelancerImage && (
+                          <img
+                            src={`data:image/jpeg;base64,${project.freelancerImage}`}
+                            alt={project.freelancer}
+                            className="w-6 h-6 rounded-full object-cover"
+                          />
+                        )}
+                        <span>
                           {userRole === userRoles.FREELANCER
                             ? project.client
                             : project.freelancer}
                         </span>
-                        <span className="flex items-center">
-                          <DollarSign className="mr-1 h-3 w-3" />
-                          {project.budget}
-                        </span>
-                        <span className="flex items-center">
-                          <Clock className="mr-1 h-3 w-3" />
-                          {project.deadline}
-                        </span>
                       </div>
+
+                      {/* job.budget */}
+                      <span className="flex items-center gap-1">
+                        <IndianRupee className="h-3 w-3" />
+                        {project.budget}
+                      </span>
+
+                      {/* job.projectEndTime */}
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {project.deadline}
+                      </span>
                     </div>
-                    <div>
-                      <Button variant="outline" size="sm" className="w-full">
-                        View Project Details
-                      </Button>
-                    </div>
+
+                    <Button variant="outline" size="sm" className="w-full">
+                      View Project Details
+                    </Button>
                   </div>
                 ))}
               </div>
@@ -331,21 +354,19 @@ export default function DashboardContent() {
         <Card>
           <CardHeader className="space-y-0">
             <CardTitle className="text-lg md:text-xl">
-              {userRole === userRoles.FREELANCER
-                ? "Recent Bids"
-                : "Recent Job Posts"}
+              {userRole === userRoles.FREELANCER ? "Completed Jobs" : "Recent Job Posts"}
             </CardTitle>
             <CardDescription className="text-sm">
               {userRole === userRoles.FREELANCER
-                ? "Your latest proposal submissions"
-                : "Your recent job postings and proposals"}
+                ? "Your recently completed contracts"
+                : "Your recent job postings and proposals received"}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {recentActivity.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 {userRole === userRoles.FREELANCER
-                  ? "No recent bids"
+                  ? "No completed jobs yet"
                   : "No recent job posts"}
               </div>
             ) : (
@@ -353,20 +374,12 @@ export default function DashboardContent() {
                 {recentActivity.map((item, index) => (
                   <div key={index} className="space-y-2 rounded-lg border p-3">
                     <div className="flex items-start justify-between">
-                      <h3 className="font-semibold text-sm leading-tight pr-2">
-                        {item.title}
-                      </h3>
+                      <h3 className="font-semibold text-sm leading-tight pr-2">{item.title}</h3>
                       <Badge
                         variant={
-                          item.status === "Shortlisted" ||
-                          item.status === "Hired"
-                            ? "default"
-                            : item.status === "Pending" ||
-                                item.status === "Reviewing"
-                              ? "secondary"
-                              : item.status === "Active"
-                                ? "outline"
-                                : "destructive"
+                          item.status === "COMPLETED" ? "default"
+                          : item.status === "ACTIVE" || item.status === "In Progress" ? "outline"
+                          : "secondary"
                         }
                         className="text-xs flex-shrink-0"
                       >
@@ -374,19 +387,15 @@ export default function DashboardContent() {
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
-                      {userRole === userRoles.FREELANCER ? (
-                        <>
-                          <div>Budget: {item.budget}</div>
-                          <div>Your bid: {item.bidAmount}</div>
-                          <div>{item.submittedAt}</div>
-                        </>
-                      ) : (
-                        <>
-                          <div>Budget: {item.budget}</div>
-                          <div>Proposals: {item.proposals}</div>
-                          <div>{item.postedAt}</div>
-                        </>
+                      {/* job.budget / acceptedBid.amount */}
+                      <div className="flex items-center gap-1">
+                        <IndianRupee className="h-3 w-3" /> {item.budget}
+                      </div>
+                      {/* CLIENT ONLY: job.proposalsCount */}
+                      {userRole !== userRoles.FREELANCER && (
+                        <div>Proposals: {item.proposals}</div>
                       )}
+                      <div>{item.postedAt}</div>
                     </div>
                   </div>
                 ))}
@@ -394,6 +403,7 @@ export default function DashboardContent() {
             )}
           </CardContent>
         </Card>
+
       </div>
     </div>
   );
