@@ -1,334 +1,507 @@
-"use client"
+"use client";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { RUPEE, userRoles } from "@/utils/constants"
+} from "@/components/ui/select";
+import { userRoles } from "@/utils/constants";
 import {
   Briefcase,
   Calendar,
   CheckCircle,
   Clock,
+  ExternalLink,
   Eye,
   FileText,
   Filter,
+  IndianRupee,
+  Layers,
+  Loader2,
   MessageSquare,
   Search,
-  Star,
   User,
   XCircle,
-} from "lucide-react"
-import { useState } from "react"
+} from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { apiClient } from "@/api/AxiosServiceApi.js";
 
-const freelancerProposals = [
-  {
-    id: 1,
-    jobTitle: "E-commerce Website Development",
-    client: "TechCorp Inc.",
-    clientAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 2500,
-    status: "Under Review",
-    submittedDate: "2024-01-25",
-    coverLetter:
-      "I have extensive experience in e-commerce development with React and Node.js...",
-    timeline: "6 weeks",
-    category: "Web Development",
-    skills: ["React", "Node.js", "MongoDB", "Stripe"],
-    clientRating: 4.8,
-    clientJobs: 12,
+// ─── API ──────────────────────────────────────────────────────────────────────
+
+async function fetchMyProposals() {
+  const response = await apiClient.get("/api/review-my-proposals");
+  return response.data;
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+function useProposals() {
+  const [proposals, setProposals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await fetchMyProposals();
+        if (!cancelled) setProposals(data);
+      } catch (err) {
+        if (!cancelled)
+          setError(err?.response?.data?.message ?? "Failed to load proposals.");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  return { proposals, loading, error };
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function formatDate(iso) {
+  if (!iso) return "—";
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function formatBudget(amount) {
+  if (amount == null) return "—";
+  return new Intl.NumberFormat("en-IN").format(amount);
+}
+
+function getInitials(name = "") {
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function base64ToDataUrl(base64) {
+  if (!base64) return undefined;
+  return `data:image/png;base64,${base64}`;
+}
+
+// ─── Status Badge ─────────────────────────────────────────────────────────────
+
+const STATUS_META = {
+  ACTIVE: {
+    label: "Active",
+    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
   },
-  {
-    id: 2,
-    jobTitle: "Mobile App UI/UX Design",
-    client: "FitLife Startup",
-    clientAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 1800,
-    status: "Accepted",
-    submittedDate: "2024-01-20",
-    coverLetter:
-      "Your fitness app project aligns perfectly with my design expertise...",
-    timeline: "4 weeks",
-    category: "Design",
-    skills: ["Figma", "UI/UX", "Mobile Design", "Prototyping"],
-    clientRating: 4.9,
-    clientJobs: 8,
+  CLOSED: {
+    label: "Closed",
+    color: "bg-slate-100 text-slate-600 border-slate-200",
   },
-  {
-    id: 3,
-    jobTitle: "Content Writing for Tech Blog",
-    client: "DevInsights Media",
-    clientAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 800,
-    status: "Declined",
-    submittedDate: "2024-01-18",
-    coverLetter:
-      "I specialize in technical content writing with 5+ years experience...",
-    timeline: "2 weeks",
-    category: "Writing",
-    skills: ["Technical Writing", "SEO", "Content Strategy"],
-    clientRating: 4.6,
-    clientJobs: 25,
+  PENDING: {
+    label: "Pending",
+    color: "bg-amber-100 text-amber-700 border-amber-200",
   },
-]
-
-const clientProposals = [
-  {
-    id: 1,
-    jobTitle: "Full-Stack Web Development",
-    freelancer: "Sarah Johnson",
-    freelancerAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 3500,
-    status: "New",
-    submittedDate: "2024-01-25",
-    coverLetter:
-      "I'm excited to work on your full-stack project. With 8+ years of experience...",
-    timeline: "8 weeks",
-    freelancerRating: 4.9,
-    completedJobs: 47,
-    skills: ["React", "Node.js", "PostgreSQL", "AWS"],
-    hourlyRate: 85,
+  ACCEPTED: {
+    label: "Accepted",
+    color: "bg-emerald-100 text-emerald-700 border-emerald-200",
   },
-  {
-    id: 2,
-    jobTitle: "Brand Identity Design",
-    freelancer: "Mike Chen",
-    freelancerAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 2200,
-    status: "Shortlisted",
-    submittedDate: "2024-01-23",
-    coverLetter:
-      "Your brand identity project caught my attention. I have extensive experience...",
-    timeline: "5 weeks",
-    freelancerRating: 4.8,
-    completedJobs: 32,
-    skills: ["Brand Design", "Logo Design", "Adobe Creative Suite"],
-    hourlyRate: 65,
+  DECLINED: {
+    label: "Declined",
+    color: "bg-red-100 text-red-600 border-red-200",
   },
-  {
-    id: 3,
-    jobTitle: "Mobile App Development",
-    freelancer: "Emily Rodriguez",
-    freelancerAvatar: "/placeholder.svg?height=40&width=40",
-    bidAmount: 4500,
-    status: "Interviewed",
-    submittedDate: "2024-01-20",
-    coverLetter:
-      "I'm passionate about mobile development and would love to bring your app idea to life...",
-    timeline: "10 weeks",
-    freelancerRating: 5.0,
-    completedJobs: 28,
-    skills: ["React Native", "iOS", "Android", "Firebase"],
-    hourlyRate: 90,
+  "UNDER REVIEW": {
+    label: "Under Review",
+    color: "bg-blue-100 text-blue-700 border-blue-200",
   },
-]
+  NEW: {
+    label: "New",
+    color: "bg-purple-100 text-purple-700 border-purple-200",
+  },
+  SHORTLISTED: {
+    label: "Shortlisted",
+    color: "bg-yellow-100 text-yellow-700 border-yellow-200",
+  },
+  INTERVIEWED: {
+    label: "Interviewed",
+    color: "bg-teal-100 text-teal-700 border-teal-200",
+  },
+};
 
-export default function ProposalsContent({ userRole }) {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [selectedTab, setSelectedTab] = useState("all")
+function StatusBadge({ status = "" }) {
+  const meta = STATUS_META[status.toUpperCase()] ?? {
+    label: status,
+    color: "bg-slate-100 text-slate-600 border-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${meta.color}`}
+    >
+      {meta.label}
+    </span>
+  );
+}
 
-  const proposals =
-    userRole === userRoles.FREELANCER ? freelancerProposals : clientProposals
+// ─── Experience Badge ─────────────────────────────────────────────────────────
 
-  const getStatusColor = (status) => {
-    switch (status.toLowerCase()) {
-      case "accepted":
-      case "hired":
-        return "default"
-      case "under review":
-      case "new":
-        return "secondary"
-      case "shortlisted":
-      case "interviewed":
-        return "outline"
-      case "declined":
-        return "destructive"
-      default:
-        return "outline"
-    }
-  }
+const EXP_META = {
+  ENTRY: {
+    label: "Entry Level",
+    color: "bg-sky-50 text-sky-600 border-sky-200",
+  },
+  INTERMEDIATE: {
+    label: "Intermediate",
+    color: "bg-violet-50 text-violet-600 border-violet-200",
+  },
+  EXPERT: {
+    label: "Expert",
+    color: "bg-orange-50 text-orange-600 border-orange-200",
+  },
+};
 
-  const getProposalStats = () => {
-    if (userRole === userRoles.FREELANCER) {
-      const total = freelancerProposals.length
-      const accepted = freelancerProposals.filter(
-        (p) => p.status === "Accepted"
-      ).length
-      const pending = freelancerProposals.filter(
-        (p) => p.status === "Under Review"
-      ).length
-      const declined = freelancerProposals.filter(
-        (p) => p.status === "Declined"
-      ).length
-      return { total, accepted, pending, declined }
-    } else {
-      const total = clientProposals.length
-      const new_proposals = clientProposals.filter(
-        (p) => p.status === "New"
-      ).length
-      const shortlisted = clientProposals.filter(
-        (p) => p.status === "Shortlisted"
-      ).length
-      const interviewed = clientProposals.filter(
-        (p) => p.status === "Interviewed"
-      ).length
-      return { total, new: new_proposals, shortlisted, interviewed }
-    }
-  }
+function ExperienceBadge({ level }) {
+  if (!level) return null;
+  const meta = EXP_META[level.toUpperCase()] ?? {
+    label: level,
+    color: "bg-slate-50 text-slate-500 border-slate-200",
+  };
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium border ${meta.color}`}
+    >
+      <Layers className="h-3 w-3" />
+      {meta.label}
+    </span>
+  );
+}
 
-  const stats = getProposalStats()
+// ─── Proposal Card ────────────────────────────────────────────────────────────
+
+function ProposalCard({ proposal, userRole }) {
+  const { clientDto } = proposal;
+  const avatarSrc = base64ToDataUrl(clientDto?.userDto?.imageData);
+  const displayName =
+    clientDto?.companyName ?? clientDto?.userDto?.username ?? "Client";
+
+  const durationDays =
+    proposal.projectStartTime && proposal.projectEndTime
+      ? Math.ceil(
+          (new Date(proposal.projectEndTime) -
+            new Date(proposal.projectStartTime)) /
+            (1000 * 60 * 60 * 24),
+        )
+      : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            {userRole === userRoles.FREELANCER
-              ? "My Proposals"
-              : "Review Proposals"}
-          </h1>
-          <p className="text-muted-foreground text-sm md:text-base">
-            {userRole === userRoles.FREELANCER
-              ? "Track your submitted proposals and their status"
-              : "Review and manage incoming proposals from freelancers"}
-          </p>
+    <div className="border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-md transition-all duration-200 bg-card">
+      {/* ── Top bar: title + status ── */}
+      <div className="flex items-start justify-between gap-4 px-5 pt-5 pb-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-base leading-snug truncate">
+            {proposal.jobTitle}
+          </h3>
+          <div className="flex items-center gap-2 mt-1">
+            <Avatar className="h-5 w-5">
+              <AvatarImage src={avatarSrc} alt={displayName} />
+              <AvatarFallback className="text-[9px]">
+                {getInitials(displayName)}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm text-muted-foreground">{displayName}</span>
+            {clientDto?.userDto?.email && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground truncate max-w-[180px]">
+                  {clientDto.userDto.email}
+                </span>
+              </>
+            )}
+            {clientDto?.phone && (
+              <>
+                <span className="text-muted-foreground/40">·</span>
+                <span className="text-xs text-muted-foreground flex items-center gap-1">
+                  <User className="h-3 w-3" />
+                  {clientDto.phone}
+                </span>
+              </>
+            )}
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="bg-transparent">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          {userRole === "client" && (
-            <Button size="sm">
-              <FileText className="mr-2 h-4 w-4" />
-              Post New Job
+        <StatusBadge status={proposal.status} />
+      </div>
+
+      {/* ── Divider ── */}
+      <div className="border-t border-border/60 mx-5" />
+
+      {/* ── Description ── */}
+      {proposal.jobDescription && (
+        <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 px-5 pt-3">
+          {proposal.jobDescription}
+        </p>
+      )}
+
+      {/* ── Skills ── */}
+      {proposal.requiredSkills?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 px-5 pt-3">
+          {proposal.requiredSkills.map((skill) => (
+            <Badge
+              key={skill}
+              variant="secondary"
+              className="text-xs px-2 py-0"
+            >
+              {skill}
+            </Badge>
+          ))}
+        </div>
+      )}
+
+      {/* ── Meta row: dates · duration · experience ── */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-5 pt-3 text-xs text-muted-foreground">
+        {proposal.projectStartTime && (
+          <div className="flex items-center gap-1">
+            <Calendar className="h-3.5 w-3.5 shrink-0" />
+            <span>{formatDate(proposal.projectStartTime)}</span>
+            {proposal.projectEndTime && (
+              <>
+                <span className="mx-0.5">→</span>
+                <span>{formatDate(proposal.projectEndTime)}</span>
+              </>
+            )}
+          </div>
+        )}
+        {durationDays != null && (
+          <div className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5 shrink-0" />
+            {durationDays} days
+          </div>
+        )}
+        <ExperienceBadge level={proposal.experienceLevel} />
+      </div>
+
+      {/* ── Divider ── */}
+      <div className="border-t border-border/60 mx-5 mt-4" />
+
+      {/* ── Footer: budget + posted date + actions ── */}
+      <div className="flex items-center justify-between gap-4 px-5 py-3">
+        {/* Budget */}
+        <div className="flex items-baseline gap-1">
+          <div className="flex items-center text-lg font-bold tabular-nums">
+            <IndianRupee className="h-4 w-4" />
+            {formatBudget(proposal.budget)}
+          </div>
+          <span className="text-xs text-muted-foreground">budget</span>
+          {proposal.createdAt && (
+            <>
+              <span className="text-muted-foreground/40 mx-1">·</span>
+              <span className="text-xs text-muted-foreground">
+                Posted {formatDate(proposal.createdAt)}
+              </span>
+            </>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 shrink-0">
+          {proposal.file && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent h-8 px-3 text-xs"
+              onClick={() => window.open(proposal.file, "_blank")}
+            >
+              <ExternalLink className="h-3.5 w-3.5 mr-1" />
+              Brief
+            </Button>
+          )}
+          {userRole === userRoles.CLIENT ? (
+            <>
+              <Button
+                variant="outline"
+                size="sm"
+                className="bg-transparent h-8 px-3 text-xs"
+              >
+                <MessageSquare className="h-3.5 w-3.5 mr-1" />
+                Message
+              </Button>
+              <Button size="sm" className="h-8 px-3 text-xs">
+                Hire
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent h-8 px-3 text-xs"
+            >
+              <Eye className="h-3.5 w-3.5 mr-1" />
+              Details
             </Button>
           )}
         </div>
       </div>
+    </div>
+  );
+}
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Total Proposals
-            </CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">
-              {userRole === userRoles.FREELANCER ? "Submitted" : "Received"}
-            </p>
-          </CardContent>
-        </Card>
+// ─── Stat Card ────────────────────────────────────────────────────────────────
 
-        {userRole === userRoles.FREELANCER ? (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Accepted</CardTitle>
-                <CheckCircle className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.accepted}</div>
-                <p className="text-xs text-muted-foreground">
-                  Success rate:{" "}
-                  {((stats.accepted / stats.total) * 100).toFixed(1)}%
-                </p>
-              </CardContent>
-            </Card>
+function StatCard({ title, value, sub, icon: Icon, iconClass }) {
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className={`h-4 w-4 ${iconClass ?? "text-muted-foreground"}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+        {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
+      </CardContent>
+    </Card>
+  );
+}
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Pending</CardTitle>
-                <Clock className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.pending}</div>
-                <p className="text-xs text-muted-foreground">Under review</p>
-              </CardContent>
-            </Card>
+// ─── Main Export ──────────────────────────────────────────────────────────────
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Declined</CardTitle>
-                <XCircle className="h-4 w-4 text-red-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.declined}</div>
-                <p className="text-xs text-muted-foreground">Not selected</p>
-              </CardContent>
-            </Card>
-          </>
-        ) : (
-          <>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">New</CardTitle>
-                <Eye className="h-4 w-4 text-blue-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.new}</div>
-                <p className="text-xs text-muted-foreground">Need review</p>
-              </CardContent>
-            </Card>
+export default function ProposalsContent({ userRole }) {
+  const { proposals, loading, error } = useProposals();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Shortlisted
-                </CardTitle>
-                <Star className="h-4 w-4 text-yellow-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.shortlisted}</div>
-                <p className="text-xs text-muted-foreground">Top candidates</p>
-              </CardContent>
-            </Card>
+  const stats = useMemo(
+    () => ({
+      total: proposals.length,
+      active: proposals.filter((p) => p.status === "ACTIVE").length,
+      pending: proposals.filter((p) => p.status === "PENDING").length,
+      declined: proposals.filter((p) => p.status === "DECLINED").length,
+    }),
+    [proposals],
+  );
 
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  Interviewed
-                </CardTitle>
-                <MessageSquare className="h-4 w-4 text-green-600" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.interviewed}</div>
-                <p className="text-xs text-muted-foreground">In progress</p>
-              </CardContent>
-            </Card>
-          </>
+  const uniqueStatuses = useMemo(
+    () => [...new Set(proposals.map((p) => p.status).filter(Boolean))],
+    [proposals],
+  );
+
+  const filtered = useMemo(
+    () =>
+      proposals.filter((p) => {
+        const matchSearch =
+          !searchTerm ||
+          p.jobTitle?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          p.clientDto?.companyName
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase()) ||
+          p.requiredSkills?.some((s) =>
+            s.toLowerCase().includes(searchTerm.toLowerCase()),
+          );
+
+        const matchStatus =
+          statusFilter === "all" ||
+          p.status?.toLowerCase() === statusFilter.toLowerCase();
+
+        return matchSearch && matchStatus;
+      }),
+    [proposals, searchTerm, statusFilter],
+  );
+
+  const isFreelancer = userRole === userRoles.FREELANCER;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px] text-muted-foreground gap-2">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span className="text-sm">Loading proposals…</span>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[300px]">
+        <p className="text-sm text-red-500">{error}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
+            {isFreelancer ? "My Proposals" : "Review Proposals"}
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {isFreelancer
+              ? "Track your submitted proposals and their status"
+              : "Review and manage incoming proposals from freelancers"}
+          </p>
+        </div>
+        {!isFreelancer && (
+          <Button size="sm">
+            <FileText className="mr-2 h-4 w-4" />
+            Post New Job
+          </Button>
         )}
       </div>
 
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      {/* Stats */}
+      <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          title="Total"
+          value={stats.total}
+          sub="All proposals"
+          icon={FileText}
+        />
+        <StatCard
+          title="Active"
+          value={stats.active}
+          sub="Currently open"
+          icon={CheckCircle}
+          iconClass="text-emerald-600"
+        />
+        <StatCard
+          title="Pending"
+          value={stats.pending}
+          sub="Awaiting action"
+          icon={Clock}
+          iconClass="text-amber-500"
+        />
+        <StatCard
+          title="Declined"
+          value={stats.declined}
+          sub="Not selected"
+          icon={XCircle}
+          iconClass="text-red-500"
+        />
+      </div>
+
+      {/* Search + Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
           <Input
-            placeholder={`Search ${
-              userRole === userRoles.FREELANCER ? "jobs" : "freelancers"
-            }...`}
+            placeholder="Search by title, client, or skill…"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10"
@@ -336,179 +509,52 @@ export default function ProposalsContent({ userRole }) {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
+            <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            {userRole === userRoles.FREELANCER ? (
-              <>
-                <SelectItem value="under-review">Under Review</SelectItem>
-                <SelectItem value="accepted">Accepted</SelectItem>
-                <SelectItem value="declined">Declined</SelectItem>
-              </>
-            ) : (
-              <>
-                <SelectItem value="new">New</SelectItem>
-                <SelectItem value="shortlisted">Shortlisted</SelectItem>
-                <SelectItem value="interviewed">Interviewed</SelectItem>
-              </>
-            )}
+            <SelectItem value="all">All Statuses</SelectItem>
+            {uniqueStatuses.map((s) => (
+              <SelectItem key={s} value={s.toLowerCase()}>
+                {s.charAt(0) + s.slice(1).toLowerCase()}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
-      {/* Proposals List */}
+      {/* List */}
       <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">
-            {userRole === userRoles.FREELANCER
-              ? "Submitted Proposals"
-              : "Received Proposals"}
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">
+            {isFreelancer ? "Submitted Proposals" : "Received Proposals"}
           </CardTitle>
           <CardDescription>
-            {userRole === userRoles.FREELANCER
-              ? "Track the status of your job applications"
-              : "Review and manage proposals from talented freelancers"}
+            {filtered.length} of {proposals.length} proposals
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {proposals.map((proposal) => (
-              <div
-                key={proposal.id}
-                className="border rounded-lg p-4 hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between space-y-4 lg:space-y-0">
-                  <div className="flex-1 space-y-3">
-                    <div className="flex items-start space-x-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarImage
-                          src={
-                            userRole === userRoles.FREELANCER
-                              ? proposal.clientAvatar
-                              : proposal.freelancerAvatar
-                          }
-                          alt="Avatar"
-                        />
-                        <AvatarFallback>
-                          {userRole === userRoles.FREELANCER
-                            ? proposal.client
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                            : proposal.freelancer
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">
-                          {proposal.jobTitle}
-                        </h3>
-                        <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                          <div className="flex items-center space-x-1">
-                            <User className="h-4 w-4" />
-                            <span>
-                              {userRole === userRoles.FREELANCER
-                                ? proposal.client
-                                : proposal.freelancer}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>
-                              {userRole === userRoles.FREELANCER
-                                ? proposal.clientRating
-                                : proposal.freelancerRating}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-1">
-                            <Briefcase className="h-4 w-4" />
-                            <span>
-                              {userRole === userRoles.FREELANCER
-                                ? proposal.clientJobs
-                                : proposal.completedJobs}{" "}
-                              jobs
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {proposal.coverLetter}
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {proposal.skills.map((skill) => (
-                        <Badge
-                          key={skill}
-                          variant="secondary"
-                          className="text-xs"
-                        >
-                          {skill}
-                        </Badge>
-                      ))}
-                    </div>
-
-                    <div className="flex items-center space-x-6 text-sm text-muted-foreground">
-                      <div className="flex items-center space-x-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>Submitted: {proposal.submittedDate}</span>
-                      </div>
-                      <div className="flex items-center space-x-1">
-                        <Clock className="h-4 w-4" />
-                        <span>Timeline: {proposal.timeline}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-end space-y-3">
-                    <Badge variant={getStatusColor(proposal.status)}>
-                      {proposal.status}
-                    </Badge>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold">
-                        ${proposal.bidAmount.toLocaleString()}
-                      </div>
-                      {userRole === "client" && (
-                        <div className="text-sm text-muted-foreground">
-                          ${proposal.hourlyRate}/hr
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex space-x-2">
-                      {userRole === "client" ? (
-                        <>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="bg-transparent"
-                          >
-                            <MessageSquare className="mr-2 h-4 w-4" />
-                            Message
-                          </Button>
-                          <Button size="sm">Hire</Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-transparent"
-                        >
-                          <Eye className="mr-2 h-4 w-4" />
-                          View Details
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+          {filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center text-muted-foreground">
+              <Briefcase className="h-10 w-10 mb-3 opacity-30" />
+              <p className="text-sm font-medium">No proposals found</p>
+              <p className="text-xs mt-1">
+                Try adjusting your search or filters
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {filtered.map((proposal) => (
+                <ProposalCard
+                  key={proposal.id}
+                  proposal={proposal}
+                  userRole={userRole}
+                />
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

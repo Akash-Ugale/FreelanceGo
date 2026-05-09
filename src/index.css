@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 * {
-  font-family: "Inter", sans-serif;
+  font-family: "Funnel Sans","Inter", sans-serif;
   scrollbar-width: thin;
   scrollbar-color: white transparent;
   box-sizing: border-box;
