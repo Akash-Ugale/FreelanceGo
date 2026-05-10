@@ -4,26 +4,31 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Edit2, X } from "lucide-react"
-
-// PayoutSetupRequest fields:
-//   freelancerId        → passed as prop (userId from AuthContext)
-//   accountHolderName   → ✅ new field
-//   accountNumber       → ✅ existing
-//   ifscCode            → ✅ existing
-//   bankName            → optional (not shown in UI but sent if needed)
-//   accountType         → optional
+import { Edit2, X, ShieldCheck, BadgeCheck, AlertCircle } from "lucide-react"
 
 export default function BankDetailsSection({
   accountNumber = "",
   ifscCode = "",
   accountHolderName = "",
-  userId,        // freelancerId for PayoutSetupRequest
+  phoneNumber = "",   // from data.freelancer?.phone — already in profile
+  userId,
   onSave,
 }) {
+  // If any bank detail already exists → treat as already set up
+  const isAlreadySetup = !!(accountHolderName || accountNumber || ifscCode)
+
+  const [status, setStatus]     = useState(isAlreadySetup ? "active" : "not_set") // "not_set" | "active"
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving]   = useState(false)
-  const [formData, setFormData]   = useState({
+
+  const [formData, setFormData] = useState({
+    accountHolderName,
+    accountNumber,
+    ifscCode,
+  })
+
+  // Saved snapshot — shown masked in the status card
+  const [savedData, setSavedData] = useState({
     accountHolderName,
     accountNumber,
     ifscCode,
@@ -39,23 +44,37 @@ export default function BankDetailsSection({
   const handleSave = async () => {
     try {
       setIsSaving(true)
-      // POST /api/freelancer/payout/setup
-      // Body: PayoutSetupRequest { freelancerId, accountHolderName, accountNumber, ifscCode }
       await onSave?.({
         freelancerId:      String(userId),
         accountHolderName: formData.accountHolderName,
         accountNumber:     formData.accountNumber,
         ifscCode:          formData.ifscCode,
+        phoneNumber:       phoneNumber,   // injected from profile, user doesn't re-enter
       })
+      // On success → switch to active status card
+      setSavedData({ ...formData })
+      setStatus("active")
       setIsEditing(false)
+    } catch {
+      // toast is handled in parent
     } finally {
       setIsSaving(false)
     }
   }
 
-  const maskAccountNumber = (num) => {
-    if (!num) return "Not provided"
-    return `****${num.slice(-4)}`
+  const handleEdit = () => {
+    setFormData({ ...savedData })
+    setIsEditing(true)
+  }
+
+  const handleCancel = () => {
+    setFormData({ ...savedData })
+    setIsEditing(false)
+  }
+
+  const maskAccount = (num) => {
+    if (!num) return "—"
+    return `${"•".repeat(Math.max(0, num.length - 4))}${num.slice(-4)}`
   }
 
   return (
@@ -63,26 +82,81 @@ export default function BankDetailsSection({
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-3">
         <div>
           <CardTitle className="text-lg">Bank Details</CardTitle>
-          <CardDescription className="text-xs">Secure payment information</CardDescription>
+          <CardDescription className="text-xs">Secure payout information</CardDescription>
         </div>
-        {!isEditing && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsEditing(true)}
-            className="gap-2 h-8"
-          >
-            <Edit2 className="h-4 w-4" />
-            Edit
-          </Button>
+
+        {/* Status badge — only shown when active and not editing */}
+        {status === "active" && !isEditing && (
+          <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+            <BadgeCheck className="h-3.5 w-3.5" />
+            Active
+          </span>
         )}
       </CardHeader>
 
-      <CardContent className="pb-3">
-        {isEditing ? (
-          <div className="space-y-3">
+      <CardContent className="pb-4">
 
-            {/* accountHolderName — NEW field from PayoutSetupRequest */}
+        {/* ── NOT SET UP YET ── */}
+        {status === "not_set" && !isEditing && (
+          <div className="flex flex-col items-center justify-center py-6 gap-3 border border-dashed border-border rounded-lg bg-secondary/20">
+            <AlertCircle className="h-8 w-8 text-muted-foreground" />
+            <div className="text-center">
+              <p className="text-sm font-medium">No payout account set up</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Add your bank details to receive payments</p>
+            </div>
+            <Button size="sm" onClick={() => setIsEditing(true)} className="mt-1">
+              Set Up Payout
+            </Button>
+          </div>
+        )}
+
+        {/* ── ACTIVE STATUS CARD ── */}
+        {status === "active" && !isEditing && (
+          <div className="space-y-4">
+            {/* Success banner */}
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+              <ShieldCheck className="h-5 w-5 text-emerald-500 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                  Payout account is active
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  You'll receive payments to the account below
+                </p>
+              </div>
+            </div>
+
+            {/* Masked details */}
+            <div className="space-y-2 p-3 border border-border rounded-md bg-secondary/30">
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-muted-foreground">Account Holder</p>
+                <p className="text-sm font-semibold">{savedData.accountHolderName || "—"}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-muted-foreground">Account Number</p>
+                <p className="text-sm font-semibold font-mono">{maskAccount(savedData.accountNumber)}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-muted-foreground">IFSC Code</p>
+                <p className="text-sm font-semibold font-mono">{savedData.ifscCode || "—"}</p>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleEdit}
+              className="gap-2 w-full bg-transparent"
+            >
+              <Edit2 className="h-3.5 w-3.5" />
+              Update Bank Details
+            </Button>
+          </div>
+        )}
+
+        {/* ── EDIT / SETUP FORM ── */}
+        {isEditing && (
+          <div className="space-y-3">
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Account Holder Name <span className="text-red-500">*</span>
@@ -95,7 +169,6 @@ export default function BankDetailsSection({
               />
             </div>
 
-            {/* accountNumber */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Account Number <span className="text-red-500">*</span>
@@ -109,7 +182,6 @@ export default function BankDetailsSection({
               />
             </div>
 
-            {/* ifscCode */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
                 IFSC Code <span className="text-red-500">*</span>
@@ -122,52 +194,45 @@ export default function BankDetailsSection({
               />
             </div>
 
+            {/* Phone shown as read-only — pulled from profile, not re-entered */}
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Registered Phone
+              </label>
+              <Input
+                value={phoneNumber}
+                disabled
+                className="text-xs h-9 bg-secondary/40 cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Linked from your profile. Update it in Profile settings.
+              </p>
+            </div>
+
             <div className="flex gap-2 justify-end pt-2">
               <Button
                 variant="outline"
-                onClick={() => setIsEditing(false)}
-                className="gap-2 h-8"
+                size="sm"
+                onClick={handleCancel}
+                className="gap-2 h-8 bg-transparent"
                 disabled={isSaving}
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
                 Cancel
               </Button>
               <Button
+                size="sm"
                 onClick={handleSave}
-                className="gap-2 h-8"
+                className="h-8"
                 disabled={
                   isSaving ||
-                  !formData.accountHolderName ||
-                  !formData.accountNumber ||
-                  !formData.ifscCode
+                  !formData.accountHolderName.trim() ||
+                  !formData.accountNumber.trim() ||
+                  !formData.ifscCode.trim()
                 }
               >
-                {isSaving ? "Saving..." : "Save"}
+                {isSaving ? "Saving..." : "Save & Activate"}
               </Button>
-            </div>
-          </div>
-        ) : (
-          <div className="space-y-2 p-3 border border-border rounded-md bg-secondary/30">
-            {/* accountHolderName */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Account Holder Name</p>
-              <p className="text-sm font-semibold text-foreground">
-                {accountHolderName || formData.accountHolderName || "Not provided"}
-              </p>
-            </div>
-            {/* accountNumber — masked */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">Account Number</p>
-              <p className="text-sm font-semibold text-foreground">
-                {maskAccountNumber(accountNumber || formData.accountNumber)}
-              </p>
-            </div>
-            {/* ifscCode */}
-            <div>
-              <p className="text-xs font-medium text-muted-foreground">IFSC Code</p>
-              <p className="text-sm font-semibold text-foreground">
-                {ifscCode || formData.ifscCode || "Not provided"}
-              </p>
             </div>
           </div>
         )}

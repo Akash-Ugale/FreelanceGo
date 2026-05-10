@@ -196,18 +196,17 @@ export default function FreelancerProfile() {
   //   accountNumber,
   //   ifscCode,
   // }
-  const handleBankDetailsSave = async (payoutData) => {
-    try {
-      // payoutData already shaped as PayoutSetupRequest by BankDetailsSection
-      await apiClient.post("/api/freelancer/payout/setup", payoutData, {
-        withCredentials: true,
-      });
-      toast.success("Bank details saved!");
-    } catch (error) {
-      console.error("Bank details save error:", error?.response?.data ?? error);
-      toast.error("Failed to save bank details");
-    }
-  };
+const handleBankDetailsSave = async (payoutData) => {
+  try {
+    await apiClient.post("/api/freelancer/payout/setup", payoutData, {
+      withCredentials: true,
+    });
+    toast.success("Bank details saved!");
+  } catch (error) {
+    console.error("Bank details save error:", error?.response?.data ?? error);
+    toast.error("Failed to save bank details");
+  }
+};
 
   if (loading) return <div className="p-8 text-center">Loading profile...</div>;
   if (!data)   return <div className="p-8 text-center">No profile data found.</div>;
@@ -264,6 +263,7 @@ export default function FreelancerProfile() {
         accountHolderName={data.accountHolderName ?? ""}
         accountNumber={data.accountNumber ?? ""}
         ifscCode={data.ifscCode ?? ""}
+        phoneNumber={data.freelancer?.phone ?? ""}   // ← pulled from existing profile
         onSave={handleBankDetailsSave}
       />
     </div>

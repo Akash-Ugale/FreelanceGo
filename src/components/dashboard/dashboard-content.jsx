@@ -63,7 +63,7 @@ export default function DashboardContent() {
         console.error("Dashboard fetch error:", error?.response?.data ?? error);
       } finally {
         setLoading(false);
-      }
+      } 
     })();
   }, [token, authLoading, userRole]);
 

@@ -90,13 +90,19 @@ export default function ClientProfile() {
   if (loading) return <p className="text-center py-10 text-gray-500">Loading profile...</p>;
   if (!data) return <p className="text-center py-10 text-red-500">No client data found.</p>;
 
+  const phaseConfig = {
+    IN_PROGRESS: { label: "In Progress", class: "bg-blue-500/10 text-blue-400 border border-blue-500/20" },
+    COMPLETED:   { label: "Completed",   class: "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" },
+    PENDING:     { label: "Pending",     class: "bg-amber-500/10 text-amber-400 border border-amber-500/20" },
+    CANCELLED:   { label: "Cancelled",   class: "bg-red-500/10 text-red-400 border border-red-500/20" },
+  };
+
   return (
-    <div className="space-y-6 max-w-5xl mx-auto p-4">
+    <div className="space-y-4 max-w-5xl mx-auto p-4">
       <ProfileHeader
         originalData={data}
         coverPhoto={data.clientProfile?.bannerUrl}
         profileImage={data.clientProfile?.profileImageUrl}
-        // FIX: use companyName for clients, not username (which is null)
         name={data.client?.companyName || data.userDto?.username || ""}
         designation={data.client?.designation || "Client"}
         location={data.clientProfile?.location}
@@ -116,27 +122,58 @@ export default function ClientProfile() {
         onSave={handleSocialLinksSave}
       />
 
-      <div className="p-6 border border-gray-800 rounded-xl shadow-sm bg-[#0f172a]">
-        <h2 className="text-xl font-bold mb-4 text-white">Active Projects</h2>
-        {activeProjects && activeProjects.length > 0 ? (
-          <ul className="grid gap-4">
-            {activeProjects.map((project) => (
-              <li key={project.id} className="p-4 border border-gray-700 rounded-lg hover:border-blue-500 transition-colors bg-[#1e293b]">
-                <h3 className="font-semibold text-lg text-white">{project.title}</h3>
-                <p className="text-sm text-gray-400 mt-1">{project.description}</p>
-                {project.budget && (
-                  <span className="text-xs font-bold text-green-400 mt-2 block">
-                    Budget: ${project.budget}
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="text-center py-6 bg-[#1e293b] rounded-lg">
-            <p className="text-sm text-gray-400">No active projects found.</p>
+      {/* ── Active Projects — matches Card style of SocialLinksSection ── */}
+      <div className="rounded-lg border border-border bg-card shadow-sm">
+        {/* Header — same pattern as CardHeader */}
+        <div className="flex flex-row items-center justify-between px-6 pt-5 pb-4">
+          <div>
+            <h2 className="text-2xl font-semibold text-foreground">Active Projects</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">Projects you have posted</p>
           </div>
-        )}
+          {activeProjects.length > 0 && (
+            <span className="text-xs font-semibold text-primary bg-primary/10 border border-primary/20 px-2.5 py-1 rounded-full">
+              {activeProjects.length} {activeProjects.length === 1 ? "Project" : "Projects"}
+            </span>
+          )}
+        </div>
+
+        {/* Content */}
+        <div className="px-6 pb-5 space-y-3">
+          {activeProjects.length > 0 ? (
+            activeProjects.map((project) => {
+              const phase = phaseConfig[project.phase] ?? {
+                label: project.phase ?? "Unknown",
+                class: "bg-secondary text-muted-foreground border border-border",
+              };
+
+              return (
+                <div
+                  key={project.id}
+                  className="flex items-center justify-between p-4 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 transition-colors"
+                >
+                  {/* Left — title + budget */}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {project.jobTitle}
+                    </p>
+                    <p className="text-xs font-medium text-emerald-500 mt-0.5">
+                      ₹{project.budget?.toLocaleString("en-IN") ?? "—"}
+                    </p>
+                  </div>
+
+                  {/* Right — phase badge */}
+                  <span className={`ml-4 flex-shrink-0 text-xs font-semibold px-2.5 py-1 rounded-full ${phase.class}`}>
+                    {phase.label}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-center py-8 rounded-lg border border-dashed border-border bg-secondary/20">
+              <p className="text-sm text-muted-foreground">No active projects yet</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
