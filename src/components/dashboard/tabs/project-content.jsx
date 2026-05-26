@@ -819,7 +819,8 @@ export default function ProjectsContent() {
     const canClientReviewProposal =
       userRole === userRoles.CLIENT &&
       isActiveMilestone &&
-      milestone.verificationStatus === "PENDING_REVIEW" && // ! Change back to "PENDING_REVIEW"
+      (milestone.verificationStatus === "PENDING_REVIEW" ||
+      milestone.verificationStatus === "APPROVED_BY_CLIENT") && // ! Change back to "PENDING_REVIEW"
       milestone.status !== "APPROVED" &&
       milestone.status !== "IN_PROGRESS";
 
