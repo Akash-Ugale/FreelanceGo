@@ -385,19 +385,76 @@ export default function ProfileSetup() {
             </div>
           )}
 
+          {/* NEW SECTION ADDED FOR NEW USERS */}
+          {(!existingFreelancer || !existingClient) && (
+            <div className="mb-12">
+              <h2 className="text-2xl font-semibold mb-6 flex items-center gap-2">
+                <Plus className="h-6 w-6 text-foreground" />
+                {existingFreelancer || existingClient ? "Add Another Profile" : "Create Your Profile"}
+              </h2>
+
+              <div className="grid md:grid-cols-2 gap-6">
+                
+                {/* Create Freelancer Card */}
+                {!existingFreelancer && (
+                  <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <Briefcase className="h-10 w-10 text-primary mb-2" />
+                      <CardTitle>I am a Freelancer</CardTitle>
+                      <CardDescription>
+                        Find projects, submit proposals, and earn money doing what you love.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        onClick={() => handleCreateNewProfile("freelancer")}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Freelancer Profile
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Create Client Card */}
+                {!existingClient && (
+                  <Card className="border-dashed border-2 hover:border-primary/50 transition-colors">
+                    <CardHeader>
+                      <User className="h-10 w-10 text-blue-500 mb-2" />
+                      <CardTitle>I am a Client</CardTitle>
+                      <CardDescription>
+                        Post jobs, hire top talent, and manage your freelance projects.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        onClick={() => handleCreateNewProfile("client")}
+                        className="w-full"
+                        variant="outline"
+                      >
+                        <Plus className="mr-2 h-4 w-4" />
+                        Create Client Profile
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
+
+              </div>
+            </div>
+          )}
+
           {/* Footer */}
           <div className="text-center mt-12 pt-8 border-t">
-
             <p className="text-muted-foreground">
               Need help getting started?{" "}
-
               <Link
                 to="/contact-us"
                 className="text-primary hover:underline"
               >
                 Contact our support team
               </Link>
-
             </p>
           </div>
 
