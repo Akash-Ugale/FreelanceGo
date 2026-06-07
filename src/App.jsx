@@ -25,6 +25,7 @@ import ReviewProposals from "./pages/review-proposal";
 import Reviews from "./pages/reviews";
 import ProjectDetailsPage from "@/pages/ProjectDetailsPage.jsx";
 import ProfilePage from "./pages/profile";
+import GoogleAuthFailed from "@/pages/AuthFailedPage.jsx";
 
 function App() {
   const router = createBrowserRouter([
@@ -57,6 +58,7 @@ function App() {
     { path: "/register", element: <Register /> },
     { path: "/create-profile", element: <CreateProfile /> },
     { path: "/profile-setup", element: <ProfileSetup /> },
+    { path: "/auth-failed", element: <GoogleAuthFailed /> },
   ]);
 
   return (
