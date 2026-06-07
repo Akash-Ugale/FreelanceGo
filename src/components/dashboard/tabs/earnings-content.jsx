@@ -10,8 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { userRoles } from "@/utils/constants"
 import {
   AlertCircle,
   Calendar,
@@ -20,123 +18,129 @@ import {
   DollarSign,
   Download,
   Eye,
-  TrendingDown,
   TrendingUp,
+  TrendingDown,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react"
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
+import { apiClient } from "@/api/AxiosServiceApi.js";
 
-export default function EarningsContent({ userRole }) {
-  const [selectedPeriod, setSelectedPeriod] = useState("month")
 
-  // Mock data with consistent structure
-  const freelancerEarnings = {
-    totalEarnings: 12450.0,
-    thisMonth: 2850.0,
-    lastMonth: 3200.0,
-    pendingPayments: 1250.0,
-    availableBalance: 8900.0,
-    transactions: [
-      {
-        id: "1",
-        project: "E-commerce Website Development",
-        client: "TechCorp Inc.",
-        amount: 2500.0,
-        date: "2024-01-15",
-        status: "completed",
-        type: "project",
-      },
-      {
-        id: "2",
-        project: "Mobile App UI Design",
-        client: "StartupXYZ",
-        amount: 1800.0,
-        date: "2024-01-10",
-        status: "pending",
-        type: "milestone",
-      },
-      {
-        id: "3",
-        project: "Website Maintenance",
-        client: "LocalBiz",
-        amount: 450.0,
-        date: "2024-01-08",
-        status: "completed",
-        type: "hourly",
-      },
-    ],
+// ─── API helper ────────────────────────────────────────────────────────────────
+const fetchEarnings = async (page, size) => {
+  const res = await apiClient.get(
+    `/api/earnings-dashboard?page=${page}&size=${size}`
+  )
+  return res.data
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+const fmt = (n) =>
+  typeof n === "number" ? `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"
+
+const getStatusMeta = (status) => {
+  switch ((status || "").toLowerCase()) {
+    case "completed":
+      return {
+        color: "bg-green-100 text-green-800",
+        icon: <CheckCircle className="h-4 w-4" />,
+        label: "Completed",
+      }
+    case "active":
+      return {
+        color: "bg-blue-100 text-blue-800",
+        icon: <AlertCircle className="h-4 w-4" />,
+        label: "Active",
+      }
+    case "pending":
+      return {
+        color: "bg-yellow-100 text-yellow-800",
+        icon: <Clock className="h-4 w-4" />,
+        label: "Pending",
+      }
+    default:
+      return {
+        color: "bg-gray-100 text-gray-800",
+        icon: <Clock className="h-4 w-4" />,
+        label: status || "Unknown",
+      }
   }
+}
 
-  const clientPayments = {
-    totalEarnings: 8750.0, // Using totalEarnings for consistency
-    thisMonth: 1950.0,
-    lastMonth: 2100.0,
-    pendingPayments: 850.0,
-    availableBalance: 5200.0,
-    transactions: [
-      {
-        id: "1",
-        project: "Website Redesign",
-        freelancer: "John Smith",
-        amount: 3200.0,
-        date: "2024-01-12",
-        status: "completed",
-        type: "project",
-      },
-      {
-        id: "2",
-        project: "Logo Design",
-        freelancer: "Sarah Johnson",
-        amount: 850.0,
-        date: "2024-01-09",
-        status: "in_escrow",
-        type: "milestone",
-      },
-      {
-        id: "3",
-        project: "Content Writing",
-        freelancer: "Mike Davis",
-        amount: 600.0,
-        date: "2024-01-05",
-        status: "completed",
-        type: "hourly",
-      },
-    ],
-  }
+const MONTHLY_GOAL = 5000
 
-  const data =
-    userRole === userRoles.FREELANCER ? freelancerEarnings : clientPayments
-  const monthlyChange = (
-    ((data.thisMonth - data.lastMonth) / data.lastMonth) *
-    100
-  ).toFixed(1)
-  const isPositiveChange = Number.parseFloat(monthlyChange) > 0
+// ─── Component ─────────────────────────────────────────────────────────────────
+export default function EarningsContent() {
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [page, setPage] = useState(0)
+  const pageSize = 5
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case "completed":
-        return "bg-green-100 text-green-800"
-      case "pending":
-        return "bg-yellow-100 text-yellow-800"
-      case "in_escrow":
-        return "bg-blue-100 text-blue-800"
-      default:
-        return "bg-gray-100 text-gray-800"
+  const load = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await fetchEarnings(page, pageSize)
+      setData(result)
+    } catch (err) {
+      setError(err?.response?.data?.message ?? err.message ?? 'Something went wrong')
+    } finally {
+      setLoading(false)
     }
+  }, [page])
+
+  useEffect(() => {
+    load()
+  }, [load])
+
+  // ── Derived values ────────────────────────────────────────────────────────
+  const totalEarnings = data?.totalEarnings ?? 0
+  const inEscrow = data?.inEscrow ?? 0
+  const avgPerProject = data?.avgEarningsPerProject ?? 0
+  const contracts = data?.recentContracts ?? []
+  const totalPages = data?.totalPages ?? 1
+  const totalContracts = data?.totalContracts ?? 0
+
+  const completedCount = contracts.filter(
+    (c) => (c.status || "").toLowerCase() === "completed"
+  ).length
+  const activeCount = contracts.filter(
+    (c) => (c.status || "").toLowerCase() === "active"
+  ).length
+
+  const goalProgress = Math.min((totalEarnings / MONTHLY_GOAL) * 100, 100)
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (loading && !data) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3 text-muted-foreground">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <p className="text-sm">Loading earnings…</p>
+        </div>
+      </div>
+    )
   }
 
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "completed":
-        return <CheckCircle className="h-4 w-4" />
-      case "pending":
-        return <Clock className="h-4 w-4" />
-      case "in_escrow":
-        return <AlertCircle className="h-4 w-4" />
-      default:
-        return <Clock className="h-4 w-4" />
-    }
+  // ── Error state ───────────────────────────────────────────────────────────
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="flex flex-col items-center gap-3 text-center">
+          <AlertCircle className="h-8 w-8 text-red-500" />
+          <p className="text-sm text-muted-foreground">{error}</p>
+          <Button variant="outline" size="sm" onClick={load}>
+            Retry
+          </Button>
+        </div>
+      </div>
+    )
   }
 
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       <div>
@@ -147,122 +151,85 @@ export default function EarningsContent({ userRole }) {
           View your earnings and transactions.
         </p>
       </div>
-      {/* Overview Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+
+      {/* ── Overview Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {userRole === userRoles.FREELANCER
-                ? "Total Earnings"
-                : "Total Spent"}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${data.totalEarnings.toLocaleString()}
-            </div>
+            <div className="text-2xl font-bold">{fmt(totalEarnings)}</div>
             <p className="text-xs text-muted-foreground">
-              All time{" "}
-              {userRole === userRoles.FREELANCER ? "earnings" : "spending"}
+              Across {totalContracts} contract{totalContracts !== 1 ? "s" : ""}
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">This Month</CardTitle>
-            {isPositiveChange ? (
-              <TrendingUp className="h-4 w-4 text-green-600" />
-            ) : (
-              <TrendingDown className="h-4 w-4 text-red-600" />
-            )}
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${data.thisMonth.toLocaleString()}
-            </div>
-            <p
-              className={`text-xs ${
-                isPositiveChange ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {isPositiveChange ? "+" : ""}
-              {monthlyChange}% from last month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              {userRole === userRoles.FREELANCER
-                ? "Pending Payments"
-                : "In Escrow"}
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">In Escrow</CardTitle>
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${data.pendingPayments.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {userRole === userRoles.FREELANCER
-                ? "Awaiting release"
-                : "Held in escrow"}
-            </p>
+            <div className="text-2xl font-bold">{fmt(inEscrow)}</div>
+            <p className="text-xs text-muted-foreground">Held in active contracts</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Available Balance
-            </CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium">Avg per Project</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              ${data.availableBalance.toLocaleString()}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Ready for withdrawal
-            </p>
+            <div className="text-2xl font-bold">{fmt(avgPerProject)}</div>
+            <p className="text-xs text-muted-foreground">From completed contracts</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Earnings Chart and Actions */}
+      {/* ── Quick Actions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>
-              {userRole === userRoles.FREELANCER ? "Earnings" : "Spending"}{" "}
-              Overview
-            </CardTitle>
-            <CardDescription>
-              Your {userRole === userRoles.FREELANCER ? "earnings" : "spending"}{" "}
-              trend over time
-            </CardDescription>
+            <CardTitle>Earnings Summary</CardTitle>
+            <CardDescription>Breakdown of your current earnings</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Tabs value={selectedPeriod} onValueChange={setSelectedPeriod}>
-                <TabsList>
-                  <TabsTrigger value="week">Week</TabsTrigger>
-                  <TabsTrigger value="month">Month</TabsTrigger>
-                  <TabsTrigger value="year">Year</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {/* Mock chart area */}
-              <div className="h-64 bg-muted/20 rounded-lg flex items-center justify-center">
-                <div className="text-center">
-                  <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-muted-foreground">
-                    Chart visualization would go here
-                  </p>
+              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-100">
+                <div className="flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <div>
+                    <p className="text-sm font-medium">Completed Earnings</p>
+                    <p className="text-xs text-muted-foreground">Released to you</p>
+                  </div>
                 </div>
+                <p className="text-lg font-bold text-green-700">{fmt(totalEarnings)}</p>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
+                <div className="flex items-center gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600" />
+                  <div>
+                    <p className="text-sm font-medium">In Escrow</p>
+                    <p className="text-xs text-muted-foreground">Held in active contracts</p>
+                  </div>
+                </div>
+                <p className="text-lg font-bold text-blue-700">{fmt(inEscrow)}</p>
+              </div>
+
+              <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-medium">Avg per Project</p>
+                    <p className="text-xs text-muted-foreground">From completed work</p>
+                  </div>
+                </div>
+                <p className="text-lg font-bold">{fmt(avgPerProject)}</p>
               </div>
             </div>
           </CardContent>
@@ -273,157 +240,158 @@ export default function EarningsContent({ userRole }) {
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            {userRole === userRoles.FREELANCER ? (
-              <>
-                <Button className="w-full" size="sm">
-                  <Download className="h-4 w-4 mr-2" />
-                  Withdraw Funds
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  size="sm"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Tax Documents
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  size="sm"
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Payment Schedule
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button className="w-full" size="sm">
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Add Funds
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  size="sm"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Payment Methods
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full bg-transparent"
-                  size="sm"
-                >
-                  <Download className="h-4 w-4 mr-2" />
-                  Download Receipts
-                </Button>
-              </>
-            )}
+            <Button className="w-full" size="sm">
+              <Download className="h-4 w-4 mr-2" />
+              Withdraw Funds
+            </Button>
+            <Button variant="outline" className="w-full bg-transparent" size="sm">
+              <Eye className="h-4 w-4 mr-2" />
+              View Tax Documents
+            </Button>
+            <Button variant="outline" className="w-full bg-transparent" size="sm">
+              <Calendar className="h-4 w-4 mr-2" />
+              Payment Schedule
+            </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Transactions */}
+      {/* ── Recent Contracts ── */}
       <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-          <CardDescription>
-            Your latest{" "}
-            {userRole === userRoles.FREELANCER ? "earnings" : "payments"}
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between">
+          <div>
+            <CardTitle>Recent Contracts</CardTitle>
+            <CardDescription>Your latest earnings from contracts</CardDescription>
+          </div>
+          {loading && (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground mt-1" />
+          )}
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {data.transactions.map((transaction) => (
-              <div
-                key={transaction.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex items-center space-x-4">
-                  <div
-                    className={`p-2 rounded-full ${getStatusColor(
-                      transaction.status
-                    )}`}
-                  >
-                    {getStatusIcon(transaction.status)}
-                  </div>
-                  <div>
-                    <p className="font-medium">{transaction.project}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {userRole === userRoles.FREELANCER
-                        ? transaction.client
-                        : transaction.freelancer}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {transaction.date}
-                    </p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-medium">
-                    ${transaction.amount.toLocaleString()}
-                  </p>
-                  <Badge
-                    variant="outline"
-                    className={`text-xs ${getStatusColor(transaction.status)}`}
-                  >
-                    {transaction.status.replace("_", " ")}
-                  </Badge>
-                </div>
-              </div>
-            ))}
-          </div>
+          {contracts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
+              <DollarSign className="h-8 w-8" />
+              <p className="text-sm">No contracts found.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {contracts.map((contract, idx) => {
+                const meta = getStatusMeta(contract.status)
+                const amount = contract.acceptedBid?.amount ?? contract.amount ?? 0
+                const jobTitle =
+                  contract.job?.title ??
+                  contract.jobTitle ??
+                  `Contract #${contract.id ?? idx + 1}`
+                const clientName =
+                  contract.client?.user?.name ??
+                  contract.clientName ??
+                  "Client"
+                const date =
+                  contract.createdAt ?? contract.createAt ?? null
 
-          <div className="mt-6 text-center">
-            <Button variant="outline">View All Transactions</Button>
-          </div>
+                return (
+                  <div
+                    key={contract.id ?? idx}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="flex items-center space-x-4">
+                      <div className={`p-2 rounded-full ${meta.color}`}>
+                        {meta.icon}
+                      </div>
+                      <div>
+                        <p className="font-medium">{jobTitle}</p>
+                        <p className="text-sm text-muted-foreground">{clientName}</p>
+                        {date && (
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(date).toLocaleDateString(undefined, {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium">{fmt(amount)}</p>
+                      <Badge
+                        variant="outline"
+                        className={`text-xs ${meta.color}`}
+                      >
+                        {meta.label}
+                      </Badge>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* ── Pagination ── */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between mt-6 pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                Page {page + 1} of {totalPages}
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page === 0 || loading}
+                  onClick={() => setPage((p) => p - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Prev
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages - 1 || loading}
+                  onClick={() => setPage((p) => p + 1)}
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
-      {/* Monthly Progress */}
+      {/* ── Goal Progress ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Monthly Progress</CardTitle>
+          <CardTitle>Earnings Goal</CardTitle>
           <CardDescription>
-            Track your{" "}
-            {userRole === userRoles.FREELANCER ? "earnings" : "spending"} goals
+            Track your progress toward ${MONTHLY_GOAL.toLocaleString()} goal
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
-                <span>Monthly Goal</span>
-                <span>${data.thisMonth.toLocaleString()} / $5,000</span>
+                <span>Total Earnings</span>
+                <span>
+                  {fmt(totalEarnings)} / ${MONTHLY_GOAL.toLocaleString()}
+                </span>
               </div>
-              <Progress value={(data.thisMonth / 5000) * 100} className="h-2" />
+              <Progress value={goalProgress} className="h-2" />
             </div>
 
             <div className="grid grid-cols-3 gap-4 text-center">
               <div>
                 <p className="text-2xl font-bold text-green-600">
-                  {Math.round((data.thisMonth / 5000) * 100)}%
+                  {Math.round(goalProgress)}%
                 </p>
                 <p className="text-xs text-muted-foreground">Goal Progress</p>
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {
-                    data.transactions.filter((t) => t.status === "completed")
-                      .length
-                  }
-                </p>
+                <p className="text-2xl font-bold">{completedCount}</p>
                 <p className="text-xs text-muted-foreground">Completed</p>
               </div>
               <div>
-                <p className="text-2xl font-bold text-yellow-600">
-                  {
-                    data.transactions.filter((t) => t.status === "pending")
-                      .length
-                  }
-                </p>
-                <p className="text-xs text-muted-foreground">Pending</p>
+                <p className="text-2xl font-bold text-blue-600">{activeCount}</p>
+                <p className="text-xs text-muted-foreground">Active</p>
               </div>
             </div>
           </div>

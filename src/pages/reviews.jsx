@@ -1,10 +1,10 @@
-"use client"
+// "use client"
 
-import ReviewsContent from "@/components/dashboard/tabs/reviews-content"
-import { useAuth } from "@/context/AuthContext"
+// import ReviewsContent from "@/components/dashboard/tabs/reviews-content"
+// import { useAuth } from "@/context/AuthContext"
 
-export default function Reviews() {
-  const { userRole } = useAuth()
+// export default function Reviews() {
+//   const { userRole } = useAuth()
 
-  return <ReviewsContent userRole={userRole} />
-}
+//   return <ReviewsContent userRole={userRole} />
+// }

@@ -11,7 +11,7 @@ import {
   Search,
   Star,
   UserCheck,
-} from "lucide-react"
+} from "lucide-react";
 
 export const freelancerItems = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
@@ -21,9 +21,9 @@ export const freelancerItems = [
   { title: "Bid History", href: "/dashboard/bid-history", icon: Clock },
   { title: "Earnings", href: "/dashboard/earnings", icon: IndianRupee },
   { title: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-  { title: "Reviews", href: "/dashboard/reviews", icon: Star },
+  // { title: "Reviews", href: "/dashboard/reviews", icon: Star },
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-]
+];
 
 export const clientItems = [
   { title: "Dashboard", href: "/dashboard", icon: Home },
@@ -38,6 +38,6 @@ export const clientItems = [
   },
   { title: "Payments", href: "/dashboard/payments", icon: IndianRupee },
   { title: "Messages", href: "/dashboard/messages", icon: MessageSquare },
-  { title: "Reviews", href: "/dashboard/reviews", icon: Star },
+  // { title: "Reviews", href: "/dashboard/reviews", icon: Star },
   { title: "Analytics", href: "/dashboard/analytics", icon: BarChart3 },
-]
+];

@@ -22,7 +22,7 @@ import ProjectBids from "./pages/project-bids";
 import Proposals from "./pages/Proposals";
 import Register from "./pages/register";
 import ReviewProposals from "./pages/review-proposal";
-import Reviews from "./pages/reviews";
+// import Reviews from "./pages/reviews";
 import ProjectDetailsPage from "@/pages/ProjectDetailsPage.jsx";
 import ProfilePage from "./pages/profile";
 import GoogleAuthFailed from "@/pages/AuthFailedPage.jsx";
@@ -40,7 +40,7 @@ function App() {
         { path: "analytics", element: <Analytics /> },
         { path: "messages", element: <Messages /> },
         { path: "earnings", element: <Earnings /> },
-        { path: "reviews", element: <Reviews /> },
+        // { path: "reviews", element: <Reviews /> },
         { path: "proposals", element: <Proposals /> },
         { path: "browse-jobs", element: <BrowseJobs /> },
         { path: "bid-history", element: <BidHistory /> },
