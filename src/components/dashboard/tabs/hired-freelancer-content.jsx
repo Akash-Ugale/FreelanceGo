@@ -305,7 +305,7 @@ export default function HiredFreelancersContent({ userRole }) {
           </SelectContent>
         </Select>
       </div>
-
+        
       {loading ? (
         <div className="flex justify-center items-center py-20">
           <InlineLoader />

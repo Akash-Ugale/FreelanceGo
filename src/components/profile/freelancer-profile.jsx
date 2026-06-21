@@ -196,15 +196,38 @@ export default function FreelancerProfile() {
   //   accountNumber,
   //   ifscCode,
   // }
+// const handleBankDetailsSave = async (payoutData) => {
+//   try {
+//     await apiClient.post("/api/freelancer/payout/setup", payoutData, {
+//       withCredentials: true,
+//     });
+//     toast.success("Bank details saved!");
+//   } catch (error) {
+//     console.error("Bank details save error:", error?.response?.data ?? error);
+//     toast.error("Failed to save bank details");
+//     throw error;   // ← this one line fixes the bug
+//   }
+// };
+
 const handleBankDetailsSave = async (payoutData) => {
   try {
-    await apiClient.post("/api/freelancer/payout/setup", payoutData, {
+    const response = await apiClient.post("/api/freelancer/payout/setup", payoutData, {
       withCredentials: true,
     });
     toast.success("Bank details saved!");
+    // Refresh your data state here to capture the new IDs from the server
   } catch (error) {
-    console.error("Bank details save error:", error?.response?.data ?? error);
-    toast.error("Failed to save bank details");
+    const errorMsg = error?.response?.data?.message || "";
+    
+    // Logic to handle specific state errors
+    if (errorMsg.includes("already exists")) {
+       toast.error("Account already exists. Please refresh to sync your status.");
+    } else if (errorMsg.includes("does not exist")) {
+       toast.error("Invalid ID reference. Please re-verify your bank details.");
+    } else {
+       toast.error("Failed to save bank details");
+    }
+    throw error;
   }
 };
 

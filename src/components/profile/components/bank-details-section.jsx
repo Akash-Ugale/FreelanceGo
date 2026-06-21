@@ -4,34 +4,35 @@ import { useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Edit2, X, ShieldCheck, BadgeCheck, AlertCircle } from "lucide-react"
+import { Edit2, X, ShieldCheck, BadgeCheck, AlertCircle, Eye, EyeOff } from "lucide-react"
 
 export default function BankDetailsSection({
   accountNumber = "",
   ifscCode = "",
   accountHolderName = "",
-  phoneNumber = "",   // from data.freelancer?.phone — already in profile
+  phoneNumber = "",
   userId,
   onSave,
 }) {
-  // If any bank detail already exists → treat as already set up
   const isAlreadySetup = !!(accountHolderName || accountNumber || ifscCode)
 
-  const [status, setStatus]     = useState(isAlreadySetup ? "active" : "not_set") // "not_set" | "active"
-  const [isEditing, setIsEditing] = useState(false)
-  const [isSaving, setIsSaving]   = useState(false)
+  const [status, setStatus]               = useState(isAlreadySetup ? "active" : "not_set")
+  const [isEditing, setIsEditing]         = useState(false)
+  const [isSaving, setIsSaving]           = useState(false)
+  const [showAccountNumber, setShowAccountNumber] = useState(false)  // ← new
 
   const [formData, setFormData] = useState({
     accountHolderName,
     accountNumber,
     ifscCode,
+    phoneNumber,
   })
 
-  // Saved snapshot — shown masked in the status card
   const [savedData, setSavedData] = useState({
     accountHolderName,
     accountNumber,
     ifscCode,
+    phoneNumber,
   })
 
   const handleChange = (field) => (e) => {
@@ -49,14 +50,13 @@ export default function BankDetailsSection({
         accountHolderName: formData.accountHolderName,
         accountNumber:     formData.accountNumber,
         ifscCode:          formData.ifscCode,
-        phoneNumber:       phoneNumber,   // injected from profile, user doesn't re-enter
+        phoneNumber:       formData.phoneNumber,
       })
-      // On success → switch to active status card
       setSavedData({ ...formData })
       setStatus("active")
       setIsEditing(false)
     } catch {
-      // toast is handled in parent
+      // toast handled in parent
     } finally {
       setIsSaving(false)
     }
@@ -64,11 +64,13 @@ export default function BankDetailsSection({
 
   const handleEdit = () => {
     setFormData({ ...savedData })
+    setShowAccountNumber(false)   // ← reset to hidden when opening edit
     setIsEditing(true)
   }
 
   const handleCancel = () => {
     setFormData({ ...savedData })
+    setShowAccountNumber(false)   // ← reset on cancel too
     setIsEditing(false)
   }
 
@@ -85,7 +87,6 @@ export default function BankDetailsSection({
           <CardDescription className="text-xs">Secure payout information</CardDescription>
         </div>
 
-        {/* Status badge — only shown when active and not editing */}
         {status === "active" && !isEditing && (
           <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
             <BadgeCheck className="h-3.5 w-3.5" />
@@ -113,7 +114,6 @@ export default function BankDetailsSection({
         {/* ── ACTIVE STATUS CARD ── */}
         {status === "active" && !isEditing && (
           <div className="space-y-4">
-            {/* Success banner */}
             <div className="flex items-center gap-3 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
               <ShieldCheck className="h-5 w-5 text-emerald-500 flex-shrink-0" />
               <div>
@@ -126,7 +126,6 @@ export default function BankDetailsSection({
               </div>
             </div>
 
-            {/* Masked details */}
             <div className="space-y-2 p-3 border border-border rounded-md bg-secondary/30">
               <div className="flex justify-between items-center">
                 <p className="text-xs font-medium text-muted-foreground">Account Holder</p>
@@ -139,6 +138,10 @@ export default function BankDetailsSection({
               <div className="flex justify-between items-center">
                 <p className="text-xs font-medium text-muted-foreground">IFSC Code</p>
                 <p className="text-sm font-semibold font-mono">{savedData.ifscCode || "—"}</p>
+              </div>
+              <div className="flex justify-between items-center">
+                <p className="text-xs font-medium text-muted-foreground">Registered Phone</p>
+                <p className="text-sm font-semibold">{savedData.phoneNumber || "—"}</p>
               </div>
             </div>
 
@@ -169,17 +172,30 @@ export default function BankDetailsSection({
               />
             </div>
 
+            {/* ── Account Number with eye toggle ── */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Account Number <span className="text-red-500">*</span>
               </label>
-              <Input
-                type="password"
-                value={formData.accountNumber}
-                onChange={handleChange("accountNumber")}
-                placeholder="Enter account number"
-                className="text-xs h-9"
-              />
+              <div className="relative">
+                <Input
+                  type={showAccountNumber ? "text" : "password"}
+                  value={formData.accountNumber}
+                  onChange={handleChange("accountNumber")}
+                  placeholder="Enter account number"
+                  className="text-xs h-9 pr-9"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowAccountNumber((prev) => !prev)}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  {showAccountNumber
+                    ? <EyeOff className="h-3.5 w-3.5" />
+                    : <Eye className="h-3.5 w-3.5" />
+                  }
+                </button>
+              </div>
             </div>
 
             <div>
@@ -194,18 +210,19 @@ export default function BankDetailsSection({
               />
             </div>
 
-            {/* Phone shown as read-only — pulled from profile, not re-entered */}
             <div>
               <label className="block text-xs font-medium text-muted-foreground mb-1">
-                Registered Phone
+                Registered Phone <span className="text-red-500">*</span>
               </label>
               <Input
-                value={phoneNumber}
-                disabled
-                className="text-xs h-9 bg-secondary/40 cursor-not-allowed"
+                type="tel"
+                value={formData.phoneNumber}
+                onChange={handleChange("phoneNumber")}
+                placeholder="Enter phone number"
+                className="text-xs h-9"
               />
               <p className="text-xs text-muted-foreground mt-1">
-                Linked from your profile. Update it in Profile settings.
+                Pre-filled from your profile. You can use a different number for this payout account.
               </p>
             </div>
 
@@ -228,7 +245,8 @@ export default function BankDetailsSection({
                   isSaving ||
                   !formData.accountHolderName.trim() ||
                   !formData.accountNumber.trim() ||
-                  !formData.ifscCode.trim()
+                  !formData.ifscCode.trim() ||
+                  !formData.phoneNumber.trim()
                 }
               >
                 {isSaving ? "Saving..." : "Save & Activate"}
