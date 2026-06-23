@@ -403,21 +403,39 @@ export default function CreateProfile() {
                 )}
 
                 <div className="space-y-2">
-                  <Label htmlFor="bio">Bio *</Label>
-                  <Textarea
-                    id="bio"
-                    placeholder={
-                      role === "freelancer"
-                        ? "Tell clients about your experience, skills, and what makes you unique..."
-                        : "Tell freelancers about your company and the types of projects you work on..."
-                    }
-                    value={formData.bio}
-                    onChange={(e) =>
-                      setFormData({ ...formData, bio: e.target.value })
-                    }
-                    rows={4}
-                  />
-                </div>
+                    <Label htmlFor="bio">Bio *</Label>
+
+                    <Textarea
+                      id="bio"
+                      placeholder={
+                        role === "freelancer"
+                          ? "Tell clients about your experience, skills, and what makes you unique..."
+                          : "Tell freelancers about your company and the types of projects you work on..."
+                      }
+                      value={formData.bio}
+                      onChange={(e) =>
+                        setFormData({ ...formData, bio: e.target.value })
+                      }
+                      rows={4}
+                      maxLength={500}
+                    />
+
+                    <div className="flex justify-between text-xs">
+                      <span
+                        className={
+                          formData.bio.trim().length < 50
+                            ? "text-red-500"
+                            : "text-green-500"
+                        }
+                      >
+                        Minimum 50 characters required
+                      </span>
+
+                      <span className="text-muted-foreground">
+                        {formData.bio.length}/500
+                      </span>
+                    </div>
+                  </div>
 
                 <div className="flex gap-4 pt-6">
                   <Button

@@ -90,6 +90,7 @@ const SubmissionStatus = {
   REJECTED: "REJECTED",
 };
 
+
 // ---------------------------------------------------------------------------
 // Razorpay loader helper – loads the SDK script once on demand
 // ---------------------------------------------------------------------------
@@ -126,6 +127,10 @@ export default function ProjectsContent() {
   // ── milestones ────────────────────────────────────────────────────────────
   const [milestones, setMilestones] = useState([]);
   const [loadingMilestones, setLoadingMilestones] = useState(false);
+
+  // Add this with your other state declarations
+const [submissionNotes, setSubmissionNotes] = useState({});
+
 
   // ── add milestone dialog ──────────────────────────────────────────────────
   const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
@@ -350,7 +355,8 @@ export default function ProjectsContent() {
       return "destructive";
 
     // Approved by client (proposal level), waiting for payment
-    if (milestone.status === MilestoneStatus.APPROVED) return "default";
+
+    if (milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT) return "default";
 
     return "outline";
   };
@@ -365,17 +371,18 @@ export default function ProjectsContent() {
       return "CHANGES REQUESTED";
 
     // ── Approved proposal + payment states ─────────────────────────────────
-    if (milestone.status === MilestoneStatus.APPROVED) {
-      if (milestone.paymentStatus === PaymentStatus.ESCROW_HELD)
-        return "PAID – IN PROGRESS";
-      if (
-        milestone.paymentStatus === PaymentStatus.RELEASED ||
-        milestone.paymentStatus === PaymentStatus.COMPLETED
-      )
-        return "PAYMENT RELEASED";
-      // Approved but client hasn't paid yet
-      return "APPROVED – AWAITING PAYMENT";
-    }
+   
+          if (milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT) {
+            if (milestone.paymentStatus === PaymentStatus.ESCROW_HELD)
+              return "PAID – IN PROGRESS";
+            if (
+              milestone.paymentStatus === PaymentStatus.RELEASED ||
+              milestone.paymentStatus === PaymentStatus.COMPLETED
+            )
+              return "PAYMENT RELEASED";
+            // Approved but client hasn't paid yet
+            return "APPROVED – AWAITING PAYMENT";
+          }
 
     // ── Submission-level states ────────────────────────────────────────────
     if (milestone.submission?.status === SubmissionStatus.PENDING_REVIEW)
@@ -693,10 +700,14 @@ export default function ProjectsContent() {
     setUploadingMilestoneId(milestoneId);
     try {
       const formData = new FormData();
+      // Retrieve the notes from state using the milestoneId
+      const notes = submissionNotes[milestoneId] || "Document submission for milestone review";
+      
       const submissionData = {
-        notes: "Document submission for milestone review",
+        notes: notes,
         status: SubmissionStatus.PENDING_REVIEW,
       };
+      
       formData.append(
         "submission",
         new Blob([JSON.stringify(submissionData)], {
@@ -713,8 +724,12 @@ export default function ProjectsContent() {
       await apiClient.post(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
+      
       await fetchMilestones(selectedProject.contractId);
-      alert("Work submitted successfully! Awaiting client review.");
+      
+      // Clear the notes after successful submission
+      setSubmissionNotes(prev => ({ ...prev, [milestoneId]: "" }));
+      alert("Work submitted successfully!");
     } catch (err) {
       console.error("Error uploading file:", err);
       alert(err.response?.data?.message || "Failed to upload work");
@@ -722,7 +737,6 @@ export default function ProjectsContent() {
       setUploadingMilestoneId(null);
     }
   };
-
   // =========================================================================
   // FREELANCER: Submit work (URL)
   // =========================================================================
@@ -734,20 +748,28 @@ export default function ProjectsContent() {
     }
     setUploadingMilestoneId(milestoneId);
     try {
+      // Retrieve the notes from state using the milestoneId
+      const notes = submissionNotes[milestoneId] || "URL submission for milestone review";
+      
       const submissionData = {
         fileUrl: url,
-        notes: "URL submission for milestone review",
+        notes: notes,
         status: SubmissionStatus.PENDING_REVIEW,
       };
+      
       const milestone = milestones.find((m) => m.id === milestoneId);
       const endpoint = milestone?.submission?.id
         ? `/api/update-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`
         : `/api/create-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`;
 
       await apiClient.post(endpoint, submissionData);
+      
       await fetchMilestones(selectedProject.contractId);
+      
+      // Clear URL and notes after successful submission
       setSubmissionUrl(milestoneId, "");
-      alert("Work submitted successfully! Awaiting client review.");
+      setSubmissionNotes(prev => ({ ...prev, [milestoneId]: "" }));
+      alert("Work submitted successfully!");
     } catch (err) {
       console.error("Error submitting URL:", err);
       alert(err.response?.data?.message || "Failed to submit URL");
@@ -856,19 +878,32 @@ export default function ProjectsContent() {
     const isPastMilestone = idx < activeMilestoneIndex;
     const isFutureMilestone = idx > activeMilestoneIndex;
 
+     
+
     // Freelancer can submit work when:
     //   – milestone is APPROVED and client has paid (ESCROW_HELD)
     //   – no submission yet OR previous submission was REJECTED
-    const milestoneApprovedAndPaid =
-      milestone.status === MilestoneStatus.APPROVED &&
-      milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
+    // const milestoneApprovedAndPaid =
+    //   milestone.status === MilestoneStatus.APPROVED &&
+    //   milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
 
-    const canSubmitWork =
-      userRole === userRoles.FREELANCER &&
-      isActiveMilestone &&
-      milestoneApprovedAndPaid &&
-      (!milestone.submission ||
-        milestone.submission.status === SubmissionStatus.REJECTED);
+    // NEW
+      const milestoneApprovedAndPaid =
+        milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
+        milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
+
+     // REPLACE your current const canSubmitWork with this:
+
+        const canSubmitWork =
+          userRole === userRoles.FREELANCER &&
+          isActiveMilestone &&
+          milestoneApprovedAndPaid &&
+          (
+            !milestone.submission || 
+            milestone.submission.status === SubmissionStatus.REJECTED || 
+            // Allow submission if the milestone is NOT yet fully verified
+            milestone.verificationStatus !== VerificationStatus.VERIFIED
+          );
 
     const hasSubmission = !!milestone.submission;
     const submissionPendingReview =
@@ -884,15 +919,21 @@ export default function ProjectsContent() {
     // Client can review the milestone proposal when:
     //   – verificationStatus is PENDING_REVIEW or APPROVED_BY_CLIENT
     //   – milestone is not yet APPROVED or IN_PROGRESS
-    const canClientReviewProposal =
-      userRole === userRoles.CLIENT &&
-      isActiveMilestone &&
-      milestone.verificationStatus === VerificationStatus.PENDING_REVIEW &&
-      /*(milestone.verificationStatus === VerificationStatus.PENDING_REVIEW ||
-        milestone.verificationStatus ===
-          VerificationStatus.APPROVED_BY_CLIENT)*/
-      milestone.status !== MilestoneStatus.APPROVED &&
-      milestone.status !== MilestoneStatus.IN_PROGRESS;
+    // const canClientReviewProposal =
+    //   userRole === userRoles.CLIENT &&
+    //   isActiveMilestone &&
+    //   milestone.verificationStatus === VerificationStatus.PENDING_REVIEW &&
+    //   /*(milestone.verificationStatus === VerificationStatus.PENDING_REVIEW ||
+    //     milestone.verificationStatus ===
+    //       VerificationStatus.APPROVED_BY_CLIENT)*/
+    //   milestone.status !== MilestoneStatus.APPROVED &&
+    //   milestone.status !== MilestoneStatus.IN_PROGRESS;
+
+    
+      const canClientReviewProposal =
+        userRole === userRoles.CLIENT &&
+        isActiveMilestone &&
+        milestone.verificationStatus === VerificationStatus.PENDING_REVIEW;
 
     // Client can review submitted work when:
     //   – a submission exists and is PENDING_REVIEW
@@ -925,7 +966,7 @@ export default function ProjectsContent() {
               {milestone.paymentStatus === PaymentStatus.ESCROW_HELD && (
                 <Badge variant="default" className="bg-green-600">
                   <DollarSign className="h-3 w-3 mr-1" />
-                  Paid
+                  ESCROW_HELD
                 </Badge>
               )}
               {milestone.paymentStatus === PaymentStatus.RELEASED && (
@@ -1002,17 +1043,28 @@ export default function ProjectsContent() {
               )}
 
             {/* Milestone approved but NOT paid yet */}
-            {milestone.status === MilestoneStatus.APPROVED &&
+            {/* {milestone.status === MilestoneStatus.APPROVED &&
               milestone.paymentStatus !== PaymentStatus.ESCROW_HELD && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
                   <p className="text-sm text-yellow-900 dark:text-yellow-100">
                     Milestone approved! Waiting for client to process payment.
                   </p>
                 </div>
-              )}
+              )} */}
+
+              
+                {milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
+                  milestone.paymentStatus !== PaymentStatus.ESCROW_HELD && (
+                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
+                      <p className="text-sm text-yellow-900 dark:text-yellow-100">
+                        Milestone approved! Waiting for client to process payment.
+                      </p>
+                    </div>
+                  )}
 
             {/* Milestone approved + paid – submit work */}
             {canSubmitWork && (
+              
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600 dark:text-green-400">
                   ✓ Milestone approved and payment confirmed. Submit your work
@@ -1028,6 +1080,19 @@ export default function ProjectsContent() {
                     </p>
                   </div>
                 )}
+
+                {/* --- ADD THE TEXTAREA HERE --- */}
+                <div className="space-y-1">
+                  <Label className="text-xs">Submission Notes</Label>
+                  <Textarea
+                    placeholder="Add details about your work..."
+                    value={submissionNotes[milestone.id] || ""}
+                    onChange={(e) => 
+                      setSubmissionNotes(prev => ({ ...prev, [milestone.id]: e.target.value }))
+                    }
+                    rows={2}
+                  />
+                </div>
 
                 <div className="flex items-center gap-2">
                   <Button
@@ -1197,16 +1262,17 @@ export default function ProjectsContent() {
             )}
 
             {/* Awaiting freelancer work after payment */}
-            {isActiveMilestone &&
-              milestone.status === MilestoneStatus.APPROVED &&
-              milestone.paymentStatus === PaymentStatus.ESCROW_HELD &&
-              !hasSubmission && (
-                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                  <p className="text-sm text-blue-900 dark:text-blue-100">
-                    Payment confirmed. Waiting for freelancer to submit work.
-                  </p>
-                </div>
-              )}
+            
+              {isActiveMilestone &&
+                milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
+                milestone.paymentStatus === PaymentStatus.ESCROW_HELD &&
+                !hasSubmission && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                    <p className="text-sm text-blue-900 dark:text-blue-100">
+                      Payment confirmed. Waiting for freelancer to submit work.
+                    </p>
+                  </div>
+                )}
 
             {/* Review submission */}
             {canClientReviewSubmission && (
@@ -1297,6 +1363,8 @@ export default function ProjectsContent() {
       </div>
     );
   };
+
+  
 
   // =========================================================================
   // JSX

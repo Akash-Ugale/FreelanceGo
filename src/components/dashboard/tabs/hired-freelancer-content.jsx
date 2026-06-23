@@ -196,7 +196,7 @@ export default function HiredFreelancersContent({ userRole }) {
   )
 ).length;
   const totalSpent = contracts.reduce(
-    (sum, c) => sum + (c.job?.budget ?? 0), 0
+    (sum, c) => sum + (c.acceptedBid?.amount ?? 0), 0
   );
   // No rating field in DTO — show N/A gracefully
   const avgRating = null;
@@ -251,6 +251,8 @@ export default function HiredFreelancersContent({ userRole }) {
             <CardTitle className="text-sm font-medium">Active Contracts</CardTitle>
             <Briefcase className="h-4 w-4 text-blue-600" />
           </CardHeader>
+
+
           <CardContent>
             <div className="text-2xl font-bold">{activeProjects}</div>
             <p className="text-xs text-muted-foreground">Currently running</p>

@@ -37,9 +37,10 @@ export default function ProfileHeader({
   onCoverPhotoChange,
   onProfileImageChange,
   onSave,
+  isClientProfile = false,
 }) {
   const { userRole } = useAuth();
-  const isClient = userRole !== userRoles.FREELANCER;
+  const isClient = isClientProfile;
 
   const [tempCoverPhoto, setTempCoverPhoto] = useState(coverPhoto);
   const [coverPhotoFile, setCoverPhotoFile] = useState(null);

@@ -100,11 +100,13 @@ export default function ClientProfile() {
   return (
     <div className="space-y-4 max-w-5xl mx-auto p-4">
       <ProfileHeader
+
+        isClientProfile={true}
         originalData={data}
         coverPhoto={data.clientProfile?.bannerUrl}
-        profileImage={data.clientProfile?.profileImageUrl}
-        name={data.client?.companyName || data.userDto?.username || ""}
-        designation={data.client?.designation || "Client"}
+        profileImage={data.user?.imageData}
+        name={data.user?.username}
+        designation={data.client?.companyName}
         location={data.clientProfile?.location}
         rating={data.clientProfile?.rating || 0}
         bio={data.client?.bio}
