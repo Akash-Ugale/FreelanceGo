@@ -28,7 +28,7 @@ export default function Navbar() {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex flex-1 items-center space-x-6 text-sm font-medium relative z-10">
           <Link
-            to="/how-it-works"
+            to="/how-it-works" 
             className="relative transition-colors hover:text-primary group py-1"
           >
             <span className="relative z-10">How It Works</span>
@@ -59,7 +59,7 @@ export default function Navbar() {
               <span className="sr-only">GitHub</span>
             </Button>
           </a>
-          <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
+          {/* <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
             <Button
               variant="ghost"
               size="sm"
@@ -67,7 +67,7 @@ export default function Navbar() {
             >
               Login
             </Button>
-          </a>
+          </a> */}
           <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
             <Button
               size="sm"

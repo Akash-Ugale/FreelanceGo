@@ -10,6 +10,14 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 
+const OAUTH_URL =
+  "https://freelancegobackend.onrender.com/oauth2/authorization/google";
+
+const handleRoleLogin = (role) => {
+  localStorage.setItem("intended_role", role);
+  window.location.href = OAUTH_URL;
+};
+
 export default function Hero() {
   const [isVisible, setIsVisible] = useState(false);
 
@@ -31,7 +39,7 @@ export default function Hero() {
         >
           <Sparkles className="w-4 h-4 mr-2 text-primary animate-pulse" />
           <span className="bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent font-semibold">
-            #1 Freelance Platform of 2024
+            #1 Freelance Platform of 2026
           </span>
           <TrendingUp className="w-4 h-4 ml-2 text-primary" />
         </Badge>
@@ -50,7 +58,6 @@ export default function Hero() {
           <span className="block mt-2 bg-gradient-to-r from-primary via-blue-600 to-purple-600 bg-clip-text text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-bold tracking-tight text-transparent animate-gradient">
             Freelance Match
           </span>
-          {/* Decorative elements */}
           <div className="absolute -top-8 -right-8 w-16 h-16 bg-primary/20 rounded-full blur-xl animate-pulse" />
           <div
             className="absolute -bottom-8 -left-8 w-20 h-20 bg-blue-500/20 rounded-full blur-xl animate-pulse"
@@ -78,7 +85,8 @@ export default function Hero() {
         }`}
       >
         <Button
-          size={"lg"}
+          size="lg"
+          onClick={() => handleRoleLogin("client")}
           className="text-white bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg hover:scale-105 transition-all duration-300 relative overflow-hidden group"
         >
           <span className="relative z-10 flex items-center gap-1">
@@ -87,9 +95,11 @@ export default function Hero() {
           </span>
           <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700"></div>
         </Button>
+
         <Button
           variant="outline"
           size="lg"
+          onClick={() => handleRoleLogin("freelancer")}
           className="w-full sm:w-auto bg-transparent backdrop-blur-sm border-2 hover:bg-primary/10 hover:border-primary transition-all duration-300 hover:scale-105 hover:shadow-lg group"
         >
           Find Work
@@ -99,64 +109,26 @@ export default function Hero() {
 
       <style jsx>{`
         @keyframes float {
-          0%,
-          100% {
-            transform: translateY(0px);
-          }
-          50% {
-            transform: translateY(-20px);
-          }
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
         }
-
         @keyframes gradient {
-          0%,
-          100% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
-
         @keyframes scroll {
-          0% {
-            transform: translateY(0);
-            opacity: 0;
-          }
-          50% {
-            opacity: 1;
-          }
-          100% {
-            transform: translateY(12px);
-            opacity: 0;
-          }
+          0% { transform: translateY(0); opacity: 0; }
+          50% { opacity: 1; }
+          100% { transform: translateY(12px); opacity: 0; }
         }
-
         @keyframes spin-slow {
-          from {
-            transform: translate(-50%, -50%) rotate(0deg);
-          }
-          to {
-            transform: translate(-50%, -50%) rotate(360deg);
-          }
+          from { transform: translate(-50%, -50%) rotate(0deg); }
+          to { transform: translate(-50%, -50%) rotate(360deg); }
         }
-
-        .animate-float {
-          animation: float linear infinite;
-        }
-
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradient 3s ease infinite;
-        }
-
-        .animate-scroll {
-          animation: scroll 2s ease-in-out infinite;
-        }
-
-        .animate-spin-slow {
-          animation: spin-slow 20s linear infinite;
-        }
+        .animate-float { animation: float linear infinite; }
+        .animate-gradient { background-size: 200% 200%; animation: gradient 3s ease infinite; }
+        .animate-scroll { animation: scroll 2s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin-slow 20s linear infinite; }
       `}</style>
     </section>
   );

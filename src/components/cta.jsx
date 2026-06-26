@@ -1,5 +1,7 @@
 import { Button } from "@/components/ui/button"
 
+const OAUTH_URL = "https://freelancegobackend.onrender.com/oauth2/authorization/google";
+
 export default function CTA() {
   return (
     <section className="border-t">
@@ -11,7 +13,11 @@ export default function CTA() {
           Join thousands of freelancers and clients who trust FreelanceGo to build successful working relationships and
           grow their businesses.
         </p>
-        <Button size="lg" className="mt-4">
+        <Button
+          size="lg"
+          className="mt-4"
+          onClick={() => { window.location.href = OAUTH_URL; }}
+        >
           Join FreelanceGo Today
         </Button>
       </div>

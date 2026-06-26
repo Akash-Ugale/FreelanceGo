@@ -306,15 +306,15 @@ export default function DashboardContent() {
                       {/* Two badges — mirrors JobPostsContent exactly */}
                       <div className="flex flex-wrap gap-2">
                         {/* contract.status badge */}
-                        <Badge
+                        {/* <Badge
                           className={
                             project.contractStatus === "ACTIVE"
                               ? "bg-green-100 text-green-800"
                               : "bg-gray-100 text-gray-800"
                           }
                         >
-                          {project.contractStatus}
-                        </Badge>
+                          
+                        </Badge> */}
 
                         {/* job.phase badge — only when phase exists */}
                         {project.jobPhase && (

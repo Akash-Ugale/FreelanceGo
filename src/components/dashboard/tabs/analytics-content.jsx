@@ -522,39 +522,59 @@ export default function AnalyticsContent() {
                   Key metrics and recommendations
                 </CardDescription>
               </CardHeader>
+
               <CardContent>
                 <div className="space-y-4">
-                  <div className="flex items-center space-x-3 p-3 bg-green-50 rounded-lg">
-                    <TrendingUp className="h-5 w-5 text-green-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Earnings</p>
-                      <p className="text-xs text-muted-foreground">
-                        Total ₹{(analytics.totalEarnings ?? 0).toLocaleString()}{" "}
-                        earned across all completed contracts.
-                      </p>
+
+                  {/* Earnings */}
+                  <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-5 w-5 text-green-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-green-100">
+                          Earnings
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-green-300">
+                          Total ₹
+                          {(analytics.totalEarnings ?? 0).toLocaleString()} earned across
+                          all completed contracts.
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 rounded-lg">
-                    <Target className="h-5 w-5 text-blue-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Opportunity</p>
-                      <p className="text-xs text-muted-foreground">
-                        {(analytics.winRatePercent ?? 0) >= 50
-                          ? "Great win rate! Keep applying to relevant projects."
-                          : "Tailor proposals more closely to each job requirement."}
-                      </p>
+
+                  {/* Opportunity */}
+                  <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center gap-3">
+                      <Target className="h-5 w-5 text-blue-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-blue-100">
+                          Opportunity
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-blue-300">
+                          {(analytics.winRatePercent ?? 0) >= 50
+                            ? "Great win rate! Keep applying to relevant projects."
+                            : "Tailor proposals more closely to each job requirement."}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-3 p-3 bg-yellow-50 rounded-lg">
-                    <Clock className="h-5 w-5 text-yellow-600 shrink-0" />
-                    <div>
-                      <p className="text-sm font-medium">Tip</p>
-                      <p className="text-xs text-muted-foreground">
-                        Respond to new proposals within 2 hours for better
-                        success rates.
-                      </p>
+
+                  {/* Tip */}
+                  <div className="flex items-center justify-between p-4 bg-yellow-50 dark:bg-yellow-950/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <div className="flex items-center gap-3">
+                      <Clock className="h-5 w-5 text-yellow-600 shrink-0" />
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-yellow-100">
+                          Tip
+                        </p>
+                        <p className="text-xs text-gray-600 dark:text-yellow-300">
+                          Respond to new proposals within 2 hours for better success rates.
+                        </p>
+                      </div>
                     </div>
                   </div>
+
                 </div>
               </CardContent>
             </Card>

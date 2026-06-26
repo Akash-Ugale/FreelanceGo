@@ -14,12 +14,12 @@ export default function Footer() {
             <h3 className="text-sm font-medium">For Freelancers</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/find-work" className="text-muted-foreground transition-colors hover:text-primary">
+                <Link className="text-muted-foreground transition-colors hover:text-primary">
                   Find Work
                 </Link>
               </li>
               <li>
-                <Link to="/how-to-freelance" className="text-muted-foreground transition-colors hover:text-primary">
+                <Link  className="text-muted-foreground transition-colors hover:text-primary">
                   How to Freelance
                 </Link>
               </li>
@@ -29,12 +29,12 @@ export default function Footer() {
             <h3 className="text-sm font-medium">For Clients</h3>
             <ul className="space-y-3 text-sm">
               <li>
-                <Link to="/find-talent" className="text-muted-foreground transition-colors hover:text-primary">
+                <Link  className="text-muted-foreground transition-colors hover:text-primary">
                   Find Talent
                 </Link>
               </li>
               <li>
-                <Link to="/how-to-hire" className="text-muted-foreground transition-colors hover:text-primary">
+                <Link  className="text-muted-foreground transition-colors hover:text-primary">
                   How to Hire
                 </Link>
               </li>
