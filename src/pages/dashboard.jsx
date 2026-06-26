@@ -65,6 +65,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { userRoles } from "@/utils/constants";
 
 export default function Dashboard() {
   const { userRole, authLoading, isAuthenticated } = useAuth();
@@ -90,8 +91,8 @@ export default function Dashboard() {
   // IMPORTANT FIX
   const role = userRole.toLowerCase();
 
-  const isFreelancer = role === "freelancer";
-  const isClient = role === "client";
+  const isFreelancer = userRole === userRoles.FREELANCER;
+  const isClient = userRole === userRoles.CLIENT;
 
   return (
     <div className="min-h-screen max-h-screen overflow-hidden bg-background flex flex-col">
@@ -103,7 +104,7 @@ export default function Dashboard() {
 
       <div>
         <DashboardHeader
-          userRole={role}
+          userRole={userRole}
           activeItem={activeItem}
           setActiveItem={setActiveItem}
         />
@@ -111,7 +112,7 @@ export default function Dashboard() {
 
       <div className="relative flex-1 flex max-h-full overflow-y-auto">
         <DashboardSidebar
-          userRole={role}
+          userRole={userRole}
           activeItem={activeItem}
           setActiveItem={setActiveItem}
         />

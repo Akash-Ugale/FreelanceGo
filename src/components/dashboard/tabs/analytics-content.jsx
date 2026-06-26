@@ -85,6 +85,23 @@ export default function AnalyticsContent() {
     : (analytics.totalSpent ?? 0);
   const activeProjectsCount = analytics.activeProjects ?? 0;
 
+
+  const handleExport = () => {
+  const blob = new Blob(
+    [JSON.stringify(analytics, null, 2)],
+    { type: "application/json" }
+  );
+
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "analytics.json";
+  a.click();
+
+  window.URL.revokeObjectURL(url);
+};
+
   // ── Freelancer: categoryEarnings + jobsWonPerCategory ─────────────────────
   const skillsData = Object.entries(analytics.categoryEarnings || {}).map(
     ([skill, earnings]) => ({
@@ -124,7 +141,12 @@ export default function AnalyticsContent() {
               : "Monitor your hiring metrics and project outcomes"}
           </p>
         </div>
-        <Button variant="outline" size="sm" className="bg-transparent">
+        <Button
+              variant="outline"
+              size="sm"
+              className="bg-transparent"
+              onClick={handleExport}
+            >
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
@@ -316,7 +338,10 @@ export default function AnalyticsContent() {
                       </span>
                     </div>
                     <Progress
-                      value={analytics.successfulHireRate ?? 0}
+                      value={Math.max(
+                        0,
+                        Math.min(analytics.successfulHireRate ?? 0, 100)
+                      )}
                       className="h-2"
                     />
                   </div>
@@ -417,7 +442,11 @@ export default function AnalyticsContent() {
                         </Badge>
                       </div>
                       <Progress
-                        value={((cat.spent || 0) / maxCategorySpent) * 100}
+                        value={
+                          maxCategorySpent > 0
+                            ? ((cat.spent || 0) / maxCategorySpent) * 100
+                            : 0
+                        }
                         className="h-2"
                       />
                     </div>

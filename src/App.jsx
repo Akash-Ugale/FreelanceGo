@@ -26,6 +26,7 @@ import ReviewProposals from "./pages/review-proposal";
 import ProjectDetailsPage from "@/pages/ProjectDetailsPage.jsx";
 import ProfilePage from "./pages/profile";
 import GoogleAuthFailed from "@/pages/AuthFailedPage.jsx";
+import EditJobContent from "./components/dashboard/tabs/edit-job-content";
 
 function App() {
   const router = createBrowserRouter([
@@ -50,6 +51,8 @@ function App() {
         { path: "project-bids/:projectId", element: <ProjectBids /> },
         { path: "job/:projectId", element: <ProjectDetailsPage /> },
         { path: "profile", element: <ProfilePage /> },
+        // New Route
+        { path: "edit-job/:id", element: <EditJobContent /> },
       ],
     },
     { path: "/", element: <Home /> },

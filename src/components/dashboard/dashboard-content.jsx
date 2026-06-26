@@ -22,11 +22,12 @@ import {
   CheckCircle,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link, useOutletContext } from "react-router-dom";
+import { Link, useNavigate, useOutletContext } from "react-router-dom";
 
 export default function DashboardContent() {
   const { userRole, token, authLoading } = useAuth();
-  const { activeItem, setActiveItem } = useOutletContext();
+  const { setActiveItem } = useOutletContext();
+  const navigate = useNavigate();
 
   const [dashboardData, setDashboardData] = useState({
     activeProjects: [],   // List<ContractDto>
@@ -46,11 +47,6 @@ export default function DashboardContent() {
     (async () => {
       try {
         setLoading(true);
-        // CLIENT  → GET /api/dashboard/client/get-post-in-progress
-        // Returns: { activeProjects, recentJobPosts, completedJobs, dashboard }
-        //
-        // FREELANCER → GET /api/freelancer/get-post-in-progress  (note: no /dashboard/ prefix)
-        // Returns: { activeProjects, completedJobs, dashboard }
         const endpoint =
           userRole === userRoles.FREELANCER
             ? "/api/freelancer/get-post-in-progress"
@@ -63,21 +59,16 @@ export default function DashboardContent() {
         console.error("Dashboard fetch error:", error?.response?.data ?? error);
       } finally {
         setLoading(false);
-      } 
+      }
     })();
   }, [token, authLoading, userRole]);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  // dashboard.totalJobs           → completed contracts count
-  // dashboard.totalActiveProjects → active contracts count
-  // dashboard.totalSpending       → sum of completed contract bid amounts
-
   const getStats = () => {
     if (userRole === userRoles.FREELANCER) {
       return [
         {
           title: "Total Earnings",
-          // ✅ totalSpending = sum of completed contract amounts for freelancer
           value: `₹${(dashboardData.dashboard?.totalSpending ?? 0).toLocaleString()}`,
           icon: IndianRupee,
         },
@@ -88,13 +79,11 @@ export default function DashboardContent() {
         },
         {
           title: "Completed Jobs",
-          // ✅ totalJobs = completed contracts count
           value: (dashboardData.dashboard?.totalJobs ?? 0).toString(),
           icon: CheckCircle,
         },
         {
           title: "Success Rate",
-          // Derived: completed / (completed + active) * 100
           value: (() => {
             const completed = dashboardData.dashboard?.totalJobs ?? 0;
             const active    = dashboardData.dashboard?.totalActiveProjects ?? 0;
@@ -108,7 +97,6 @@ export default function DashboardContent() {
       return [
         {
           title: "Total Spent",
-          // ✅ totalSpending = sum of completed contract bid amounts
           value: `₹${(dashboardData.dashboard?.totalSpending ?? 0).toLocaleString()}`,
           icon: IndianRupee,
         },
@@ -119,17 +107,16 @@ export default function DashboardContent() {
         },
         {
           title: "Completed Jobs",
-          // ✅ totalJobs = completed contracts count
           value: (dashboardData.dashboard?.totalJobs ?? 0).toString(),
           icon: CheckCircle,
         },
         {
           title: "Hired Freelancers",
-          // Derived: count distinct freelancers from activeProjects
+          // Count distinct freelancers across active projects
           value: (() => {
             const ids = new Set(
               (dashboardData.activeProjects || [])
-                .map(c => c.freelancer?.id)
+                .map(c => c.freelancer?.id ?? c.acceptedBid?.freelancerDto?.id)
                 .filter(Boolean)
             );
             return ids.size.toString();
@@ -141,35 +128,40 @@ export default function DashboardContent() {
   };
 
   // ── Active Projects ───────────────────────────────────────────────────────
-  // Each item is a ContractDto:
-  //   contract.id
-  //   contract.status                          → "ACTIVE" | "COMPLETED"
-  //   contract.job.jobTitle                    → project name
-  //   contract.job.budget                      → budget
-  //   contract.job.projectEndTime              → deadline
-  //   contract.job.clientDto.companyName       → client name
-  //   contract.acceptedBid.freelancerDto       → FreelancerDto
-  //     .userDto.username                      → freelancer name
-  //     .userDto.imageData                     → base64 avatar
-  //   contract.freelancer                      → FreelancerDto (also available directly)
-
+  // FIX 1: Added contractId so "View Project Details" can navigate
+  // FIX 2: Pull client image from contract.client when viewer is a FREELANCER
   const getProjects = () => {
     return (dashboardData.activeProjects || []).map((contract) => {
-      const job             = contract.job;
-      // freelancer available both from contract.freelancer and contract.acceptedBid.freelancerDto
+      const job = contract.job;
+
+      // Freelancer data — prefer contract.freelancer, fallback to acceptedBid
       const freelancer      = contract.freelancer ?? contract.acceptedBid?.freelancerDto;
-      const clientName      = job?.clientDto?.companyName ?? "N/A";
       const freelancerName  = freelancer?.userDto?.username ?? "No Freelancer";
       const freelancerImage = freelancer?.userDto?.imageData ?? null;
 
+      // Client data — from contract.client or job.clientDto
+      const client      = contract.client ?? job?.clientDto;
+      const clientName  = client?.companyName ?? "N/A";
+      const clientImage = client?.userDto?.imageData ?? null;
+
+      // Pass both raw values — two badges shown in JSX (same pattern as JobPostsContent)
+      // contract.status = "ACTIVE" | "COMPLETED"
+      // job.phase       = "IN_PROGRESS" | "PENDING" | "SUCCESS" | "FAILED" | null
+      const contractStatus = contract.status ?? "N/A";
+      const jobPhase       = job?.phase ?? null;
+
       return {
+        contractId:     contract.id,
+        jobId:          job?.id,
         title:          job?.jobTitle ?? "N/A",
-        client:         clientName,
-        freelancer:     freelancerName,
+        clientName,
+        clientImage,
+        freelancerName,
         freelancerImage,
-        status:         contract.status,
-        budget:         (job?.budget ?? 0).toLocaleString(),
-        deadline:       job?.projectEndTime
+        contractStatus,   // e.g. "ACTIVE"  → green badge
+        jobPhase,         // e.g. "IN_PROGRESS" → blue badge (shown only when present)
+        budget:           (job?.budget ?? 0).toLocaleString(),
+        deadline:         job?.projectEndTime
           ? new Date(job.projectEndTime).toLocaleDateString("en-US", {
               year: "numeric", month: "short", day: "numeric",
             })
@@ -179,18 +171,22 @@ export default function DashboardContent() {
   };
 
   // ── Recent Activity ───────────────────────────────────────────────────────
-  // CLIENT: recentJobPosts → List<JobDto>
-  //   job.jobTitle, job.budget, job.proposalsCount, job.status, job.createdAt
-  //
-  // FREELANCER: no recent bids in this API — show completedJobs instead
-  //   contract.job.jobTitle, contract.acceptedBid.amount, contract.status
+  // FIX 3: Better status label for recentJobPosts using both status + phase
+  const getJobStatusLabel = (job) => {
+    if (job.phase === "IN_PROGRESS") return "In Progress";
+    if (job.status === "ACTIVE")     return "Open";
+    if (job.status === "INACTIVE" && !job.phase) return "Open";   // posted, no phase yet
+    return job.status ?? "N/A";
+  };
 
   const getRecentActivity = () => {
     if (userRole === userRoles.FREELANCER) {
+      // Completed jobs — contract.createdAt may be null (API returns null); handle gracefully
       return (dashboardData.completedJobs || []).map((contract) => ({
         title:    contract.job?.jobTitle ?? "N/A",
         budget:   `₹${(contract.acceptedBid?.amount ?? 0).toLocaleString()}`,
-        status:   contract.status,
+        status:   contract.status ?? "N/A",
+        // FIX 4: contract.createdAt is null in real API data — show "N/A" safely
         postedAt: contract.createdAt
           ? new Date(contract.createdAt).toLocaleDateString("en-US", {
               month: "short", day: "numeric", year: "numeric",
@@ -198,12 +194,11 @@ export default function DashboardContent() {
           : "N/A",
       }));
     } else {
-      // CLIENT: recentJobPosts → List<JobDto>
       return (dashboardData.recentJobPosts || []).map((job) => ({
-        title:     job.jobTitle,
+        title:     job.jobTitle ?? "N/A",
         budget:    `₹${(job.budget ?? 0).toLocaleString()}`,
         proposals: job.proposalsCount ?? 0,
-        status:    job.status === "INACTIVE" ? "In Progress" : (job.status ?? "N/A"),
+        status:    getJobStatusLabel(job),                   // FIX 3
         postedAt:  job.createdAt
           ? new Date(job.createdAt).toLocaleDateString("en-US", {
               month: "short", day: "numeric", year: "numeric",
@@ -211,6 +206,15 @@ export default function DashboardContent() {
           : "N/A",
       }));
     }
+  };
+
+  // ── View Project Details handler ──────────────────────────────────────────
+  // Navigates to /dashboard/job/:jobId — same route used in JobPostsContent
+  const handleViewProject = (jobId) => {
+    if (!jobId) return;
+    const route = `/dashboard/job/${jobId}`;
+    setActiveItem(route);
+    navigate(route);
   };
 
   if (loading) {
@@ -278,12 +282,10 @@ export default function DashboardContent() {
       {/* Main Content */}
       <div className="grid gap-6 lg:grid-cols-3">
 
-        {/* Active Projects — from contract.job + contract.freelancer */}
+        {/* Active Projects */}
         <Card className="lg:col-span-2">
           <CardHeader className="space-y-0">
-            <CardTitle className="text-lg md:text-xl">
-              {userRole === userRoles.FREELANCER ? "Active Projects" : "Active Projects"}
-            </CardTitle>
+            <CardTitle className="text-lg md:text-xl">Active Projects</CardTitle>
             <CardDescription className="text-sm">
               {userRole === userRoles.FREELANCER
                 ? "Your currently active contracts"
@@ -297,34 +299,60 @@ export default function DashboardContent() {
               </div>
             ) : (
               <div className="space-y-4">
-                {projects.map((project, index) => (
-                  <div key={index} className="rounded-lg border p-4 space-y-3">
+                {projects.map((project) => (
+                  <div key={project.contractId} className="rounded-lg border p-4 space-y-3">
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
                       <h4 className="font-semibold text-sm md:text-base">{project.title}</h4>
-                      <Badge
-                        variant={project.status === "COMPLETED" ? "default" : "outline"}
-                        className="w-fit"
-                      >
-                        {project.status}
-                      </Badge>
+                      {/* Two badges — mirrors JobPostsContent exactly */}
+                      <div className="flex flex-wrap gap-2">
+                        {/* contract.status badge */}
+                        <Badge
+                          className={
+                            project.contractStatus === "ACTIVE"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-gray-100 text-gray-800"
+                          }
+                        >
+                          {project.contractStatus}
+                        </Badge>
+
+                        {/* job.phase badge — only when phase exists */}
+                        {project.jobPhase && (
+                          <Badge className="bg-blue-100 text-blue-800">
+                            {project.jobPhase.replace("_", " ")}
+                          </Badge>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-3 text-xs md:text-sm text-muted-foreground">
-                      {/* freelancer.userDto.username + imageData */}
+                      {/* FIX 2: show client info (with image) when viewer is FREELANCER,
+                               show freelancer info (with image) when viewer is CLIENT */}
                       <div className="flex items-center gap-2">
                         <Users className="h-3 w-3" />
-                        {project.freelancerImage && (
-                          <img
-                            src={`data:image/jpeg;base64,${project.freelancerImage}`}
-                            alt={project.freelancer}
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
+                        {userRole === userRoles.FREELANCER ? (
+                          <>
+                            {project.clientImage && (
+                              <img
+                                src={`data:image/jpeg;base64,${project.clientImage}`}
+                                alt={project.clientName}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            )}
+                            <span>{project.clientName}</span>
+                          </>
+                        ) : (
+                          <>
+                            {project.freelancerImage && (
+                              <img
+                                src={`data:image/jpeg;base64,${project.freelancerImage}`}
+                                alt={project.freelancerName}
+                                className="w-6 h-6 rounded-full object-cover"
+                              />
+                            )}
+                            <span>{project.freelancerName}</span>
+                          </>
                         )}
-                        <span>
-                          {userRole === userRoles.FREELANCER
-                            ? project.client
-                            : project.freelancer}
-                        </span>
                       </div>
 
                       {/* job.budget */}
@@ -340,7 +368,13 @@ export default function DashboardContent() {
                       </span>
                     </div>
 
-                    <Button variant="outline" size="sm" className="w-full">
+                    {/* "View Project Details" navigates to /dashboard/job/:jobId */}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => handleViewProject(project.jobId)}
+                    >
                       View Project Details
                     </Button>
                   </div>
@@ -377,8 +411,9 @@ export default function DashboardContent() {
                       <h3 className="font-semibold text-sm leading-tight pr-2">{item.title}</h3>
                       <Badge
                         variant={
-                          item.status === "COMPLETED" ? "default"
-                          : item.status === "ACTIVE" || item.status === "In Progress" ? "outline"
+                          item.status === "COMPLETED"   ? "default"
+                          : item.status === "In Progress" ? "outline"
+                          : item.status === "Open"       ? "secondary"
                           : "secondary"
                         }
                         className="text-xs flex-shrink-0"
@@ -387,7 +422,6 @@ export default function DashboardContent() {
                       </Badge>
                     </div>
                     <div className="text-xs text-muted-foreground space-y-1">
-                      {/* job.budget / acceptedBid.amount */}
                       <div className="flex items-center gap-1">
                         <IndianRupee className="h-3 w-3" /> {item.budget}
                       </div>

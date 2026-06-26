@@ -20,6 +20,7 @@ import {
   Loader2,
   MapPin,
   Phone,
+  Plus,
   Search,
   Star,
   Stars,
@@ -71,13 +72,13 @@ export default function ReviewProposalsContent() {
         budgetAmount >= 1000 &&
         budgetAmount <= 3000) ||
       (budgetFilter === "3000-5000" &&
-        budgetAmount >= 3000 &&
+        budgetAmount >= 3000 &
         budgetAmount <= 5000) ||
       (budgetFilter === "over-5000" && budgetAmount > 5000);
 
     return matchesSearch && matchesCategory && matchesBudget;
   });
-
+ 
   const projectsOnPage = filteredProjects.slice(0, itemsToDisplay);
   const hasMore = itemsToDisplay < filteredProjects.length;
 
@@ -123,7 +124,10 @@ export default function ReviewProposalsContent() {
     setIsLoading(true);
     try {
       const response = await apiClient.get("/api/dashboard/review-proposals");
+
+
       const projectContent = response.data.content || [];
+
       setProjects(projectContent);
     } catch (error) {
       console.error("Error fetching active projects:", error);
@@ -190,7 +194,7 @@ export default function ReviewProposalsContent() {
     return (
       <div className="flex justify-center items-center h-64">
         <Loader2 className="mr-2 h-8 w-8 animate-spin text-blue-500" />
-        <span className="text-lg">Fetching active projects...</span>
+        <span className="text-lg">Fetching Review Proposals</span>
       </div>
     );
   }
@@ -207,13 +211,18 @@ export default function ReviewProposalsContent() {
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Button variant="outline" size="sm" className="bg-transparent">
+          {/* <Button
+            variant="outline"
+            size="sm"
+            className="bg-transparent"
+            onClick={() => setShowAdvancedFilters(true)}
+          >
             <Filter className="mr-2 h-4 w-4" />
             Advanced Filters
-          </Button>
-          <Button size="sm">
-            <FileText className="mr-2 h-4 w-4" />
-            Post New Job
+          </Button> */}
+         <Button size="sm" onClick={() => navigate("/dashboard/post-job")}>
+            <Plus className="h-4 w-4" />
+            <span className="inline ml-2">Post New Job</span>
           </Button>
         </div>
       </div>
@@ -293,6 +302,7 @@ export default function ReviewProposalsContent() {
           <SelectContent>
             <SelectItem value="all">All Categories</SelectItem>
             <SelectItem value="Web Development">Web Development</SelectItem>
+            <SelectItem value="Mobile Development">Mobile Development</SelectItem>
             <SelectItem value="Design & Creative">Design & Creative</SelectItem>
             <SelectItem value="Writing & Translation">
               Writing & Translation
@@ -358,13 +368,24 @@ export default function ReviewProposalsContent() {
                         {project.jobDescription}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end space-y-2">
+                    <div className="flex flex-wrap gap-2 justify-end">
+                      {/* Status Badge */}
                       <Badge
-                        variant="secondary"
-                        className="bg-green-100 text-green-800"
+                        className={
+                          project.status === "ACTIVE"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-gray-100 text-gray-800"
+                        }
                       >
                         {project.status}
                       </Badge>
+
+                      {/* Phase Badge */}
+                      {project.phase && (
+                        <Badge className="bg-blue-100 text-blue-800">
+                          {project.phase.replace("_", " ")}
+                        </Badge>
+                      )}
                     </div>
                   </div>
 
@@ -531,9 +552,9 @@ export default function ReviewProposalsContent() {
           <p className="text-muted-foreground mb-4">
             Try adjusting your search criteria or post a new job to get started.
           </p>
-          <Button>
-            <FileText className="mr-2 h-4 w-4" />
-            Post New Job
+         <Button size="sm" onClick={() => navigate("/dashboard/post-job")}>
+            <Plus className="h-4 w-4" />
+            <span className="inline ml-2">Post New Job</span>
           </Button>
         </div>
       )}

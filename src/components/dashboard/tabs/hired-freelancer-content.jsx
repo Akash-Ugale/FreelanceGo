@@ -67,10 +67,12 @@ export default function HiredFreelancersContent({ userRole }) {
         const data = res.data;
 
         setContracts(data.content || []);
-        setTotalPages(data.totalPages || 1);
+        setTotalPages(data.totalPages);
 
-        if (data.content?.length > 0) {
+       if (data.content?.length > 0) {
           setSelectedContractId(data.content[0].id);
+        } else {
+          setSelectedContractId(null);
         }
       } catch (error) {
         console.error("Error fetching hired freelancers:", error);
@@ -109,14 +111,24 @@ export default function HiredFreelancersContent({ userRole }) {
     status?.replace(/_/g, " ").toLowerCase();
 
 
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case "active":   return "default";
-      case "completed": return "secondary";
-      case "cancelled": return "outline";
-      default:         return "outline";
-    }
-  };
+const getStatusColor = (status) => {
+  switch (normalizeStatus(status)) {
+    case "active":
+      return "default";
+
+    case "in progress":
+      return "secondary";
+
+    case "completed":
+      return "secondary";
+
+    case "cancelled":
+      return "outline";
+
+    default:
+      return "outline";
+  }
+};
 
   // Derive a display-friendly name from FreelancerDto
   const getFreelancerName = (freelancer) =>
@@ -176,13 +188,13 @@ export default function HiredFreelancersContent({ userRole }) {
     const freelancer = contract.freelancer;
     const name       = getFreelancerName(freelancer).toLowerCase();
     const title      = freelancer?.designation?.toLowerCase() || "";
-    const status     = contract.status?.toLowerCase() || "";
+    const normalizedStatus = normalizeStatus(contract.status);
 
     const matchesSearch =
       name.includes(searchTerm.toLowerCase()) ||
       title.includes(searchTerm.toLowerCase());
     const matchesStatus =
-      statusFilter === "all" || status === statusFilter.toLowerCase();
+      statusFilter === "all" ||  normalizedStatus === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -191,7 +203,7 @@ export default function HiredFreelancersContent({ userRole }) {
 
   const totalFreelancers = contracts.length;
   const activeProjects = contracts.filter((c) =>
-  ["active", "in progress", "in_progress"].includes(
+  ["active", "in progres"].includes(
     normalizeStatus(c.status)
   )
 ).length;
@@ -226,10 +238,7 @@ export default function HiredFreelancersContent({ userRole }) {
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          <Button size="sm">
-            <Users className="mr-2 h-4 w-4" />
-            Find Talent
-          </Button>
+          
         </div>
       </div>
 
@@ -302,6 +311,7 @@ export default function HiredFreelancersContent({ userRole }) {
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
             <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="in progress">In Progress</SelectItem>
             <SelectItem value="completed">Completed</SelectItem>
             <SelectItem value="cancelled">Cancelled</SelectItem>
           </SelectContent>
@@ -423,11 +433,11 @@ export default function HiredFreelancersContent({ userRole }) {
                                     Hired: {formatHiredDate(contract.createdAt)}
                                   </span>
                                   <div className="flex items-center space-x-2">
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      className="bg-transparent"
-                                      onClick={(e) => e.stopPropagation()}
+                                   <Button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        router.push(`/messages/${freelancer.id}`);
+                                      }}
                                     >
                                       <MessageSquare className="mr-2 h-4 w-4" />
                                       Message
@@ -444,16 +454,28 @@ export default function HiredFreelancersContent({ userRole }) {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={() =>
+                                            router.push(`/freelancer/${freelancer.id}`)
+                                          }
+                                        >
                                           <Eye className="mr-2 h-4 w-4" />
                                           View Profile
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() =>
+                                              router.push(`/projects/assign/${freelancer.id}`)
+                                            }
+                                          >
                                           <Briefcase className="mr-2 h-4 w-4" />
                                           Assign Project
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            onClick={() =>
+                                              router.push(`/reports/freelancer/${freelancer.id}`)
+                                            }
+                                          >
                                           <TrendingUp className="mr-2 h-4 w-4" />
                                           Performance Report
                                         </DropdownMenuItem>

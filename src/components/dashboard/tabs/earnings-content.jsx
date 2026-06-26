@@ -199,37 +199,58 @@ export default function EarningsContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-100">
+              {/* Completed Earnings */}
+              <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-950/30 rounded-lg border border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-3">
                   <CheckCircle className="h-5 w-5 text-green-600" />
                   <div>
-                    <p className="text-sm font-medium">Completed Earnings</p>
-                    <p className="text-xs text-muted-foreground">Released to you</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-green-100">
+                      Completed Earnings
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-green-300">
+                      Released to you
+                    </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-green-700">{fmt(totalEarnings)}</p>
+                <p className="text-lg font-bold text-green-700 dark:text-green-400">
+                  {fmt(totalEarnings)}
+                </p>
               </div>
 
-              <div className="flex items-center justify-between p-4 bg-blue-50 rounded-lg border border-blue-100">
+              {/* In Escrow */}
+              <div className="flex items-center justify-between p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
                 <div className="flex items-center gap-3">
                   <AlertCircle className="h-5 w-5 text-blue-600" />
                   <div>
-                    <p className="text-sm font-medium">In Escrow</p>
-                    <p className="text-xs text-muted-foreground">Held in active contracts</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-blue-100">
+                      In Escrow
+                    </p>
+                    <p className="text-xs text-gray-600 dark:text-blue-300">
+                      Held in active contracts
+                    </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-blue-700">{fmt(inEscrow)}</p>
+                <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                  {fmt(inEscrow)}
+                </p>
               </div>
 
+              {/* Avg per Project */}
               <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg border">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="h-5 w-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm font-medium">Avg per Project</p>
-                    <p className="text-xs text-muted-foreground">From completed work</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Avg per Project
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      From completed work
+                    </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold">{fmt(avgPerProject)}</p>
+                <p className="text-lg font-bold text-foreground">
+                  {fmt(avgPerProject)}
+                </p>
               </div>
             </div>
           </CardContent>
@@ -279,15 +300,15 @@ export default function EarningsContent() {
                 const meta = getStatusMeta(contract.status)
                 const amount = contract.acceptedBid?.amount ?? contract.amount ?? 0
                 const jobTitle =
-                  contract.job?.title ??
+                  contract.job?.jobTitle ??
                   contract.jobTitle ??
                   `Contract #${contract.id ?? idx + 1}`
                 const clientName =
-                  contract.client?.user?.name ??
+                  contract.client?.userDto?.username ??
                   contract.clientName ??
                   "Client"
                 const date =
-                  contract.createdAt ?? contract.createAt ?? null
+                  contract.createdAt ?? contract.job?.createAt ?? null
 
                 return (
                   <div

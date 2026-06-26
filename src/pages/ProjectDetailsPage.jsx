@@ -25,6 +25,38 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { RUPEE } from "@/utils/constants";
 
+// ── Status badge helpers (same logic as JobPostsContent) ──────────────────────
+// job.status = "ACTIVE" | "INACTIVE"
+// job.phase  = "IN_PROGRESS" | "PENDING" | "SUCCESS" | "FAILED" | null
+//
+// Show TWO badges so the user can clearly see both dimensions:
+//   1. job.status  → is the post open for bids?
+//   2. job.phase   → what stage is the work at?
+
+function JobStatusBadges({ status, phase }) {
+  return (
+    <div className="flex flex-wrap gap-2 items-center">
+      {/* Badge 1: job.status */}
+      <Badge
+        className={
+          status === "ACTIVE"
+            ? "bg-green-100 text-green-800 text-sm"
+            : "bg-gray-100 text-gray-800 text-sm"
+        }
+      >
+        {status ?? "N/A"}
+      </Badge>
+
+      {/* Badge 2: job.phase — only when present */}
+      {phase && (
+        <Badge className="bg-blue-100 text-blue-800 text-sm">
+          {phase.replace(/_/g, " ")}
+        </Badge>
+      )}
+    </div>
+  );
+}
+
 export default function ProjectDetailsPage() {
   const navigate = useNavigate();
   const { projectId } = useParams();
@@ -61,9 +93,7 @@ export default function ProjectDetailsPage() {
   };
 
   const formatBudget = (budget) => {
-    if (typeof budget !== "number") {
-      return "N/A";
-    }
+    if (typeof budget !== "number") return "N/A";
     return `${budget.toLocaleString()}`;
   };
 
@@ -84,9 +114,7 @@ export default function ProjectDetailsPage() {
   };
 
   const handleDownloadFile = () => {
-    if (project?.file) {
-      window.open(project.file, "_blank");
-    }
+    if (project?.file) window.open(project.file, "_blank");
   };
 
   const handleBidNow = () => {
@@ -98,7 +126,6 @@ export default function ProjectDetailsPage() {
     const words = text.split(" ");
     const approximateWordsPerLine = 15;
     const maxWords = lines * approximateWordsPerLine;
-
     if (words.length <= maxWords) return text;
     return words.slice(0, maxWords).join(" ") + "...";
   };
@@ -106,9 +133,7 @@ export default function ProjectDetailsPage() {
   const shouldShowMoreButton = (text, lines = 4) => {
     if (!text) return false;
     const words = text.split(" ");
-    const approximateWordsPerLine = 15;
-    const maxWords = lines * approximateWordsPerLine;
-    return words.length > maxWords;
+    return words.length > lines * 15;
   };
 
   if (isLoading) {
@@ -138,6 +163,7 @@ export default function ProjectDetailsPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto p-6">
+      {/* Header row — Back button + TWO status badges */}
       <div className="flex items-center justify-between">
         <Button
           variant="ghost"
@@ -147,12 +173,9 @@ export default function ProjectDetailsPage() {
           <ArrowLeft className="mr-2 h-4 w-4" />
           Back
         </Button>
-        <Badge
-          variant="secondary"
-          className="bg-green-100 text-green-800 text-sm"
-        >
-          {project.status}
-        </Badge>
+
+        {/* FIX: replaced single hardcoded-green badge with JobStatusBadges */}
+        <JobStatusBadges status={project.status} phase={project.phase} />
       </div>
 
       <Card className="border-2">
@@ -192,10 +215,7 @@ export default function ProjectDetailsPage() {
                 <Clock className="h-8 w-8 text-purple-600" />
                 <div>
                   <div className="text-xl font-bold text-purple-600">
-                    {calculateDuration(
-                      project.projectStartTime,
-                      project.projectEndTime,
-                    )}
+                    {calculateDuration(project.projectStartTime, project.projectEndTime)}
                   </div>
                   <div className="text-xs text-muted-foreground">Duration</div>
                 </div>
@@ -239,13 +259,9 @@ export default function ProjectDetailsPage() {
                 onClick={() => setShowFullDescription(!showFullDescription)}
               >
                 {showFullDescription ? (
-                  <>
-                    Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                  </>
+                  <><ChevronUp className="ml-1 h-4 w-4" /> Show Less</>
                 ) : (
-                  <>
-                    Show More <ChevronDown className="ml-1 h-4 w-4" />
-                  </>
+                  <><ChevronDown className="ml-1 h-4 w-4" /> Show More</>
                 )}
               </Button>
             )}
@@ -266,13 +282,9 @@ export default function ProjectDetailsPage() {
                   onClick={() => setShowFullRequirements(!showFullRequirements)}
                 >
                   {showFullRequirements ? (
-                    <>
-                      Show Less <ChevronUp className="ml-1 h-4 w-4" />
-                    </>
+                    <><ChevronUp className="ml-1 h-4 w-4" /> Show Less</>
                   ) : (
-                    <>
-                      Show More <ChevronDown className="ml-1 h-4 w-4" />
-                    </>
+                    <><ChevronDown className="ml-1 h-4 w-4" /> Show More</>
                   )}
                 </Button>
               )}
@@ -397,36 +409,15 @@ export default function ProjectDetailsPage() {
             </div>
           )}
 
+          {/* FIX: Project Phase section now uses JobStatusBadges instead of raw text */}
           {project.phase && (
             <div>
               <h3 className="text-lg font-semibold mb-3">Project Phase</h3>
-              <Badge variant="secondary" className="text-sm">
-                {project.phase}
-              </Badge>
+              <JobStatusBadges status={project.status} phase={project.phase} />
             </div>
           )}
         </CardContent>
       </Card>
-
-      {/*<div className="flex justify-between items-center p-6 bg-muted/50 rounded-lg border">
-        <div>
-          <h3 className="text-lg font-semibold mb-1">
-            Interested in this project?
-          </h3>
-          <p className="text-sm text-muted-foreground">
-            {project.alreadyBid
-              ? "You have already submitted a proposal for this project"
-              : "Submit your proposal to get started"}
-          </p>
-        </div>
-        <Button
-          size="lg"
-          onClick={handleBidNow}
-          disabled={project.alreadyBid || project.status !== "ACTIVE"}
-        >
-          {project.alreadyBid ? "Proposal Submitted" : "Submit Proposal"}
-        </Button>
-      </div>*/}
     </div>
   );
 }

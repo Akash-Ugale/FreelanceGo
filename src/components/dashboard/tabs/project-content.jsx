@@ -43,6 +43,7 @@ import {
   AlertCircle,
   Edit,
   Lock,
+  Loader2
 } from "lucide-react";
 import { apiClient } from "@/api/AxiosServiceApi";
 import { userRoles } from "@/utils/constants";
@@ -861,13 +862,32 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   // =========================================================================
   // Loading / error / empty states
   // =========================================================================
-  if (loading)
-    return <p className="p-6 text-muted-foreground">Loading projects...</p>;
-  if (error) return <p className="p-6 text-red-500">{error}</p>;
-  if (!projects.length)
-    return (
-      <p className="p-6 text-muted-foreground">No active projects found.</p>
-    );
+ if (loading) {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <Loader2 className="mr-2 h-8 w-8 animate-spin text-blue-500" />
+      <span className="text-lg">Fetching Projects...</span>
+    </div>
+  );
+}
+
+if (error) {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <p className="text-red-500 text-lg">{error}</p>
+    </div>
+  );
+}
+
+if (!projects.length) {
+  return (
+    <div className="flex justify-center items-center h-64">
+      <p className="text-muted-foreground text-lg">
+        No active projects found.
+      </p>
+    </div>
+  );
+}
 
   // =========================================================================
   // Milestone Card renderer
