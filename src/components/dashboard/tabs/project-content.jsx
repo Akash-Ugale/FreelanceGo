@@ -14,6 +14,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -43,10 +44,13 @@ import {
   AlertCircle,
   Edit,
   Lock,
-  Loader2
+  Loader2,
+  Flag,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { apiClient } from "@/api/AxiosServiceApi";
-import { userRoles } from "@/utils/constants";
+import { RUPEE, userRoles } from "@/utils/constants";
 import { useAuth } from "@/context/AuthContext.jsx";
 import { format, differenceInDays } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -58,8 +62,8 @@ import { useNavigate } from "react-router-dom";
 /** mirrors PaymentStatus.java */
 const PaymentStatus = {
   NOT_PAID: "NOT_PAID",
-  ESCROW_HELD: "ESCROW_HELD", // client paid; funds held until work accepted
-  RELEASED: "RELEASED", // payment released to freelancer
+  ESCROW_HELD: "ESCROW_HELD",
+  RELEASED: "RELEASED",
   REFUNDED: "REFUNDED",
   COMPLETED: "COMPLETED",
   FAILED: "FAILED",
@@ -70,7 +74,7 @@ const VerificationStatus = {
   PENDING_REVIEW: "PENDING_REVIEW",
   APPROVED_BY_CLIENT: "APPROVED_BY_CLIENT",
   CHANGES_REQUESTED: "CHANGES_REQUESTED",
-  VERIFIED: "VERIFIED", // backend alias used after final acceptance
+  VERIFIED: "VERIFIED",
 };
 
 /** mirrors MilestoneStatus.java */
@@ -91,9 +95,8 @@ const SubmissionStatus = {
   REJECTED: "REJECTED",
 };
 
-
 // ---------------------------------------------------------------------------
-// Razorpay loader helper – loads the SDK script once on demand
+// Razorpay loader helper
 // ---------------------------------------------------------------------------
 function loadRazorpayScript() {
   return new Promise((resolve) => {
@@ -108,6 +111,40 @@ function loadRazorpayScript() {
     document.body.appendChild(script);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Helper: has the freelancer finalized the milestone sequence?
+//
+// The API response uses "last" (Java boolean getter strips "is" prefix in JSON
+// serialization). We check both spellings defensively.
+// ---------------------------------------------------------------------------
+const sequenceIsPublished = (milestones) =>
+  milestones.some((m) => m.last === true || m.isLast === true);
+
+// ---------------------------------------------------------------------------
+// Helper: has the client already approved the entire sequence?
+//
+// From the actual API response the approval signal lives on
+// milestone.contract.verificationStatus ("APPROVED_BY_CLIENT"), NOT on
+// milestone.verificationStatus (which is null until work is submitted/verified
+// at the individual milestone level).
+//
+// A milestone is considered "sequence-approved" when:
+//   - its contract-level verificationStatus is APPROVED_BY_CLIENT, OR
+//   - its own verificationStatus is VERIFIED (fully done), OR
+//   - its own status is COMPLETED.
+// ---------------------------------------------------------------------------
+const getMilestoneContractVerification = (m) =>
+  m.contract?.verificationStatus ?? null;
+
+const sequenceIsApprovedByClient = (milestones) =>
+  milestones.length > 0 &&
+  milestones.every(
+    (m) =>
+      getMilestoneContractVerification(m) ===
+        VerificationStatus.APPROVED_BY_CLIENT ||
+      m.status === MilestoneStatus.COMPLETED,
+  );
 
 // ---------------------------------------------------------------------------
 // Main component
@@ -129,9 +166,8 @@ export default function ProjectsContent() {
   const [milestones, setMilestones] = useState([]);
   const [loadingMilestones, setLoadingMilestones] = useState(false);
 
-  // Add this with your other state declarations
-const [submissionNotes, setSubmissionNotes] = useState({});
-
+  // ── submission notes ──────────────────────────────────────────────────────
+  const [submissionNotes, setSubmissionNotes] = useState({});
 
   // ── add milestone dialog ──────────────────────────────────────────────────
   const [isAddMilestoneOpen, setIsAddMilestoneOpen] = useState(false);
@@ -140,6 +176,7 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     description: "",
     daysRequired: "",
     amount: "",
+    isLast: false,
   });
 
   // ── submission ────────────────────────────────────────────────────────────
@@ -153,11 +190,13 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
 
-  // ── reject feedback dialog ────────────────────────────────────────────────
-  const [isRejectMilestoneOpen, setIsRejectMilestoneOpen] = useState(false);
-  const [rejectingMilestoneId, setRejectingMilestoneId] = useState(null);
-  const [milestoneFeedback, setMilestoneFeedback] = useState("");
+  // ── reject milestone feedback dialog (client → sequence rejection) ─────────
+  const [isRejectSequenceOpen, setIsRejectSequenceOpen] = useState(false);
+  // Per-milestone feedback map: { [milestoneId]: string }
+  const [sequenceFeedbackMap, setSequenceFeedbackMap] = useState({});
+  const [sequenceActionLoading, setSequenceActionLoading] = useState(false);
 
+  // ── reject submission dialog ───────────────────────────────────────────────
   const [isRejectSubmissionOpen, setIsRejectSubmissionOpen] = useState(false);
   const [rejectingSubmissionMilestoneId, setRejectingSubmissionMilestoneId] =
     useState(null);
@@ -171,6 +210,7 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     description: "",
     daysRequired: "",
     amount: "",
+    isLast: false,
   });
 
   // =========================================================================
@@ -188,53 +228,81 @@ const [submissionNotes, setSubmissionNotes] = useState({});
         const formatted = (res.data || []).map((p) => ({
           id: p.id,
           contractId: p.id,
+          // Job fields live under p.job (JobDto)
           title: p.job?.jobTitle ?? "Untitled",
           description: p.job?.jobDescription ?? "",
           requiredSkills: p.job?.requiredSkills ?? [],
           experienceLevel: p.job?.experienceLevel ?? "",
-          proposalsCount: p.job?.proposalsCount ?? p.proposalsCount ?? 0,
+          // Client is top-level on ContractDto; also nested inside job as clientDto
           client: {
-            id: p.client?.id ?? null,
+            id: p.client?.id ?? p.job?.clientDto?.id ?? null,
             companyName:
-              p.client?.companyName ?? p.client?.userDto?.username ?? "Client",
+              p.client?.companyName ??
+              p.job?.clientDto?.companyName ??
+              p.client?.userDto?.username ??
+              "Client",
             name:
-              p.client?.userDto?.username ?? p.client?.companyName ?? "Client",
-            email: p.client?.userDto?.email ?? "N/A",
-            phone: p.client?.phone ?? "N/A",
-            bio: p.client?.bio ?? "",
-            imageData: p.client?.userDto?.imageData ?? null,
+              p.client?.userDto?.username ??
+              p.job?.clientDto?.userDto?.username ??
+              p.client?.companyName ??
+              "Client",
+            email:
+              p.client?.userDto?.email ??
+              p.job?.clientDto?.userDto?.email ??
+              "N/A",
+            phone: p.client?.phone ?? p.job?.clientDto?.phone ?? "N/A",
+            bio: p.client?.bio ?? p.job?.clientDto?.bio ?? "",
+            imageData:
+              p.client?.userDto?.imageData ??
+              p.job?.clientDto?.userDto?.imageData ??
+              null,
           },
+          // Freelancer is top-level on ContractDto; also under acceptedBid.freelancerDto
           freelancer: {
-            id: p.freelancer?.id ?? p.freelancerDto?.id ?? null,
+            id: p.freelancer?.id ?? p.acceptedBid?.freelancerDto?.id ?? null,
             name:
               p.freelancer?.userDto?.username ??
-              p.freelancerDto?.userDto?.username ??
-              p.freelancer?.username ??
+              p.acceptedBid?.freelancerDto?.userDto?.username ??
               "Freelancer",
             email:
               p.freelancer?.userDto?.email ??
-              p.freelancerDto?.userDto?.email ??
+              p.acceptedBid?.freelancerDto?.userDto?.email ??
               "N/A",
-            phone: p.freelancer?.phone ?? p.freelancerDto?.phone ?? "N/A",
-            bio: p.freelancer?.bio ?? p.freelancerDto?.bio ?? "",
+            phone:
+              p.freelancer?.phone ??
+              p.acceptedBid?.freelancerDto?.phone ??
+              "N/A",
+            bio: p.freelancer?.bio ?? p.acceptedBid?.freelancerDto?.bio ?? "",
             imageData:
               p.freelancer?.userDto?.imageData ??
-              p.freelancerDto?.userDto?.imageData ??
+              p.acceptedBid?.freelancerDto?.userDto?.imageData ??
               null,
             designation:
-              p.freelancer?.designation ?? p.freelancerDto?.designation ?? "",
+              p.freelancer?.designation ??
+              p.acceptedBid?.freelancerDto?.designation ??
+              "",
             portfolioUrl:
-              p.freelancer?.portfolioUrl ?? p.freelancerDto?.portfolioUrl ?? "",
-            skills: p.freelancer?.skills ?? p.freelancerDto?.skills ?? [],
+              p.freelancer?.portfolioUrl ??
+              p.acceptedBid?.freelancerDto?.portfolioUrl ??
+              "",
+            skills:
+              p.freelancer?.skills ??
+              p.acceptedBid?.freelancerDto?.skills ??
+              [],
           },
           budget: p.job?.budget ?? 0,
-          status: p.phase ?? p.status ?? MilestoneStatus.IN_PROGRESS,
+          // Status comes from ContractDto.status; phase from job.phase
+          status: p.job?.phase ?? p.status ?? "IN_PROGRESS",
           progress: typeof p.progress === "number" ? p.progress : 0,
           startDate: new Date(p.job?.projectStartTime),
           deadline: new Date(p.job?.projectEndTime),
           files: p.job?.file ? [p.job.file] : [],
-          bidAttachment: p.proposal?.attachment ?? p.bidAttachment ?? null,
-          clientAttachment: p.job?.file ?? p.clientAttachment ?? null,
+          // Bid attachment lives on acceptedBid
+          bidAttachment:
+            p.acceptedBid?.attachmentPublicUrl ??
+            p.proposal?.attachment ??
+            null,
+          clientAttachment: p.job?.file ?? null,
         }));
         setProjects(formatted);
         setSelectedProject((prev) => prev ?? formatted[0] ?? null);
@@ -278,14 +346,12 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   // Helpers
   // =========================================================================
 
-  /**
-   * A milestone counts as "done" only when the backend marks it VERIFIED
-   * (VerificationStatus) or the MilestoneStatus is COMPLETED.
-   * APPROVED means the proposal was accepted but work hasn't been verified yet.
-   */
-  const isMilestoneDone = (m) =>
-    m.verificationStatus === VerificationStatus.VERIFIED ||
-    m.status === MilestoneStatus.COMPLETED;
+  // A milestone is "done" when:
+  //   - its own verificationStatus is VERIFIED (individual completion), OR
+  //   - its own status is COMPLETED
+  // Note: contract.verificationStatus = APPROVED_BY_CLIENT means the sequence
+  // was approved but individual milestones haven't started yet — NOT "done".
+  const isMilestoneDone = (m) => m.status === MilestoneStatus.COMPLETED;
 
   const calculateProgress = () => {
     if (!milestones?.length) return 0;
@@ -312,52 +378,57 @@ const [submissionNotes, setSubmissionNotes] = useState({});
       .reduce((total, m) => total + (parseFloat(m.amount) || 0), 0);
   };
 
-  const canAddMoreMilestones = () => milestones.length < 3;
+  // After sequence approval, no new milestones may be added (locked forever).
+  // Before that, cap at 3.
+  const canAddMoreMilestones = () => {
+    if (sequenceIsApprovedByClient(milestones)) return false;
+    if (sequenceIsPublished(milestones)) return false; // last milestone already set
+    return milestones.length < 3;
+  };
 
-  /**
-   * Returns the index of the first milestone that is not yet fully done.
-   * Only that milestone (and earlier verified ones) should be actionable.
-   */
   const getActiveMilestoneIndex = () => {
     for (let i = 0; i < milestones.length; i++) {
       if (!isMilestoneDone(milestones[i])) return i;
     }
-    return milestones.length; // all done
+    return milestones.length;
   };
 
   // ── badge helpers ──────────────────────────────────────────────────────────
+  //
+  // IMPORTANT: milestone.verificationStatus is only set at the individual
+  // milestone work-review level (VERIFIED, CHANGES_REQUESTED, etc.).
+  // When the client approves the whole sequence, the signal is on
+  // milestone.contract.verificationStatus = "APPROVED_BY_CLIENT".
+  // We read the effective verification status from both places.
+  const getEffectiveVerificationStatus = (milestone) =>
+    milestone.verificationStatus ?? getMilestoneContractVerification(milestone);
+
   const getMilestoneStatusColor = (milestone) => {
     if (!milestone) return "outline";
 
-    // Fully verified / completed
+    const vs = getEffectiveVerificationStatus(milestone);
+
     if (
-      milestone.verificationStatus === VerificationStatus.VERIFIED ||
+      vs === VerificationStatus.VERIFIED ||
       milestone.status === MilestoneStatus.COMPLETED
     )
       return "default";
 
-    // Client requested changes
-    if (milestone.verificationStatus === VerificationStatus.CHANGES_REQUESTED)
-      return "destructive";
+    if (vs === VerificationStatus.CHANGES_REQUESTED) return "destructive";
 
-    // Work was rejected
     if (milestone.submission?.status === SubmissionStatus.REJECTED)
       return "destructive";
 
-    // In-flight states
     if (
       milestone.status === MilestoneStatus.IN_PROGRESS ||
       milestone.status === MilestoneStatus.SUBMITTED
     )
       return "secondary";
 
-    // Revision requested on the deliverable
     if (milestone.status === MilestoneStatus.REVISION_REQUESTED)
       return "destructive";
 
-    // Approved by client (proposal level), waiting for payment
-
-    if (milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT) return "default";
+    if (vs === VerificationStatus.APPROVED_BY_CLIENT) return "default";
 
     return "outline";
   };
@@ -365,27 +436,24 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   const getMilestoneStatusText = (milestone) => {
     if (!milestone) return "PENDING";
 
-    // ── Verification-level states ──────────────────────────────────────────
     if (milestone.verificationStatus === VerificationStatus.VERIFIED)
       return "COMPLETED";
     if (milestone.verificationStatus === VerificationStatus.CHANGES_REQUESTED)
       return "CHANGES REQUESTED";
 
-    // ── Approved proposal + payment states ─────────────────────────────────
-   
-          if (milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT) {
-            if (milestone.paymentStatus === PaymentStatus.ESCROW_HELD)
-              return "PAID – IN PROGRESS";
-            if (
-              milestone.paymentStatus === PaymentStatus.RELEASED ||
-              milestone.paymentStatus === PaymentStatus.COMPLETED
-            )
-              return "PAYMENT RELEASED";
-            // Approved but client hasn't paid yet
-            return "APPROVED – AWAITING PAYMENT";
-          }
+    if (
+      milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT
+    ) {
+      if (milestone.paymentStatus === PaymentStatus.ESCROW_HELD)
+        return "PAID – IN PROGRESS";
+      if (
+        milestone.paymentStatus === PaymentStatus.RELEASED ||
+        milestone.paymentStatus === PaymentStatus.COMPLETED
+      )
+        return "PAYMENT RELEASED";
+      return "APPROVED – AWAITING PAYMENT";
+    }
 
-    // ── Submission-level states ────────────────────────────────────────────
     if (milestone.submission?.status === SubmissionStatus.PENDING_REVIEW)
       return "WORK SUBMITTED";
     if (milestone.submission?.status === SubmissionStatus.APPROVED)
@@ -393,7 +461,6 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     if (milestone.submission?.status === SubmissionStatus.REJECTED)
       return "WORK REJECTED";
 
-    // ── MilestoneStatus fallback ───────────────────────────────────────────
     return milestone.status || "PENDING";
   };
 
@@ -428,7 +495,7 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   // ADD MILESTONE (Freelancer)
   // =========================================================================
   const handleAddMilestone = async () => {
-    const { name, description, daysRequired, amount } = newMilestone;
+    const { name, description, daysRequired, amount, isLast } = newMilestone;
     if (!name || !description || !daysRequired || !amount) {
       alert("Please fill in all fields");
       return;
@@ -480,6 +547,9 @@ const [submissionNotes, setSubmissionNotes] = useState({});
         daysRequired: days,
         createdAt: new Date().toISOString(),
         contract: { id: selectedProject.contractId },
+        // NEW: isLast field propagated inside the milestone object
+        isLast: isLast,
+        last: isLast, // belt-and-suspenders for Java boolean getter naming
       };
 
       await apiClient.post(
@@ -493,9 +563,17 @@ const [submissionNotes, setSubmissionNotes] = useState({});
         description: "",
         daysRequired: "",
         amount: "",
+        isLast: false,
       });
       setIsAddMilestoneOpen(false);
-      alert("Milestone created successfully! Awaiting client approval.");
+
+      if (isLast) {
+        alert(
+          "Final milestone created! The entire milestone sequence is now visible to the client for review.",
+        );
+      } else {
+        alert("Milestone created successfully! You can add more milestones.");
+      }
     } catch (err) {
       console.error("Error adding milestone:", err);
       alert(err.response?.data?.message || "Failed to add milestone");
@@ -512,13 +590,15 @@ const [submissionNotes, setSubmissionNotes] = useState({});
       description: milestone.description ?? "",
       daysRequired: milestone.daysRequired?.toString() ?? "",
       amount: milestone.amount?.toString() ?? "",
+      isLast: milestone.isLast ?? milestone.last ?? false,
     });
     setIsUpdateMilestoneOpen(true);
   };
 
   const handleUpdateMilestone = async () => {
     if (!updatingMilestone) return;
-    const { name, description, daysRequired, amount } = updateMilestoneData;
+    const { name, description, daysRequired, amount, isLast } =
+      updateMilestoneData;
     if (!name || !description || !daysRequired || !amount) {
       alert("Please fill in all fields");
       return;
@@ -569,6 +649,9 @@ const [submissionNotes, setSubmissionNotes] = useState({});
           updatingMilestone.paymentStatus ?? PaymentStatus.NOT_PAID,
         verificationStatus: VerificationStatus.PENDING_REVIEW,
         contract: { id: selectedProject.contractId },
+        // NEW: preserve / update isLast on the milestone object
+        isLast: isLast,
+        last: isLast,
       };
 
       await apiClient.post(
@@ -579,7 +662,7 @@ const [submissionNotes, setSubmissionNotes] = useState({});
       await fetchMilestones(selectedProject.contractId);
       setIsUpdateMilestoneOpen(false);
       setUpdatingMilestone(null);
-      alert("Milestone updated successfully! Awaiting client re-approval.");
+      alert("Milestone updated successfully! Awaiting client re-review.");
     } catch (err) {
       console.error("Error updating milestone:", err);
       alert(err.response?.data?.message || "Failed to update milestone");
@@ -587,46 +670,91 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   };
 
   // =========================================================================
-  // CLIENT: APPROVE MILESTONE → open payment dialog
+  // CLIENT: APPROVE ENTIRE SEQUENCE
+  // POST /milestone-sequence-approval  { contractId, clientId }
+  // =========================================================================
+  const handleApproveSequence = async () => {
+    setSequenceActionLoading(true);
+    try {
+      await apiClient.post(
+        `/api/milestone-sequence-approval?contractId=${selectedProject.contractId}&clientId=${selectedProject.client.id}`,
+      );
+      await fetchMilestones(selectedProject.contractId);
+      alert(
+        "Milestone sequence approved! You can now proceed to pay each milestone and the freelancer will start work.",
+      );
+    } catch (err) {
+      console.error("Error approving sequence:", err);
+      alert(
+        err.response?.data?.message || "Failed to approve milestone sequence",
+      );
+    } finally {
+      setSequenceActionLoading(false);
+    }
+  };
+
+  // =========================================================================
+  // CLIENT: REJECT SEQUENCE — open dialog to collect per-milestone feedback
+  // =========================================================================
+  const openRejectSequence = () => {
+    // Pre-populate feedback map with empty strings for each milestone
+    const map = {};
+    milestones.forEach((m) => {
+      map[m.id] = m.clientFeedback ?? "";
+    });
+    setSequenceFeedbackMap(map);
+    setIsRejectSequenceOpen(true);
+  };
+
+  // POST /client-feedback  body: List<MilestoneDto> (each with clientFeedback)
+  const handleRejectSequence = async () => {
+    const hasAtLeastOneFeedback = Object.values(sequenceFeedbackMap).some(
+      (fb) => fb.trim().length > 0,
+    );
+    if (!hasAtLeastOneFeedback) {
+      alert(
+        "Please provide feedback for at least one milestone before rejecting.",
+      );
+      return;
+    }
+
+    setSequenceActionLoading(true);
+    try {
+      // Build updated milestone list with feedback embedded
+      const updatedMilestones = milestones.map((m) => ({
+        ...m,
+        clientFeedback: sequenceFeedbackMap[m.id] ?? "",
+        verificationStatus: sequenceFeedbackMap[m.id]?.trim()
+          ? VerificationStatus.CHANGES_REQUESTED
+          : m.verificationStatus,
+      }));
+
+      await apiClient.post(
+        `/api/client-feedback?clientId=${selectedProject.client.id}`,
+        updatedMilestones,
+      );
+
+      await fetchMilestones(selectedProject.contractId);
+      setIsRejectSequenceOpen(false);
+      setSequenceFeedbackMap({});
+      alert(
+        "Feedback sent to the freelancer. They will update the milestones and resubmit for review.",
+      );
+    } catch (err) {
+      console.error("Error rejecting sequence:", err);
+      alert(err.response?.data?.message || "Failed to send feedback");
+    } finally {
+      setSequenceActionLoading(false);
+    }
+  };
+
+  // =========================================================================
+  // CLIENT: APPROVE INDIVIDUAL MILESTONE → open payment dialog
+  // (used in execution phase only, after sequence approval)
   // =========================================================================
   const handleApproveAndPay = (milestone) => {
     setSelectedMilestoneForPayment(milestone);
     setIsPaymentDialogOpen(true);
-  };
-
-  // =========================================================================
-  // CLIENT: REJECT MILESTONE
-  // =========================================================================
-  const openRejectMilestone = (milestoneId) => {
-    setRejectingMilestoneId(milestoneId);
-    setMilestoneFeedback("");
-    setIsRejectMilestoneOpen(true);
-  };
-
-  const handleRejectMilestone = async () => {
-    if (!milestoneFeedback.trim()) {
-      alert("Please provide feedback before rejecting.");
-      return;
-    }
-    try {
-      const milestoneData = {
-        id: rejectingMilestoneId,
-        clientFeedback: milestoneFeedback,
-        verificationStatus: VerificationStatus.CHANGES_REQUESTED,
-      };
-      await apiClient.post(
-        `/api/client-feedback?clientId=${selectedProject.client.id}`,
-        milestoneData,
-      );
-      await fetchMilestones(selectedProject.contractId);
-      setIsRejectMilestoneOpen(false);
-      setRejectingMilestoneId(null);
-      setMilestoneFeedback("");
-      alert("Milestone rejected. Freelancer can update and resubmit.");
-    } catch (err) {
-      console.error("Error rejecting milestone:", err);
-      alert(err.response?.data?.message || "Failed to reject milestone");
-    }
   };
 
   // =========================================================================
@@ -657,7 +785,6 @@ const [submissionNotes, setSubmissionNotes] = useState({});
         name: "FreelanceGo",
         description: `Payment for: ${selectedMilestoneForPayment.title}`,
         handler: async function () {
-          // On success the backend sets paymentStatus = ESCROW_HELD
           alert(
             "Payment successful! Freelancer has been notified and can now start work.",
           );
@@ -701,14 +828,15 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     setUploadingMilestoneId(milestoneId);
     try {
       const formData = new FormData();
-      // Retrieve the notes from state using the milestoneId
-      const notes = submissionNotes[milestoneId] || "Document submission for milestone review";
-      
+      const notes =
+        submissionNotes[milestoneId] ||
+        "Document submission for milestone review";
+
       const submissionData = {
         notes: notes,
         status: SubmissionStatus.PENDING_REVIEW,
       };
-      
+
       formData.append(
         "submission",
         new Blob([JSON.stringify(submissionData)], {
@@ -725,11 +853,9 @@ const [submissionNotes, setSubmissionNotes] = useState({});
       await apiClient.post(endpoint, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      
+
       await fetchMilestones(selectedProject.contractId);
-      
-      // Clear the notes after successful submission
-      setSubmissionNotes(prev => ({ ...prev, [milestoneId]: "" }));
+      setSubmissionNotes((prev) => ({ ...prev, [milestoneId]: "" }));
       alert("Work submitted successfully!");
     } catch (err) {
       console.error("Error uploading file:", err);
@@ -738,6 +864,7 @@ const [submissionNotes, setSubmissionNotes] = useState({});
       setUploadingMilestoneId(null);
     }
   };
+
   // =========================================================================
   // FREELANCER: Submit work (URL)
   // =========================================================================
@@ -749,27 +876,25 @@ const [submissionNotes, setSubmissionNotes] = useState({});
     }
     setUploadingMilestoneId(milestoneId);
     try {
-      // Retrieve the notes from state using the milestoneId
-      const notes = submissionNotes[milestoneId] || "URL submission for milestone review";
-      
+      const notes =
+        submissionNotes[milestoneId] || "URL submission for milestone review";
+
       const submissionData = {
         fileUrl: url,
         notes: notes,
         status: SubmissionStatus.PENDING_REVIEW,
       };
-      
+
       const milestone = milestones.find((m) => m.id === milestoneId);
       const endpoint = milestone?.submission?.id
         ? `/api/update-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`
         : `/api/create-submission?milestoneId=${milestoneId}&freelancerId=${selectedProject.freelancer.id}`;
 
       await apiClient.post(endpoint, submissionData);
-      
+
       await fetchMilestones(selectedProject.contractId);
-      
-      // Clear URL and notes after successful submission
       setSubmissionUrl(milestoneId, "");
-      setSubmissionNotes(prev => ({ ...prev, [milestoneId]: "" }));
+      setSubmissionNotes((prev) => ({ ...prev, [milestoneId]: "" }));
       alert("Work submitted successfully!");
     } catch (err) {
       console.error("Error submitting URL:", err);
@@ -859,38 +984,168 @@ const [submissionNotes, setSubmissionNotes] = useState({});
   const currentProgress = calculateProgress();
   const activeMilestoneIndex = getActiveMilestoneIndex();
 
+  // Key derived booleans used across render
+  const published = sequenceIsPublished(milestones);
+  const sequenceApproved = sequenceIsApprovedByClient(milestones);
+
   // =========================================================================
   // Loading / error / empty states
   // =========================================================================
- if (loading) {
-  return (
-    <div className="flex justify-center items-center h-64">
-      <Loader2 className="mr-2 h-8 w-8 animate-spin text-blue-500" />
-      <span className="text-lg">Fetching Projects...</span>
-    </div>
-  );
-}
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="mr-2 h-8 w-8 animate-spin text-blue-500" />
+        <span className="text-lg">Fetching Projects...</span>
+      </div>
+    );
+  }
 
-if (error) {
-  return (
-    <div className="flex justify-center items-center h-64">
-      <p className="text-red-500 text-lg">{error}</p>
-    </div>
-  );
-}
+  if (error) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-red-500 text-lg">{error}</p>
+      </div>
+    );
+  }
 
-if (!projects.length) {
-  return (
-    <div className="flex justify-center items-center h-64">
-      <p className="text-muted-foreground text-lg">
-        No active projects found.
-      </p>
-    </div>
-  );
-}
+  if (!projects.length) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-muted-foreground text-lg">
+          No active projects found.
+        </p>
+      </div>
+    );
+  }
 
   // =========================================================================
-  // Milestone Card renderer
+  // CLIENT: Sequence Review Panel
+  // Shown when: published && !sequenceApproved
+  // Replaces the individual milestone action cards during review phase.
+  // =========================================================================
+  const renderClientSequenceReviewPanel = () => (
+    <div className="space-y-4">
+      {/* Header banner */}
+      <div className="p-4 bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+        <div className="flex items-start gap-3">
+          <Eye className="h-5 w-5 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-semibold text-indigo-900 dark:text-indigo-100 text-sm mb-1">
+              Freelancer has finalized the milestone plan
+            </p>
+            <p className="text-xs text-indigo-800 dark:text-indigo-200">
+              Review the complete milestone sequence below. You can approve the
+              entire plan or request changes before any work begins.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Milestone cards — read-only summary */}
+      <div className="space-y-3">
+        {milestones.map((milestone, idx) => {
+          const hasFeedback =
+            milestone.verificationStatus ===
+              VerificationStatus.CHANGES_REQUESTED && milestone.clientFeedback;
+
+          return (
+            <div
+              key={milestone.id || idx}
+              className="p-4 border rounded-lg bg-muted/30 space-y-2"
+            >
+              <div className="flex items-start justify-between gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    #{idx + 1}
+                  </span>
+                  <h4 className="font-medium text-sm">
+                    {milestone.title || `Milestone ${idx + 1}`}
+                  </h4>
+                  {(milestone.isLast || milestone.last) && (
+                    <Badge
+                      variant="outline"
+                      className="text-xs border-indigo-400 text-indigo-600"
+                    >
+                      <Flag className="h-3 w-3 mr-1" />
+                      Final
+                    </Badge>
+                  )}
+                  <Badge variant={getMilestoneStatusColor(milestone)}>
+                    {getMilestoneStatusText(milestone)}
+                  </Badge>
+                </div>
+                <div className="text-right text-sm font-bold">
+                  ${milestone.amount?.toFixed(2) || "0.00"}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {milestone.description}
+              </p>
+              <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {milestone.daysRequired || 0} days
+                </span>
+                {milestone.dueDate && (
+                  <span>Due: {format(new Date(milestone.dueDate), "PP")}</span>
+                )}
+              </div>
+              {/* Show previous feedback if any */}
+              {hasFeedback && (
+                <div className="p-2 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-xs">
+                  <span className="font-medium text-amber-900 dark:text-amber-100">
+                    Your previous feedback:{" "}
+                  </span>
+                  <span className="text-amber-800 dark:text-amber-200">
+                    {milestone.clientFeedback}
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Budget summary */}
+      <div className="p-3 border rounded-lg bg-background flex justify-between items-center text-sm">
+        <span className="font-medium">Total milestone value</span>
+        <span className="font-bold text-base">
+          ${milestones.reduce((sum, m) => sum + (m.amount || 0), 0).toFixed(2)}{" "}
+          <span className="text-muted-foreground font-normal text-xs">
+            of ${selectedProject?.budget?.toLocaleString()} budget
+          </span>
+        </span>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex gap-3 pt-1">
+        <Button
+          className="flex-1"
+          onClick={handleApproveSequence}
+          disabled={sequenceActionLoading}
+        >
+          {sequenceActionLoading ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <CheckCircle className="h-4 w-4 mr-2" />
+          )}
+          Approve Plan
+        </Button>
+        <Button
+          variant="destructive"
+          className="flex-1"
+          onClick={openRejectSequence}
+          disabled={sequenceActionLoading}
+        >
+          <XCircle className="h-4 w-4 mr-2" />
+          Request Changes
+        </Button>
+      </div>
+    </div>
+  );
+
+  // =========================================================================
+  // Milestone Card renderer (execution phase — unchanged behaviour)
   // =========================================================================
   const renderMilestoneCard = (milestone, idx) => {
     const isMilestoneVerified = isMilestoneDone(milestone);
@@ -898,32 +1153,18 @@ if (!projects.length) {
     const isPastMilestone = idx < activeMilestoneIndex;
     const isFutureMilestone = idx > activeMilestoneIndex;
 
-     
+    const milestoneApprovedAndPaid =
+      getEffectiveVerificationStatus(milestone) ===
+        VerificationStatus.APPROVED_BY_CLIENT &&
+      milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
 
-    // Freelancer can submit work when:
-    //   – milestone is APPROVED and client has paid (ESCROW_HELD)
-    //   – no submission yet OR previous submission was REJECTED
-    // const milestoneApprovedAndPaid =
-    //   milestone.status === MilestoneStatus.APPROVED &&
-    //   milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
-
-    // NEW
-      const milestoneApprovedAndPaid =
-        milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
-        milestone.paymentStatus === PaymentStatus.ESCROW_HELD;
-
-     // REPLACE your current const canSubmitWork with this:
-
-        const canSubmitWork =
-          userRole === userRoles.FREELANCER &&
-          isActiveMilestone &&
-          milestoneApprovedAndPaid &&
-          (
-            !milestone.submission || 
-            milestone.submission.status === SubmissionStatus.REJECTED || 
-            // Allow submission if the milestone is NOT yet fully verified
-            milestone.verificationStatus !== VerificationStatus.VERIFIED
-          );
+    const canSubmitWork =
+      userRole === userRoles.FREELANCER &&
+      isActiveMilestone &&
+      milestoneApprovedAndPaid &&
+      (!milestone.submission ||
+        milestone.submission.status === SubmissionStatus.REJECTED ||
+        milestone.verificationStatus !== VerificationStatus.VERIFIED);
 
     const hasSubmission = !!milestone.submission;
     const submissionPendingReview =
@@ -936,28 +1177,15 @@ if (!projects.length) {
       hasSubmission &&
       milestone.submission.status === SubmissionStatus.REJECTED;
 
-    // Client can review the milestone proposal when:
-    //   – verificationStatus is PENDING_REVIEW or APPROVED_BY_CLIENT
-    //   – milestone is not yet APPROVED or IN_PROGRESS
-    // const canClientReviewProposal =
-    //   userRole === userRoles.CLIENT &&
-    //   isActiveMilestone &&
-    //   milestone.verificationStatus === VerificationStatus.PENDING_REVIEW &&
-    //   /*(milestone.verificationStatus === VerificationStatus.PENDING_REVIEW ||
-    //     milestone.verificationStatus ===
-    //       VerificationStatus.APPROVED_BY_CLIENT)*/
-    //   milestone.status !== MilestoneStatus.APPROVED &&
-    //   milestone.status !== MilestoneStatus.IN_PROGRESS;
+    // In execution phase, per-milestone payment action lives here
+    const canClientPayMilestone =
+      userRole === userRoles.CLIENT &&
+      isActiveMilestone &&
+      sequenceApproved &&
+      getEffectiveVerificationStatus(milestone) ===
+        VerificationStatus.APPROVED_BY_CLIENT &&
+      milestone.paymentStatus === PaymentStatus.NOT_PAID;
 
-    
-      const canClientReviewProposal =
-        userRole === userRoles.CLIENT &&
-        isActiveMilestone &&
-        milestone.verificationStatus === VerificationStatus.PENDING_REVIEW;
-
-    // Client can review submitted work when:
-    //   – a submission exists and is PENDING_REVIEW
-    //   – this is the active milestone
     const canClientReviewSubmission =
       userRole === userRoles.CLIENT &&
       isActiveMilestone &&
@@ -970,7 +1198,7 @@ if (!projects.length) {
           isFutureMilestone ? "opacity-50" : "bg-muted/30"
         }`}
       >
-        {/* ── Header ──────────────────────────────────────────────────────── */}
+        {/* ── Header ────────────────────────────────────────────────────── */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -980,6 +1208,15 @@ if (!projects.length) {
               <h4 className="font-medium">
                 {milestone.title || `Milestone ${idx + 1}`}
               </h4>
+              {(milestone.isLast || milestone.last) && (
+                <Badge
+                  variant="outline"
+                  className="text-xs border-indigo-400 text-indigo-600"
+                >
+                  <Flag className="h-3 w-3 mr-1" />
+                  Final
+                </Badge>
+              )}
               <Badge variant={getMilestoneStatusColor(milestone)}>
                 {getMilestoneStatusText(milestone)}
               </Badge>
@@ -1021,70 +1258,61 @@ if (!projects.length) {
           </div>
         </div>
 
-        {/* ── Client feedback (CHANGES_REQUESTED) ─────────────────────────── */}
-        {milestone.clientFeedback &&
-          milestone.verificationStatus ===
-            VerificationStatus.CHANGES_REQUESTED && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-sm">
-              <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
-                Changes Requested:
-              </p>
-              <p className="text-amber-800 dark:text-amber-200">
-                {milestone.clientFeedback}
-              </p>
-            </div>
-          )}
-
-        {/* ── FREELANCER ACTIONS ───────────────────────────────────────────── */}
+        {/* ── FREELANCER ACTIONS ─────────────────────────────────────────── */}
         {userRole === userRoles.FREELANCER && isActiveMilestone && (
           <div className="space-y-2">
-            {/* Update if client requested changes */}
-            {milestone.verificationStatus ===
-              VerificationStatus.CHANGES_REQUESTED && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openUpdateMilestone(milestone)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Update Milestone
-              </Button>
-            )}
-
-            {/* Milestone PENDING – awaiting client approval */}
-            {milestone.verificationStatus ===
-              VerificationStatus.PENDING_REVIEW &&
-              milestone.status === MilestoneStatus.PENDING && (
+            {/* Awaiting sequence approval from client */}
+            {published &&
+              !sequenceApproved &&
+              milestone.verificationStatus ===
+                VerificationStatus.PENDING_REVIEW && (
                 <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
                   <p className="text-sm text-blue-900 dark:text-blue-100">
-                    Awaiting client review and approval.
+                    Awaiting client review of the full milestone plan.
                   </p>
                 </div>
               )}
 
-            {/* Milestone approved but NOT paid yet */}
-            {/* {milestone.status === MilestoneStatus.APPROVED &&
+            {/* Client requested changes on sequence */}
+            {milestone.verificationStatus ===
+              VerificationStatus.CHANGES_REQUESTED && (
+              <div className="space-y-2">
+                {milestone.clientFeedback && (
+                  <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded text-sm">
+                    <p className="font-medium text-amber-900 dark:text-amber-100 mb-1">
+                      Changes Requested:
+                    </p>
+                    <p className="text-amber-800 dark:text-amber-200">
+                      {milestone.clientFeedback}
+                    </p>
+                  </div>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openUpdateMilestone(milestone)}
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Update Milestone
+                </Button>
+              </div>
+            )}
+
+            {/* Milestone approved but NOT paid yet (execution phase) */}
+            {sequenceApproved &&
+              milestone.verificationStatus ===
+                VerificationStatus.APPROVED_BY_CLIENT &&
               milestone.paymentStatus !== PaymentStatus.ESCROW_HELD && (
                 <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
                   <p className="text-sm text-yellow-900 dark:text-yellow-100">
-                    Milestone approved! Waiting for client to process payment.
+                    Milestone plan approved! Waiting for client to process
+                    payment.
                   </p>
                 </div>
-              )} */}
-
-              
-                {milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
-                  milestone.paymentStatus !== PaymentStatus.ESCROW_HELD && (
-                    <div className="p-3 bg-yellow-50 dark:bg-yellow-950 border border-yellow-200 dark:border-yellow-800 rounded">
-                      <p className="text-sm text-yellow-900 dark:text-yellow-100">
-                        Milestone approved! Waiting for client to process payment.
-                      </p>
-                    </div>
-                  )}
+              )}
 
             {/* Milestone approved + paid – submit work */}
             {canSubmitWork && (
-              
               <div className="space-y-2">
                 <p className="text-sm font-medium text-green-600 dark:text-green-400">
                   ✓ Milestone approved and payment confirmed. Submit your work
@@ -1101,14 +1329,16 @@ if (!projects.length) {
                   </div>
                 )}
 
-                {/* --- ADD THE TEXTAREA HERE --- */}
                 <div className="space-y-1">
                   <Label className="text-xs">Submission Notes</Label>
                   <Textarea
                     placeholder="Add details about your work..."
                     value={submissionNotes[milestone.id] || ""}
-                    onChange={(e) => 
-                      setSubmissionNotes(prev => ({ ...prev, [milestone.id]: e.target.value }))
+                    onChange={(e) =>
+                      setSubmissionNotes((prev) => ({
+                        ...prev,
+                        [milestone.id]: e.target.value,
+                      }))
                     }
                     rows={2}
                   />
@@ -1200,7 +1430,7 @@ if (!projects.length) {
               </div>
             )}
 
-            {/* Show submission pending info */}
+            {/* Work submitted info */}
             {submissionPendingReview && (
               <div className="p-3 bg-background border rounded">
                 <div className="flex items-center gap-2">
@@ -1232,7 +1462,7 @@ if (!projects.length) {
               </div>
             )}
 
-            {/* Milestone fully verified / completed */}
+            {/* Milestone fully verified */}
             {isMilestoneVerified && (
               <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
                 <div className="flex items-center gap-2 text-sm text-green-900 dark:text-green-100">
@@ -1246,7 +1476,7 @@ if (!projects.length) {
           </div>
         )}
 
-        {/* ── Future milestone indicator for freelancer ─────────────────────── */}
+        {/* Future milestone indicator – freelancer */}
         {userRole === userRoles.FREELANCER && isFutureMilestone && (
           <div className="p-2 border border-dashed rounded text-center">
             <p className="text-xs text-muted-foreground">
@@ -1256,43 +1486,35 @@ if (!projects.length) {
           </div>
         )}
 
-        {/* ── CLIENT ACTIONS ───────────────────────────────────────────────── */}
-        {userRole === userRoles.CLIENT && (
+        {/* ── CLIENT ACTIONS (execution phase only) ─────────────────────── */}
+        {userRole === userRoles.CLIENT && sequenceApproved && (
           <div className="space-y-3">
-            {/* Review milestone proposal */}
-            {canClientReviewProposal && (
-              <div className="flex justify-end gap-2">
+            {/* Pay for this milestone (first action in execution phase) */}
+            {canClientPayMilestone && (
+              <div className="flex justify-end">
                 <Button
                   size="sm"
                   variant="default"
                   onClick={() => handleApproveAndPay(milestone)}
                 >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Approve & Pay
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => openRejectMilestone(milestone.id)}
-                >
-                  <XCircle className="h-4 w-4 mr-2" />
-                  Request Changes
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Pay & Start Work
                 </Button>
               </div>
             )}
 
             {/* Awaiting freelancer work after payment */}
-            
-              {isActiveMilestone &&
-                milestone.verificationStatus === VerificationStatus.APPROVED_BY_CLIENT &&
-                milestone.paymentStatus === PaymentStatus.ESCROW_HELD &&
-                !hasSubmission && (
-                  <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                    <p className="text-sm text-blue-900 dark:text-blue-100">
-                      Payment confirmed. Waiting for freelancer to submit work.
-                    </p>
-                  </div>
-                )}
+            {isActiveMilestone &&
+              milestone.verificationStatus ===
+                VerificationStatus.APPROVED_BY_CLIENT &&
+              milestone.paymentStatus === PaymentStatus.ESCROW_HELD &&
+              !hasSubmission && (
+                <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                  <p className="text-sm text-blue-900 dark:text-blue-100">
+                    Payment confirmed. Waiting for freelancer to submit work.
+                  </p>
+                </div>
+              )}
 
             {/* Review submission */}
             {canClientReviewSubmission && (
@@ -1366,25 +1588,11 @@ if (!projects.length) {
                 </p>
               </div>
             )}
-
-            {/* Pending changes from client side info */}
-            {isActiveMilestone &&
-              milestone.verificationStatus ===
-                VerificationStatus.CHANGES_REQUESTED && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded">
-                  <p className="text-sm text-amber-900 dark:text-amber-100">
-                    You requested changes. Waiting for the freelancer to update
-                    the milestone.
-                  </p>
-                </div>
-              )}
           </div>
         )}
       </div>
     );
   };
-
-  
 
   // =========================================================================
   // JSX
@@ -1795,7 +2003,8 @@ if (!projects.length) {
                               <DialogTitle>Add New Milestone</DialogTitle>
                               <DialogDescription>
                                 Create a milestone for this project. You can add
-                                up to 3 milestones.
+                                up to 3 milestones. Milestones remain hidden
+                                from the client until you mark the final one.
                                 <div className="mt-2 flex items-center gap-2 text-sm">
                                   <AlertCircle className="h-4 w-4" />
                                   <span>
@@ -1883,6 +2092,35 @@ if (!projects.length) {
                                   />
                                 </div>
                               </div>
+
+                              {/* NEW: isLast checkbox */}
+                              <div className="flex items-start gap-3 p-3 border rounded-lg bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800">
+                                <Checkbox
+                                  id="is-last-milestone"
+                                  checked={newMilestone.isLast}
+                                  onCheckedChange={(checked) =>
+                                    setNewMilestone({
+                                      ...newMilestone,
+                                      isLast: !!checked,
+                                    })
+                                  }
+                                  className="mt-0.5"
+                                />
+                                <div className="space-y-1">
+                                  <Label
+                                    htmlFor="is-last-milestone"
+                                    className="text-sm font-medium text-indigo-900 dark:text-indigo-100 cursor-pointer flex items-center gap-1.5"
+                                  >
+                                    <Flag className="h-3.5 w-3.5" />
+                                    This is the last milestone
+                                  </Label>
+                                  <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                                    Checking this will publish the entire
+                                    milestone plan to the client for review. No
+                                    new milestones can be added afterwards.
+                                  </p>
+                                </div>
+                              </div>
                             </div>
                             <DialogFooter>
                               <Button
@@ -1894,13 +2132,16 @@ if (!projects.length) {
                                     description: "",
                                     daysRequired: "",
                                     amount: "",
+                                    isLast: false,
                                   });
                                 }}
                               >
                                 Cancel
                               </Button>
                               <Button onClick={handleAddMilestone}>
-                                Create Milestone
+                                {newMilestone.isLast
+                                  ? "Create & Publish Plan"
+                                  : "Create Milestone"}
                               </Button>
                             </DialogFooter>
                           </DialogContent>
@@ -1908,7 +2149,7 @@ if (!projects.length) {
                       )}
                   </div>
 
-                  {/* Guidelines banner */}
+                  {/* ── Freelancer guidelines banner ─────────────────────── */}
                   {userRole === userRoles.FREELANCER && (
                     <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
                       <div className="flex gap-2">
@@ -1923,15 +2164,20 @@ if (!projects.length) {
                               within project limits
                             </li>
                             <li>
-                              • Client must approve and pay before you can start
-                              work
+                              • Milestones are hidden from the client until you
+                              mark the final milestone
                             </li>
                             <li>
-                              • Submit work (file or URL) once milestone is paid
+                              • Once the final milestone is created, the entire
+                              plan is sent to the client for review
                             </li>
                             <li>
-                              • Milestones are completed sequentially – next
-                              unlocks when current is done
+                              • Client must approve the full plan before any
+                              payment or work begins
+                            </li>
+                            <li>
+                              • Milestones execute sequentially after plan
+                              approval
                             </li>
                           </ul>
                         </div>
@@ -1939,6 +2185,61 @@ if (!projects.length) {
                     </div>
                   )}
 
+                  {/* ── Freelancer: sequence published but not yet approved ─ */}
+                  {userRole === userRoles.FREELANCER &&
+                    published &&
+                    !sequenceApproved &&
+                    milestones.some(
+                      (m) =>
+                        m.verificationStatus !==
+                        VerificationStatus.CHANGES_REQUESTED,
+                    ) && (
+                      <div className="p-3 bg-indigo-50 dark:bg-indigo-950 border border-indigo-200 dark:border-indigo-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <Eye className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                          <p className="text-sm text-indigo-900 dark:text-indigo-100">
+                            Your milestone plan has been submitted to the client
+                            for review.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                  {/* ── Freelancer: sequence changes requested ─────────────── */}
+                  {userRole === userRoles.FREELANCER &&
+                    published &&
+                    !sequenceApproved &&
+                    milestones.some(
+                      (m) =>
+                        m.verificationStatus ===
+                        VerificationStatus.CHANGES_REQUESTED,
+                    ) && (
+                      <div className="p-3 bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                          <p className="text-sm text-amber-900 dark:text-amber-100">
+                            The client has requested changes. Update the flagged
+                            milestones below, then the plan will be resubmitted
+                            automatically.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                  {/* ── Freelancer: not yet published ─────────────────────── */}
+                  {userRole === userRoles.FREELANCER && !published && (
+                    <div className="p-3 bg-muted border border-dashed rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                        <p className="text-sm text-muted-foreground">
+                          Milestones below are only visible to you. Mark the
+                          last milestone to publish the plan to the client.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* ── Client guidelines banner ──────────────────────────── */}
                   {userRole === userRoles.CLIENT && (
                     <div className="p-3 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
                       <div className="flex gap-2">
@@ -1949,20 +2250,20 @@ if (!projects.length) {
                           </p>
                           <ul className="space-y-1 text-xs">
                             <li>
-                              • Review and approve or request changes on
-                              freelancer's milestone proposals
+                              • The freelancer plans the full milestone sequence
+                              before you can review it
                             </li>
                             <li>
-                              • Approve &amp; Pay triggers a Razorpay payment –
-                              funds held in escrow
+                              • Once the plan is ready, review and approve the
+                              entire sequence or request changes
                             </li>
                             <li>
-                              • Review submitted work and accept or request
-                              revision
+                              • After approval, pay each milestone in advance –
+                              funds are held in escrow
                             </li>
                             <li>
-                              • Milestones are sequential – only one is active
-                              at a time
+                              • Review submitted work and release payment upon
+                              acceptance
                             </li>
                           </ul>
                         </div>
@@ -1970,7 +2271,21 @@ if (!projects.length) {
                     </div>
                   )}
 
-                  {/* Milestone list */}
+                  {/* ── Client: milestone not published yet ───────────────── */}
+                  {userRole === userRoles.CLIENT && !published && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <EyeOff className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                      <p className="font-medium">
+                        Milestone plan not ready yet
+                      </p>
+                      <p className="text-sm mt-1">
+                        The freelancer is still planning the milestones. You
+                        will be able to review them once the plan is finalized.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Main milestone content */}
                   {loadingMilestones ? (
                     <div className="text-center py-8 text-muted-foreground">
                       <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent" />
@@ -1978,20 +2293,35 @@ if (!projects.length) {
                     </div>
                   ) : milestones?.length > 0 ? (
                     <div className="space-y-3">
-                      {milestones.map((milestone, idx) =>
-                        renderMilestoneCard(milestone, idx),
-                      )}
+                      {/* FREELANCER: always see their own milestones */}
+                      {userRole === userRoles.FREELANCER &&
+                        milestones.map((milestone, idx) =>
+                          renderMilestoneCard(milestone, idx),
+                        )}
+
+                      {/* CLIENT: sequence review panel (published, not yet approved) */}
+                      {userRole === userRoles.CLIENT &&
+                        published &&
+                        !sequenceApproved &&
+                        renderClientSequenceReviewPanel()}
+
+                      {/* CLIENT: execution phase (sequence already approved) */}
+                      {userRole === userRoles.CLIENT &&
+                        sequenceApproved &&
+                        milestones.map((milestone, idx) =>
+                          renderMilestoneCard(milestone, idx),
+                        )}
                     </div>
                   ) : (
-                    <div className="text-center py-12 text-muted-foreground">
-                      <Target className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                      <p className="font-medium">No milestones defined yet</p>
-                      <p className="text-sm mt-1">
-                        {userRole === userRoles.FREELANCER
-                          ? "Create milestones to track your project progress"
-                          : "Freelancer will create milestones for project tracking"}
-                      </p>
-                    </div>
+                    userRole === userRoles.FREELANCER && (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Target className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                        <p className="font-medium">No milestones defined yet</p>
+                        <p className="text-sm mt-1">
+                          Create milestones to track your project progress
+                        </p>
+                      </div>
+                    )
                   )}
                 </div>
               </TabsContent>
@@ -2012,7 +2342,6 @@ if (!projects.length) {
                           </span>
                         </div>
 
-                        {/* Funds currently held in escrow (paid but not yet released) */}
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">
                             Funds in Escrow
@@ -2029,7 +2358,6 @@ if (!projects.length) {
                           </span>
                         </div>
 
-                        {/* Funds released to freelancer after work accepted */}
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">
                             Released to Freelancer
@@ -2047,7 +2375,6 @@ if (!projects.length) {
                           </span>
                         </div>
 
-                        {/* Fully verified milestones (VERIFIED verificationStatus) */}
                         <div className="flex justify-between items-center">
                           <span className="text-sm font-medium">
                             Completed &amp; Paid Out
@@ -2078,8 +2405,11 @@ if (!projects.length) {
                             className="flex items-center justify-between p-3 border rounded bg-background"
                           >
                             <div className="flex-1">
-                              <p className="text-sm font-medium">
+                              <p className="text-sm font-medium flex items-center gap-1.5">
                                 {milestone.title || `Milestone ${idx + 1}`}
+                                {(milestone.isLast || milestone.last) && (
+                                  <Flag className="h-3 w-3 text-indigo-500" />
+                                )}
                               </p>
                               <p className="text-xs text-muted-foreground">
                                 {getMilestoneStatusText(milestone)}
@@ -2143,8 +2473,8 @@ if (!projects.length) {
           <DialogHeader>
             <DialogTitle>Process Milestone Payment</DialogTitle>
             <DialogDescription>
-              Approve and pay for this milestone to allow the freelancer to
-              start work. Payment is handled securely via Razorpay.
+              Pay for this milestone to allow the freelancer to start work.
+              Payment is handled securely via Razorpay.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
@@ -2211,46 +2541,73 @@ if (!projects.length) {
         </DialogContent>
       </Dialog>
 
-      {/* ── Reject Milestone Dialog ────────────────────────────────────── */}
+      {/* ── Reject Sequence Dialog (client → per-milestone feedback) ──── */}
       <Dialog
-        open={isRejectMilestoneOpen}
-        onOpenChange={setIsRejectMilestoneOpen}
+        open={isRejectSequenceOpen}
+        onOpenChange={setIsRejectSequenceOpen}
       >
-        <DialogContent className="sm:max-w-[425px]">
+        <DialogContent className="sm:max-w-[540px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Request Changes</DialogTitle>
+            <DialogTitle>Request Changes to Milestone Plan</DialogTitle>
             <DialogDescription>
-              Provide feedback to the freelancer explaining what changes are
-              needed.
+              Provide feedback for the milestones that need changes. At least
+              one milestone must have feedback before submitting.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4">
-            <Label htmlFor="milestone-feedback">Feedback *</Label>
-            <Textarea
-              id="milestone-feedback"
-              placeholder="Describe what changes you need..."
-              value={milestoneFeedback}
-              onChange={(e) => setMilestoneFeedback(e.target.value)}
-              rows={4}
-              className="mt-2"
-            />
+          <div className="space-y-4 py-4">
+            {milestones.map((milestone, idx) => (
+              <div
+                key={milestone.id}
+                className="space-y-2 p-3 border rounded-lg"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    #{idx + 1}
+                  </span>
+                  <p className="text-sm font-medium">
+                    {milestone.title || `Milestone ${idx + 1}`}
+                  </p>
+                  <span className="text-xs text-muted-foreground ml-auto">
+                    ${milestone.amount?.toFixed(2)}
+                  </span>
+                </div>
+                <Textarea
+                  placeholder={`Feedback for milestone ${idx + 1} (leave blank if no changes needed)`}
+                  value={sequenceFeedbackMap[milestone.id] ?? ""}
+                  onChange={(e) =>
+                    setSequenceFeedbackMap((prev) => ({
+                      ...prev,
+                      [milestone.id]: e.target.value,
+                    }))
+                  }
+                  rows={2}
+                />
+              </div>
+            ))}
           </div>
           <DialogFooter className="gap-2">
             <Button
               variant="outline"
               size="sm"
               onClick={() => {
-                setIsRejectMilestoneOpen(false);
-                setMilestoneFeedback("");
+                setIsRejectSequenceOpen(false);
+                setSequenceFeedbackMap({});
               }}
+              disabled={sequenceActionLoading}
             >
               Cancel
             </Button>
             <Button
               variant="destructive"
               size="sm"
-              onClick={handleRejectMilestone}
+              onClick={handleRejectSequence}
+              disabled={sequenceActionLoading}
             >
+              {sequenceActionLoading ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <XCircle className="h-4 w-4 mr-2" />
+              )}
               Send Feedback
             </Button>
           </DialogFooter>
@@ -2385,6 +2742,34 @@ if (!projects.length) {
                     })
                   }
                 />
+              </div>
+            </div>
+
+            {/* NEW: isLast checkbox in update dialog */}
+            <div className="flex items-start gap-3 p-3 border rounded-lg bg-indigo-50 dark:bg-indigo-950 border-indigo-200 dark:border-indigo-800">
+              <Checkbox
+                id="update-is-last-milestone"
+                checked={updateMilestoneData.isLast}
+                onCheckedChange={(checked) =>
+                  setUpdateMilestoneData({
+                    ...updateMilestoneData,
+                    isLast: !!checked,
+                  })
+                }
+                className="mt-0.5"
+              />
+              <div className="space-y-1">
+                <Label
+                  htmlFor="update-is-last-milestone"
+                  className="text-sm font-medium text-indigo-900 dark:text-indigo-100 cursor-pointer flex items-center gap-1.5"
+                >
+                  <Flag className="h-3.5 w-3.5" />
+                  This is the last milestone
+                </Label>
+                <p className="text-xs text-indigo-700 dark:text-indigo-300">
+                  Marks this milestone as final, publishing the full plan to the
+                  client once submitted.
+                </p>
               </div>
             </div>
           </div>
