@@ -15,7 +15,7 @@ import {
   Calendar,
   CheckCircle,
   Clock,
-  DollarSign,
+  IndianRupee,
   Download,
   Eye,
   TrendingUp,
@@ -38,7 +38,12 @@ const fetchEarnings = async (page, size) => {
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 const fmt = (n) =>
-  typeof n === "number" ? `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00"
+  typeof n === "number"
+    ? n.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      })
+    : "0.00";
 
 const getStatusMeta = (status) => {
   switch ((status || "").toLowerCase()) {
@@ -157,7 +162,7 @@ export default function EarningsContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Earnings</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <IndianRupee className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{fmt(totalEarnings)}</div>
@@ -191,7 +196,7 @@ export default function EarningsContent() {
       </div>
 
       {/* ── Quick Actions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-6">
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Earnings Summary</CardTitle>
@@ -212,9 +217,10 @@ export default function EarningsContent() {
                     </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-green-700 dark:text-green-400">
-                  {fmt(totalEarnings)}
-                </p>
+                <div className="flex items-center gap-1 text-lg font-bold text-green-700 dark:text-green-400">
+                <IndianRupee className="h-5 w-5" />
+                {fmt(totalEarnings)}
+              </div>
               </div>
 
               {/* In Escrow */}
@@ -230,9 +236,10 @@ export default function EarningsContent() {
                     </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                <div className="flex items-center gap-1 text-lg font-bold text-blue-700 dark:text-blue-400">
+                  <IndianRupee className="h-5 w-5" />
                   {fmt(inEscrow)}
-                </p>
+                </div>
               </div>
 
               {/* Avg per Project */}
@@ -248,15 +255,16 @@ export default function EarningsContent() {
                     </p>
                   </div>
                 </div>
-                <p className="text-lg font-bold text-foreground">
+                <div className="flex items-center gap-1 text-lg font-bold text-foreground">
+                  <IndianRupee className="h-5 w-5" />
                   {fmt(avgPerProject)}
-                </p>
+                </div>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        {/* <Card>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
@@ -274,7 +282,7 @@ export default function EarningsContent() {
               Payment Schedule
             </Button>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* ── Recent Contracts ── */}
@@ -291,7 +299,7 @@ export default function EarningsContent() {
         <CardContent>
           {contracts.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-muted-foreground gap-2">
-              <DollarSign className="h-8 w-8" />
+              <IndianRupee className="h-8 w-8" />
               <p className="text-sm">No contracts found.</p>
             </div>
           ) : (
@@ -334,7 +342,10 @@ export default function EarningsContent() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium">{fmt(amount)}</p>
+                      <div className="flex items-center justify-end gap-1 font-medium">
+                        <IndianRupee className="h-4 w-4" />
+                        {fmt(amount)}
+                      </div>
                       <Badge
                         variant="outline"
                         className={`text-xs ${meta.color}`}
@@ -383,17 +394,21 @@ export default function EarningsContent() {
       <Card>
         <CardHeader>
           <CardTitle>Earnings Goal</CardTitle>
-          <CardDescription>
-            Track your progress toward ${MONTHLY_GOAL.toLocaleString()} goal
-          </CardDescription>
+         <CardDescription>
+          Track your progress toward ₹{MONTHLY_GOAL.toLocaleString()} goal
+        </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
             <div>
               <div className="flex justify-between text-sm mb-2">
                 <span>Total Earnings</span>
-                <span>
-                  {fmt(totalEarnings)} / ${MONTHLY_GOAL.toLocaleString()}
+                <span className="flex items-center gap-1">
+                  <IndianRupee className="h-4 w-4" />
+                  {fmt(totalEarnings)}
+                  /
+                  <IndianRupee className="h-4 w-4" />
+                  {MONTHLY_GOAL.toLocaleString()}
                 </span>
               </div>
               <Progress value={goalProgress} className="h-2" />

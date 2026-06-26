@@ -27,6 +27,7 @@ import ProjectDetailsPage from "@/pages/ProjectDetailsPage.jsx";
 import ProfilePage from "./pages/profile";
 import GoogleAuthFailed from "@/pages/AuthFailedPage.jsx";
 import EditJobContent from "./components/dashboard/tabs/edit-job-content";
+import HowItWorks from "./pages/HowItWorks";
 
 function App() {
   const router = createBrowserRouter([
@@ -57,6 +58,7 @@ function App() {
     },
     { path: "/", element: <Home /> },
     { path: "/about-us", element: <AboutUs /> },
+    { path: "/how-it-works",  element: <HowItWorks /> },
     { path: "/login", element: <Login /> },
     { path: "/register", element: <Register /> },
     { path: "/create-profile", element: <CreateProfile /> },
