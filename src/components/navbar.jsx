@@ -45,7 +45,7 @@ export default function Navbar() {
 
         {/* Desktop Actions */}
         <div className="hidden md:flex items-center space-x-4 relative z-10">
-          <a
+          {/* <a
             href="https://github.com/amanesoft"
             target="_blank"
             rel="noreferrer"
@@ -58,7 +58,7 @@ export default function Navbar() {
               <Github className="h-4 w-4" />
               <span className="sr-only">GitHub</span>
             </Button>
-          </a>
+          </a> */}
           {/* <a href="https://freelancegobackend.onrender.com/oauth2/authorization/google">
             <Button
               variant="ghost"
